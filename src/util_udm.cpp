@@ -8,11 +8,6 @@
 #include <sstream>
 #pragma optimize("",off)
 
-template <typename Arg>
-void create(Arg&& a){
-  
-}
-
 static void test()
 {
 	udm::is_convertible<float,std::string>();
@@ -207,17 +202,26 @@ bool udm::Property::Read(const VFilePtr &f,Array &a,std::string &outErr)
 	a.Clear();
 	a.valueType = f->Read<decltype(a.valueType)>();
 	a.size = f->Read<decltype(a.size)>();
+	a.fromProperty = {*this};
 	if(is_non_trivial_type(a.valueType))
 	{
 		f->Seek(f->Tell() +sizeof(uint64_t)); // Skip size
 		auto tag = get_non_trivial_tag(a.valueType);
-		return std::visit([&f,&a,&outErr](auto tag) {
+		return std::visit([this,&f,&a,&outErr](auto tag) {
 			using T = decltype(tag)::type;
 			a.values = new T[a.size];
 			for(auto i=decltype(a.size){0u};i<a.size;++i)
 			{
 				if(Read(f,static_cast<T*>(a.values)[i],outErr) == false)
 					return false;
+			}
+
+			// Also see udm::Array::Resize
+			if constexpr(std::is_same_v<T,Element> || std::is_same_v<T,Array>)
+			{
+				auto *p = static_cast<T*>(a.values);
+				for(auto i=decltype(a.size){0u};i<a.size;++i)
+					p[i].fromProperty = PropertyWrapper{a,i};
 			}
 			return true;
 		},tag);
@@ -455,24 +459,27 @@ void udm::Property::Write(VFilePtrReal &f) const
 udm::LinkedPropertyWrapper udm::Property::operator[](const std::string &key) {return LinkedPropertyWrapper{*this}[key];}
 udm::LinkedPropertyWrapper udm::Property::operator[](const char *key) {return operator[](std::string{key});}
 
-bool udm::Property::GetBlobData(void *outBuffer,size_t bufferSize) const
+bool udm::Property::GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize)
 {
-	if(IsType(Type::Blob))
-	{
-		auto &blob = GetValue<Blob>();
-		if(blob.data.size() != bufferSize)
-			return false;
-		memcpy(outBuffer,blob.data.data(),bufferSize);
-		return true;
-	}
-	if(IsType(Type::BlobLz4) == false)
+	if(blob.data.size() != bufferSize)
 		return false;
-	auto &blobLz4 = GetValue<BlobLz4>();
+	memcpy(outBuffer,blob.data.data(),bufferSize);
+	return true;
+}
+bool udm::Property::GetBlobData(const BlobLz4 &blobLz4,void *outBuffer,size_t bufferSize)
+{
 	auto blob = decompress_lz4_blob(blobLz4);
 	if(blob.data.size() != bufferSize)
 		return false;
 	memcpy(outBuffer,blob.data.data(),bufferSize);
 	return true;
+}
+
+bool udm::Property::GetBlobData(void *outBuffer,size_t bufferSize) const
+{
+	return IsType(Type::Blob) ? GetBlobData(GetValue<Blob>(),outBuffer,bufferSize) :
+		IsType(Type::BlobLz4) ? GetBlobData(GetValue<BlobLz4>(),outBuffer,bufferSize) :
+		false;
 }
 
 bool udm::Property::Read(Type ptype,const VFilePtr &f,std::string &outErr)

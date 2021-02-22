@@ -306,7 +306,7 @@ namespace udm
 	template<class T>
 		BlobLz4 compress_lz4_blob(const T &v)
 	{
-		return compress_lz4_blob(v.data(),v.size());
+		return compress_lz4_blob(v.data(),v.size() *sizeof(v[0]));
 	}
 	constexpr size_t size_of(Type t);
 	template<typename T>
@@ -354,7 +354,22 @@ namespace udm
 		template<class T>
 			bool GetBlobData(T &v) const
 		{
-			return GetBlobData(v.data(),v.size() *sizeof(v.front()));
+			if(GetBlobData(v.data(),v.size() *sizeof(v.front())))
+				return true;
+			if constexpr(is_trivial_type(type_to_enum<T::value_type>()))
+			{
+				if(IsType(Type::Array))
+				{
+					auto &a = GetValue<Array>();
+					if(a.valueType == type_to_enum<T::value_type>())
+					{
+						v.resize(a.GetSize());
+						memcpy(v.data(),a.values,v.size() *sizeof(v[0]));
+						return true;
+					}
+				}
+			}
+			return false;
 		}
 		template<typename T>
 			T &GetValue();
@@ -375,12 +390,12 @@ namespace udm
 		void ToAscii(std::stringstream &ss,const std::string &propName,const std::string &prefix="");
 		
 		static void ToAscii(std::stringstream &ss,const std::string &propName,Type type,const DataValue value,const std::string &prefix="");
-		static bool Read(const VFilePtr &f,Blob &outBlob,std::string &outErr);
-		static bool Read(const VFilePtr &f,BlobLz4 &outBlob,std::string &outErr);
-		static bool Read(const VFilePtr &f,Utf8String &outStr,std::string &outErr);
-		static bool Read(const VFilePtr &f,Element &outEl,std::string &outErr);
-		static bool Read(const VFilePtr &f,Array &outArray,std::string &outErr);
-		static bool Read(const VFilePtr &f,String &outStr,std::string &outErr);
+		bool Read(const VFilePtr &f,Blob &outBlob,std::string &outErr);
+		bool Read(const VFilePtr &f,BlobLz4 &outBlob,std::string &outErr);
+		bool Read(const VFilePtr &f,Utf8String &outStr,std::string &outErr);
+		bool Read(const VFilePtr &f,Element &outEl,std::string &outErr);
+		bool Read(const VFilePtr &f,Array &outArray,std::string &outErr);
+		bool Read(const VFilePtr &f,String &outStr,std::string &outErr);
 		static void Write(VFilePtrReal &f,const Blob &blob);
 		static void Write(VFilePtrReal &f,const BlobLz4 &blob);
 		static void Write(VFilePtrReal &f,const Utf8String &str);
@@ -409,6 +424,8 @@ namespace udm
 		static std::string ToAsciiValue(const Mat3x4 &m,const std::string &prefix="");
 
 		static constexpr uint8_t EXTENDED_STRING_IDENTIFIER = std::numeric_limits<uint8_t>::max();
+		static bool GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize);
+		static bool GetBlobData(const BlobLz4 &blob,void *outBuffer,size_t bufferSize);
 	private:
 		template<typename T>
 			static void NumericTypeToString(T value,std::stringstream &ss)
@@ -436,6 +453,31 @@ namespace udm
 	};
 #pragma pack(pop)
 
+	struct LinkedPropertyWrapper;
+	template<typename T>
+		class ArrayIterator
+	{
+	public:
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = T&;
+		using difference_type = std::ptrdiff_t;
+		using pointer = T*;
+		using reference = T&;
+	
+		ArrayIterator();
+		ArrayIterator(udm::Array &a);
+		ArrayIterator(udm::Array &a,uint32_t idx);
+		ArrayIterator &operator++();
+		ArrayIterator operator++(int);
+		reference operator*();
+		pointer operator->();
+		bool operator==(const ArrayIterator &other) const;
+		bool operator!=(const ArrayIterator &other) const;
+	private:
+		ArrayIterator(const ArrayIterator &other);
+		udm::LinkedPropertyWrapper m_curProperty;
+	};
+
 	struct PropertyWrapper
 	{
 		PropertyWrapper()=default;
@@ -454,15 +496,48 @@ namespace udm
 		//	operator T() const;
 		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
 		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element);
+		bool IsArrayItem() const;
+
+		Array *GetOwningArray();
+		const Array *GetOwningArray() const {return const_cast<PropertyWrapper*>(this)->GetOwningArray();}
+		bool GetBlobData(void *outBuffer,size_t bufferSize) const;
+		template<class T>
+			bool GetBlobData(T &v) const;
+		template<typename T>
+			T &GetValue();
+		template<typename T>
+			const T &GetValue() const;
+		template<typename T>
+			T *GetValuePtr();
+		template<typename T>
+			T ToValue(const T &defaultValue) const;
+		template<typename T>
+			std::optional<T> ToValue() const;
+		template<typename T>
+			T operator()(const T &defaultValue) const {return ToValue<T>(defaultValue);}
+		
+		// For array properties
+		uint32_t GetSize() const;
+		template<typename T>
+			ArrayIterator<T> begin();
+		template<typename T>
+			ArrayIterator<T> end();
+		ArrayIterator<Element> begin();
+		ArrayIterator<Element> end();
+		//
+
 		LinkedPropertyWrapper operator[](const std::string &key) const;
 		LinkedPropertyWrapper operator[](const char *key) const;
 		LinkedPropertyWrapper operator[](uint32_t idx) const;
 		LinkedPropertyWrapper operator[](int32_t idx) const;
 		LinkedPropertyWrapper operator[](size_t idx) const;
+		bool operator==(const PropertyWrapper &other) const;
+		bool operator!=(const PropertyWrapper &other) const;
 		Property *operator*();
 		const Property *operator*() const {return const_cast<PropertyWrapper*>(this)->operator*();}
 		Property *operator->() {return operator*();}
-		operator bool() const {return prop;}
+		const Property *operator->() const {return const_cast<PropertyWrapper*>(this)->operator->();}
+		operator bool() const;
 		Property *prop = nullptr;
 		uint32_t arrayIndex = std::numeric_limits<uint32_t>::max();
 	protected:
@@ -493,6 +568,8 @@ namespace udm
 		{
 			linked = true;
 		}
+		bool operator==(const LinkedPropertyWrapper &other) const;
+		bool operator!=(const LinkedPropertyWrapper &other) const;
 		template<typename T>
 			void operator=(T &&v);
 		std::unique_ptr<LinkedPropertyWrapper> prev = nullptr;
@@ -508,8 +585,8 @@ namespace udm
 		PropertyWrapper fromProperty {};
 		PropertyWrapper parentProperty {};
 		
-		PropertyWrapper operator[](const std::string &key) {return fromProperty[key];}
-		PropertyWrapper operator[](const char *key) {return operator[](std::string{key});}
+		LinkedPropertyWrapper operator[](const std::string &key) {return fromProperty[key];}
+		LinkedPropertyWrapper operator[](const char *key) {return operator[](std::string{key});}
 
 		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
 		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element);
@@ -538,7 +615,20 @@ namespace udm
 		template<typename T>
 			T &GetValue(uint32_t idx);
 		template<typename T>
-			const T &GetValue(uint32_t idx) const {return const_cast<Array*>(this)->GetValue(idx);}
+			const T &GetValue(uint32_t idx) const {return const_cast<Array*>(this)->GetValue<T>(idx);}
+
+		template<typename T>
+			ArrayIterator<T> begin()
+		{
+			return ArrayIterator<T>{*this};
+		}
+		template<typename T>
+			ArrayIterator<T> end()
+		{
+			return ArrayIterator<T>{*this,GetSize()};
+		}
+		ArrayIterator<Element> begin() {return begin<Element>();}
+		ArrayIterator<Element> end() {return end<Element>();}
 	private:
 		friend Property;
 		friend PropertyWrapper;
@@ -979,12 +1069,38 @@ template<typename T>
 template<typename T>
 	T udm::Property::ToValue(const T &defaultValue) const
 {
+	if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+		return defaultValue;
 	auto val = ToValue<T>();
 	return val.has_value() ? *val : defaultValue;
 }
 template<typename T>
 	std::optional<T> udm::Property::ToValue() const
 {
+	if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+		return {};
+	if constexpr(util::is_specialization<T,std::vector>::value)
+	{
+		if(type != Type::Array)
+			return {};
+		auto &a = GetValue<Array>();
+		if(a.IsValueType(array_value_type_to_enum<T>()) == false)
+			return {};
+		auto n = a.GetSize();
+		T v {};
+		v.resize(n);
+		if constexpr(is_non_trivial_type(array_value_type_to_enum<T>()))
+		{
+			for(auto i=decltype(n){0u};i<n;++i)
+				v[i] = static_cast<T::value_type*>(a.values)[i];
+			return v;
+		}
+		else
+		{
+			memcpy(v.data(),a.values,v.size() *sizeof(v.front()));
+			return v;
+		}
+	}
 	auto vs = [&](auto tag) -> std::optional<T> {
 		if constexpr(is_convertible<decltype(tag)::type,T>())
 			return static_cast<T>(const_cast<udm::Property*>(this)->GetValue<decltype(tag)::type>());
@@ -995,14 +1111,9 @@ template<typename T>
 	
 	if(is_generic_type(type))
 		return std::visit(vs,get_generic_tag(type));
-
-	switch(type)
-	{
-	case Type::String:
-		if constexpr(is_convertible<String,T>())
-			return static_cast<T>(const_cast<udm::Property*>(this)->GetValue<String>());
-		break;
-	}
+	
+	if(is_non_trivial_type(type))
+		return std::visit(vs,get_non_trivial_tag(type));
 	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
 	return {};
 }
@@ -1021,5 +1132,145 @@ template<typename T>
 {
 	return (this->type == type_to_enum<T>()) ? reinterpret_cast<T*>(value) : nullptr;
 }
+
+template<class T>
+	bool udm::PropertyWrapper::GetBlobData(T &v) const
+{
+	if(GetBlobData(v.data(),v.size() *sizeof(v.front())))
+		return true;
+	if(IsArrayItem())
+		return false;
+	return (*this)->GetBlobData(v);
+}
+template<typename T>
+	T &udm::PropertyWrapper::GetValue()
+{
+	if(IsArrayItem())
+	{
+		auto &a = *GetOwningArray();
+		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValue<T>();
+		if(a.IsValueType(type_to_enum<T>()) == false)
+			throw std::runtime_error{"Type mismatch, requested type is " +std::string{magic_enum::enum_name(type_to_enum<T>())} +", but actual type is " +std::string{magic_enum::enum_name(a.valueType)} +"!"};
+		return static_cast<T*>(a.values)[arrayIndex];
+	}
+	return (*this)->GetValue<T>();
+}
+template<typename T>
+	const T &udm::PropertyWrapper::GetValue() const {return const_cast<PropertyWrapper*>(this)->GetValue<T>();}
+template<typename T>
+	T *udm::PropertyWrapper::GetValuePtr()
+{
+	if(IsArrayItem())
+	{
+		auto &a = *GetOwningArray();
+		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr<T>();
+		if(a.IsValueType(type_to_enum<T>()) == false)
+			return nullptr;
+		return &static_cast<T*>(a.values)[arrayIndex];
+	}
+	return (*this)->GetValuePtr<T>();
+}
+template<typename T>
+	T udm::PropertyWrapper::ToValue(const T &defaultValue) const
+{
+	if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+		return defaultValue;
+	auto val = ToValue<T>();
+	return val.has_value() ? *val : defaultValue;
+}
+
+template<typename T>
+	udm::ArrayIterator<T> udm::PropertyWrapper::begin()
+{
+	auto *a = GetValuePtr<Array>();
+	if(a == nullptr)
+		return ArrayIterator<T>{};
+	return a->begin<T>();
+}
+template<typename T>
+	udm::ArrayIterator<T> udm::PropertyWrapper::end()
+{
+	auto *a = GetValuePtr<Array>();
+	if(a == nullptr)
+		return ArrayIterator<T>{};
+	return a->end<T>();
+}
+
+template<typename T>
+	std::optional<T> udm::PropertyWrapper::ToValue() const
+{
+	if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+		return {};
+	if(IsArrayItem())
+	{
+		auto &a = *GetOwningArray();
+		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->ToValue<T>();
+		auto vs = [&](auto tag) -> std::optional<T> {
+			if constexpr(is_convertible<decltype(tag)::type>(type_to_enum<T>()))
+				return static_cast<T>(const_cast<udm::PropertyWrapper*>(this)->GetValue<decltype(tag)::type>());
+			return {};
+		};
+		if(is_numeric_type(a.valueType))
+			return std::visit(vs,get_numeric_tag(a.valueType));
+	
+		if(is_generic_type(a.valueType))
+			return std::visit(vs,get_generic_tag(a.valueType));
+	
+		if(is_non_trivial_type(a.valueType))
+			return std::visit(vs,get_non_trivial_tag(a.valueType));
+		return {}; // Unreachable
+	}
+	return (*this)->ToValue<T>();
+}
+
+template<typename T>
+	udm::ArrayIterator<T>::ArrayIterator()
+	: m_curProperty{}
+{}
+
+template<typename T>
+	udm::ArrayIterator<T>::ArrayIterator(udm::Array &a,uint32_t idx)
+	: m_curProperty{a,idx}
+{}
+
+template<typename T>
+	udm::ArrayIterator<T>::ArrayIterator(udm::Array &a)
+	: ArrayIterator{a,0u}
+{}
+
+template<typename T>
+	udm::ArrayIterator<T>::ArrayIterator(const ArrayIterator &other)
+	: m_curProperty{other.m_curProperty}
+{}
+
+template<typename T>
+	udm::ArrayIterator<T> &udm::ArrayIterator<T>::operator++()
+{
+	++m_curProperty.arrayIndex;
+	return *this;
+}
+
+template<typename T>
+	udm::ArrayIterator<T> udm::ArrayIterator<T>::operator++(int)
+{
+	auto it = *this;
+	it.operator++();
+	return it;
+}
+
+template<typename T>
+	typename udm::ArrayIterator<T>::reference udm::ArrayIterator<T>::operator*() {return m_curProperty.GetValue<T>();}
+
+template<typename T>
+	typename udm::ArrayIterator<T>::pointer udm::ArrayIterator<T>::operator->() {return m_curProperty.GetValuePtr<T>();}
+
+template<typename T>
+	bool udm::ArrayIterator<T>::operator==(const ArrayIterator &other) const {return m_curProperty == other.m_curProperty;}
+
+template<typename T>
+	bool udm::ArrayIterator<T>::operator!=(const ArrayIterator &other) const {return !operator==(other);}
 
 #endif

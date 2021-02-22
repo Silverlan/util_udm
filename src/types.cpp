@@ -123,12 +123,13 @@ void udm::Array::Resize(uint32_t newSize)
 			}
 			values = newValues;
 			size = newSize;
-
+			
+			// Also see udm::Property::Read (with array overload)
 			if constexpr(std::is_same_v<T,Element> || std::is_same_v<T,Array>)
 			{
 				auto *p = static_cast<T*>(values);
 				for(auto i=decltype(size){0u};i<size;++i)
-					p->fromProperty = PropertyWrapper{*this,i};
+					p[i].fromProperty = PropertyWrapper{*this,i};
 			}
 		},tag);
 		return;
@@ -207,6 +208,55 @@ void udm::PropertyWrapper::operator=(Property &other)
 	prop = &other;
 	arrayIndex = std::numeric_limits<uint32_t>::max();
 }
+
+udm::PropertyWrapper::operator bool() const
+{
+	if(arrayIndex == std::numeric_limits<uint32_t>::max())
+		return prop;
+	auto *a = GetOwningArray();
+	if(a == nullptr || !linked)
+		return false;
+	auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
+	return linkedWrapper.propName.empty() || static_cast<bool>(const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[linkedWrapper.propName]);
+}
+
+bool udm::PropertyWrapper::IsArrayItem() const
+{
+	/*return arrayIndex != std::numeric_limits<uint32_t>::max() && linked && 
+		static_cast<const LinkedPropertyWrapper&>(*this).prev &&
+		static_cast<const LinkedPropertyWrapper&>(*this).prev->prop &&
+		static_cast<const LinkedPropertyWrapper&>(*this).prev->prop->IsType(Type::Array);*/
+	return arrayIndex != std::numeric_limits<uint32_t>::max() && prop && prop->IsType(Type::Array);
+}
+
+udm::Array *udm::PropertyWrapper::GetOwningArray()
+{
+	if(IsArrayItem() == false)
+		return nullptr;
+	//return &static_cast<const LinkedPropertyWrapper&>(*this).prev->prop->GetValue<Array>();
+	return &prop->GetValue<Array>();
+}
+
+bool udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize) const
+{
+	if(IsArrayItem())
+	{
+		auto &a = *GetOwningArray();
+		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetBlobData(outBuffer,bufferSize);
+		return a.IsValueType(Type::Blob) ? Property::GetBlobData(a.GetValue<Blob>(arrayIndex),outBuffer,bufferSize) :
+			a.IsValueType(Type::BlobLz4) ? Property::GetBlobData(a.GetValue<BlobLz4>(arrayIndex),outBuffer,bufferSize) :
+			false;
+	}
+	return (*this)->GetBlobData(outBuffer,bufferSize);
+}
+
+uint32_t udm::PropertyWrapper::GetSize() const
+{
+	return (static_cast<bool>(*this) && (*this)->IsType(Type::Array)) ? GetValue<udm::Array>().GetSize() : 0;
+}
+udm::ArrayIterator<udm::Element> udm::PropertyWrapper::begin() {return begin<Element>();}
+udm::ArrayIterator<udm::Element> udm::PropertyWrapper::end() {return end<Element>();}
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type)
 {
@@ -351,4 +401,20 @@ void udm::LinkedPropertyWrapper::InitializeProperty(Type type)
 	auto &el = *static_cast<Element*>(prev->prop->value);
 	prop = el.Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
 }
+
+bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
+{
+	if(linked != other.linked)
+		return false;
+	if(linked)
+		return static_cast<const udm::LinkedPropertyWrapper&>(*this) == static_cast<const udm::LinkedPropertyWrapper&>(other);
+	return prop == other.prop && arrayIndex == other.arrayIndex;
+}
+bool udm::PropertyWrapper::operator!=(const PropertyWrapper &other) const {return !operator==(other);}
+
+bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) const
+{
+	return prop == other.prop && arrayIndex == other.arrayIndex && propName == other.propName;
+}
+bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
 #pragma optimize("",on)
