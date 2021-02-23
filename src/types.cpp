@@ -220,6 +220,19 @@ udm::PropertyWrapper::operator bool() const
 	return linkedWrapper.propName.empty() || static_cast<bool>(const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[linkedWrapper.propName]);
 }
 
+void *udm::PropertyWrapper::GetValuePtr(Type &outType)
+{
+	if(IsArrayItem())
+	{
+		auto &a = *GetOwningArray();
+		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr(outType);
+		outType = a.valueType;
+		return static_cast<uint8_t*>(a.values) +arrayIndex *size_of(a.valueType);
+	}
+	return (*this)->GetValuePtr(outType);
+}
+
 bool udm::PropertyWrapper::IsArrayItem() const
 {
 	/*return arrayIndex != std::numeric_limits<uint32_t>::max() && linked && 
@@ -237,6 +250,15 @@ udm::Array *udm::PropertyWrapper::GetOwningArray()
 	return &prop->GetValue<Array>();
 }
 
+bool udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize,Type type) const
+{
+	if(GetBlobData(outBuffer,bufferSize))
+		return true;
+	if(IsArrayItem())
+		return false;
+	return (*this)->GetBlobData(outBuffer,bufferSize,type);
+}
+
 bool udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize) const
 {
 	if(IsArrayItem())
@@ -251,9 +273,29 @@ bool udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize) const
 	return (*this)->GetBlobData(outBuffer,bufferSize);
 }
 
+udm::Blob udm::PropertyWrapper::GetBlobData(Type &outType) const
+{
+	if(IsArrayItem())
+	{
+		auto &a = *GetOwningArray();
+		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetBlobData(outType);
+		return a.IsValueType(Type::Blob) ? a.GetValue<Blob>(arrayIndex) :
+			a.IsValueType(Type::BlobLz4) ? Property::GetBlobData(a.GetValue<BlobLz4>(arrayIndex)) :
+			udm::Blob{};
+	}
+	return (*this)->GetBlobData(outType);
+}
+
 uint32_t udm::PropertyWrapper::GetSize() const
 {
 	return (static_cast<bool>(*this) && (*this)->IsType(Type::Array)) ? GetValue<udm::Array>().GetSize() : 0;
+}
+void udm::PropertyWrapper::Resize(uint32_t size)
+{
+	if(!static_cast<bool>(*this) || (*this)->IsType(Type::Array) == false)
+		return;
+	GetValue<udm::Array>().Resize(size);
 }
 udm::ArrayIterator<udm::Element> udm::PropertyWrapper::begin() {return begin<Element>();}
 udm::ArrayIterator<udm::Element> udm::PropertyWrapper::end() {return end<Element>();}

@@ -351,6 +351,8 @@ namespace udm
 		LinkedPropertyWrapper operator[](const char *key);
 
 		bool GetBlobData(void *outBuffer,size_t bufferSize) const;
+		bool GetBlobData(void *outBuffer,size_t bufferSize,Type type) const;
+		Blob GetBlobData(Type &outType) const;
 		template<class T>
 			bool GetBlobData(T &v) const
 		{
@@ -377,6 +379,7 @@ namespace udm
 			const T &GetValue() const;
 		template<typename T>
 			T *GetValuePtr();
+		void *GetValuePtr(Type &outType);
 		template<typename T>
 			T ToValue(const T &defaultValue) const;
 		template<typename T>
@@ -426,6 +429,7 @@ namespace udm
 		static constexpr uint8_t EXTENDED_STRING_IDENTIFIER = std::numeric_limits<uint8_t>::max();
 		static bool GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize);
 		static bool GetBlobData(const BlobLz4 &blob,void *outBuffer,size_t bufferSize);
+		static Blob GetBlobData(const BlobLz4 &blob);
 	private:
 		template<typename T>
 			static void NumericTypeToString(T value,std::stringstream &ss)
@@ -467,6 +471,7 @@ namespace udm
 		ArrayIterator();
 		ArrayIterator(udm::Array &a);
 		ArrayIterator(udm::Array &a,uint32_t idx);
+		ArrayIterator(const ArrayIterator &other);
 		ArrayIterator &operator++();
 		ArrayIterator operator++(int);
 		reference operator*();
@@ -474,7 +479,6 @@ namespace udm
 		bool operator==(const ArrayIterator &other) const;
 		bool operator!=(const ArrayIterator &other) const;
 	private:
-		ArrayIterator(const ArrayIterator &other);
 		udm::LinkedPropertyWrapper m_curProperty;
 	};
 
@@ -501,6 +505,8 @@ namespace udm
 		Array *GetOwningArray();
 		const Array *GetOwningArray() const {return const_cast<PropertyWrapper*>(this)->GetOwningArray();}
 		bool GetBlobData(void *outBuffer,size_t bufferSize) const;
+		bool GetBlobData(void *outBuffer,size_t bufferSize,Type type) const;
+		Blob GetBlobData(Type &outType) const;
 		template<class T>
 			bool GetBlobData(T &v) const;
 		template<typename T>
@@ -509,6 +515,7 @@ namespace udm
 			const T &GetValue() const;
 		template<typename T>
 			T *GetValuePtr();
+		void *GetValuePtr(Type &outType);
 		template<typename T>
 			T ToValue(const T &defaultValue) const;
 		template<typename T>
@@ -518,6 +525,7 @@ namespace udm
 		
 		// For array properties
 		uint32_t GetSize() const;
+		void Resize(uint32_t size);
 		template<typename T>
 			ArrayIterator<T> begin();
 		template<typename T>
@@ -1158,6 +1166,7 @@ template<typename T>
 }
 template<typename T>
 	const T &udm::PropertyWrapper::GetValue() const {return const_cast<PropertyWrapper*>(this)->GetValue<T>();}
+
 template<typename T>
 	T *udm::PropertyWrapper::GetValuePtr()
 {
@@ -1184,6 +1193,8 @@ template<typename T>
 template<typename T>
 	udm::ArrayIterator<T> udm::PropertyWrapper::begin()
 {
+	if(!static_cast<bool>(*this))
+		return ArrayIterator<T>{};
 	auto *a = GetValuePtr<Array>();
 	if(a == nullptr)
 		return ArrayIterator<T>{};
@@ -1192,6 +1203,8 @@ template<typename T>
 template<typename T>
 	udm::ArrayIterator<T> udm::PropertyWrapper::end()
 {
+	if(!static_cast<bool>(*this))
+		return ArrayIterator<T>{};
 	auto *a = GetValuePtr<Array>();
 	if(a == nullptr)
 		return ArrayIterator<T>{};

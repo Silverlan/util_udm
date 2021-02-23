@@ -475,11 +475,61 @@ bool udm::Property::GetBlobData(const BlobLz4 &blobLz4,void *outBuffer,size_t bu
 	return true;
 }
 
+udm::Blob udm::Property::GetBlobData(const BlobLz4 &blob) {return decompress_lz4_blob(blob);}
+
 bool udm::Property::GetBlobData(void *outBuffer,size_t bufferSize) const
 {
 	return IsType(Type::Blob) ? GetBlobData(GetValue<Blob>(),outBuffer,bufferSize) :
 		IsType(Type::BlobLz4) ? GetBlobData(GetValue<BlobLz4>(),outBuffer,bufferSize) :
 		false;
+}
+
+bool udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,Type type) const
+{
+	if(GetBlobData(outBuffer,bufferSize))
+		return true;
+	if(is_trivial_type(type))
+	{
+		if(IsType(Type::Array))
+		{
+			auto &a = GetValue<Array>();
+			if(a.valueType == type)
+			{
+				if(a.GetSize() *size_of(a.valueType) != bufferSize)
+					return false;
+				memcpy(outBuffer,a.values,bufferSize);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+udm::Blob udm::Property::GetBlobData(Type &outType) const
+{
+	outType = type;
+	if(IsType(Type::Blob))
+		return GetValue<Blob>();
+	if(IsType(Type::BlobLz4))
+		return decompress_lz4_blob(GetValue<BlobLz4>());
+	if(is_trivial_type(type))
+	{
+		if(IsType(Type::Array))
+		{
+			auto &a = GetValue<Array>();
+			udm::Blob blob {};
+			blob.data.resize(a.GetSize() *size_of(a.valueType));
+			memcpy(blob.data.data(),a.values,blob.data.size());
+			return blob;
+		}
+	}
+	return {};
+}
+
+void *udm::Property::GetValuePtr(Type &outType)
+{
+	outType = this->type;
+	return value;
 }
 
 bool udm::Property::Read(Type ptype,const VFilePtr &f,std::string &outErr)
