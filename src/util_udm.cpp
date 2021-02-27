@@ -176,7 +176,7 @@ bool udm::Property::Read(const VFilePtr &f,Element &el,std::string &outErr)
 	std::vector<std::string> stringTable {};
 	stringTable.resize(numChildren);
 	for(auto i=decltype(numChildren){0u};i<numChildren;++i)
-		stringTable[i] = f->ReadString();
+		stringTable[i] = Data::ReadKey(f);
 	el.children.reserve(numChildren);
 	for(auto i=decltype(numChildren){0u};i<numChildren;++i)
 	{
@@ -390,7 +390,7 @@ void udm::Property::Write(VFilePtrReal &f,const Element &el)
 
 	f->Write<uint32_t>(el.children.size());
 	for(auto &pair : el.children)
-		f->WriteString(pair.first);
+		Data::WriteKey(f,pair.first);
 
 	for(auto &pair : el.children)
 		pair.second->Write(f);
@@ -728,6 +728,22 @@ void udm::Data::SkipProperty(VFilePtr &f,Type type)
 	static_assert(NON_TRIVIAL_TYPES.size() == 6);
 }
 
+std::string udm::Data::ReadKey(const VFilePtr &f)
+{
+	auto len = f->Read<uint8_t>();
+	std::string str;
+	str.resize(len);
+	f->Read(str.data(),len);
+	return str;
+}
+void udm::Data::WriteKey(VFilePtrReal &f,const std::string &key)
+{
+	if(key.length() > std::numeric_limits<uint8_t>::max())
+		return WriteKey(f,key.substr(0,std::numeric_limits<uint8_t>::max()));
+	f->Write<uint8_t>(key.length());
+	f->Write(key.data(),key.length());
+}
+
 udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path,std::string &outErr) const
 {
 	auto end = path.find('.');
@@ -802,7 +818,7 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path,st
 	uint32_t ichild = std::numeric_limits<uint32_t>::max();
 	for(auto i=decltype(numChildren){0u};i<numChildren;++i)
 	{
-		auto str = f->ReadString();
+		auto str = ReadKey(f);
 		if(str == name)
 			ichild = i;
 	}

@@ -719,6 +719,9 @@ namespace udm
 		void ToAscii(std::stringstream &ss) const;
 
 		const Header &GetHeader() const {return m_header;}
+
+		static std::string ReadKey(const VFilePtr &f);
+		static void WriteKey(VFilePtrReal &f,const std::string &key);
 	private:
 		bool ValidateHeaderProperties(std::string &outErr);
 		static void SkipProperty(VFilePtr &f,Type type);
