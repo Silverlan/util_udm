@@ -119,6 +119,15 @@ namespace udm
 	};
 	static std::array<Type,6> NON_TRIVIAL_TYPES = {Type::String,Type::Utf8String,Type::Blob,Type::BlobLz4,Type::Element,Type::Array};
 
+	enum class BlobResult : uint8_t
+	{
+		Success = 0,
+		DecompressedSizeMismatch,
+		InsufficientSize,
+		ValueTypeMismatch,
+		NotABlobType
+	};
+
 	constexpr bool is_numeric_type(Type t)
 	{
 	  switch (t){
@@ -350,14 +359,27 @@ namespace udm
 		LinkedPropertyWrapper operator[](const std::string &key);
 		LinkedPropertyWrapper operator[](const char *key);
 
-		bool GetBlobData(void *outBuffer,size_t bufferSize) const;
-		bool GetBlobData(void *outBuffer,size_t bufferSize,Type type) const;
+		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize=nullptr) const;
+		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,Type type,uint64_t *optOutRequiredSize=nullptr) const;
 		Blob GetBlobData(Type &outType) const;
 		template<class T>
-			bool GetBlobData(T &v) const
+			BlobResult GetBlobData(T &v) const
 		{
-			if(GetBlobData(v.data(),v.size() *sizeof(v.front())))
-				return true;
+			uint64_t reqBufferSize = 0;
+			auto result = GetBlobData(v.data(),v.size() *sizeof(v[0]),&reqBufferSize);
+			if(result == BlobResult::InsufficientSize)
+			{
+				if(v.size() *sizeof(v[0]) != reqBufferSize)
+				{
+					if((reqBufferSize %sizeof(v[0])) > 0)
+						return BlobResult::ValueTypeMismatch;
+					v.resize(reqBufferSize /sizeof(v[0]));
+					return GetBlobData<T>(v);
+				}
+				return result;
+			}
+			if(result != BlobResult::NotABlobType)
+				return result;
 			if constexpr(is_trivial_type(type_to_enum<T::value_type>()))
 			{
 				if(IsType(Type::Array))
@@ -367,11 +389,11 @@ namespace udm
 					{
 						v.resize(a.GetSize());
 						memcpy(v.data(),a.values,v.size() *sizeof(v[0]));
-						return true;
+						return BlobResult::Success;
 					}
 				}
 			}
-			return false;
+			return BlobResult::NotABlobType;
 		}
 		template<typename T>
 			T &GetValue();
@@ -427,8 +449,8 @@ namespace udm
 		static std::string ToAsciiValue(const Mat3x4 &m,const std::string &prefix="");
 
 		static constexpr uint8_t EXTENDED_STRING_IDENTIFIER = std::numeric_limits<uint8_t>::max();
-		static bool GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize);
-		static bool GetBlobData(const BlobLz4 &blob,void *outBuffer,size_t bufferSize);
+		static BlobResult GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize);
+		static BlobResult GetBlobData(const BlobLz4 &blob,void *outBuffer,size_t bufferSize);
 		static Blob GetBlobData(const BlobLz4 &blob);
 	private:
 		template<typename T>
@@ -504,11 +526,11 @@ namespace udm
 
 		Array *GetOwningArray();
 		const Array *GetOwningArray() const {return const_cast<PropertyWrapper*>(this)->GetOwningArray();}
-		bool GetBlobData(void *outBuffer,size_t bufferSize) const;
-		bool GetBlobData(void *outBuffer,size_t bufferSize,Type type) const;
+		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize=nullptr) const;
+		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,Type type,uint64_t *optOutRequiredSize=nullptr) const;
 		Blob GetBlobData(Type &outType) const;
 		template<class T>
-			bool GetBlobData(T &v) const;
+			BlobResult GetBlobData(T &v) const;
 		template<typename T>
 			T &GetValue();
 		template<typename T>
@@ -582,7 +604,8 @@ namespace udm
 			void operator=(T &&v);
 		std::unique_ptr<LinkedPropertyWrapper> prev = nullptr;
 		std::string propName;
-	private:
+
+		// For internal use only!
 		void InitializeProperty(Type type=Type::Element);
 	};
 
@@ -1142,12 +1165,25 @@ template<typename T>
 }
 
 template<class T>
-	bool udm::PropertyWrapper::GetBlobData(T &v) const
+	udm::BlobResult udm::PropertyWrapper::GetBlobData(T &v) const
 {
-	if(GetBlobData(v.data(),v.size() *sizeof(v.front())))
-		return true;
+	uint64_t reqBufferSize = 0;
+	auto result = GetBlobData(v.data(),v.size() *sizeof(v[0]),&reqBufferSize);
+	if(result == BlobResult::InsufficientSize)
+	{
+		if(v.size() *sizeof(v[0]) != reqBufferSize)
+		{
+			if((reqBufferSize %sizeof(v[0])) > 0)
+				return BlobResult::ValueTypeMismatch;
+			v.resize(reqBufferSize /sizeof(v[0]));
+			return GetBlobData<T>(v);
+		}
+		return result;
+	}
+	if(result != BlobResult::NotABlobType)
+		return result;
 	if(IsArrayItem())
-		return false;
+		return BlobResult::NotABlobType;
 	return (*this)->GetBlobData(v);
 }
 template<typename T>
@@ -1179,7 +1215,7 @@ template<typename T>
 			return nullptr;
 		return &static_cast<T*>(a.values)[arrayIndex];
 	}
-	return (*this)->GetValuePtr<T>();
+	return prop ? (*this)->GetValuePtr<T>() : nullptr;
 }
 template<typename T>
 	T udm::PropertyWrapper::ToValue(const T &defaultValue) const

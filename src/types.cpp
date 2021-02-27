@@ -250,27 +250,43 @@ udm::Array *udm::PropertyWrapper::GetOwningArray()
 	return &prop->GetValue<Array>();
 }
 
-bool udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize,Type type) const
+udm::BlobResult udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize,Type type,uint64_t *optOutRequiredSize) const
 {
-	if(GetBlobData(outBuffer,bufferSize))
-		return true;
+	auto result = GetBlobData(outBuffer,bufferSize,optOutRequiredSize);
+	if(result != BlobResult::NotABlobType)
+		return result;
 	if(IsArrayItem())
-		return false;
-	return (*this)->GetBlobData(outBuffer,bufferSize,type);
+		return BlobResult::NotABlobType;
+	return (*this)->GetBlobData(outBuffer,bufferSize,type,optOutRequiredSize);
 }
 
-bool udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize) const
+udm::BlobResult udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize) const
 {
 	if(IsArrayItem())
 	{
 		auto &a = *GetOwningArray();
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetBlobData(outBuffer,bufferSize);
-		return a.IsValueType(Type::Blob) ? Property::GetBlobData(a.GetValue<Blob>(arrayIndex),outBuffer,bufferSize) :
-			a.IsValueType(Type::BlobLz4) ? Property::GetBlobData(a.GetValue<BlobLz4>(arrayIndex),outBuffer,bufferSize) :
-			false;
+			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetBlobData(outBuffer,bufferSize,optOutRequiredSize);
+		switch(a.valueType)
+		{
+		case Type::Blob:
+		{
+			auto &blob = a.GetValue<Blob>(arrayIndex);
+			if(optOutRequiredSize)
+				*optOutRequiredSize = blob.data.size();
+			return Property::GetBlobData(blob,outBuffer,bufferSize);
+		}
+		case Type::BlobLz4:
+		{
+			auto &blob = a.GetValue<BlobLz4>(arrayIndex);
+			if(optOutRequiredSize)
+				*optOutRequiredSize = blob.uncompressedSize;
+			return Property::GetBlobData(blob,outBuffer,bufferSize);
+		}
+		}
+		return BlobResult::NotABlobType;
 	}
-	return (*this)->GetBlobData(outBuffer,bufferSize);
+	return (*this)->GetBlobData(outBuffer,bufferSize,optOutRequiredSize);
 }
 
 udm::Blob udm::PropertyWrapper::GetBlobData(Type &outType) const
@@ -320,6 +336,8 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 		}
 		throw std::logic_error{"Attempted to add key-value to indexed property with invalid array reference!"};
 	}
+	if(prop == nullptr && linked)
+		static_cast<udm::LinkedPropertyWrapper&>(*this).InitializeProperty();
 	if(prop == nullptr || prop->type != Type::Element)
 		throw std::logic_error{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
 	auto wrapper = static_cast<Element*>(prop->value)->AddArray(path,size,type);
@@ -347,6 +365,8 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 		}
 		throw std::logic_error{"Attempted to add key-value to indexed property with invalid array reference!"};
 	}
+	if(prop == nullptr && linked)
+		static_cast<udm::LinkedPropertyWrapper&>(*this).InitializeProperty();
 	if(prop == nullptr || prop->type != Type::Element)
 		throw std::logic_error{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
 	auto wrapper = static_cast<Element*>(prop->value)->Add(path,type);

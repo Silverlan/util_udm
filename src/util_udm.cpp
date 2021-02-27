@@ -459,35 +459,51 @@ void udm::Property::Write(VFilePtrReal &f) const
 udm::LinkedPropertyWrapper udm::Property::operator[](const std::string &key) {return LinkedPropertyWrapper{*this}[key];}
 udm::LinkedPropertyWrapper udm::Property::operator[](const char *key) {return operator[](std::string{key});}
 
-bool udm::Property::GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize)
+udm::BlobResult udm::Property::GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize)
 {
 	if(blob.data.size() != bufferSize)
-		return false;
+		return BlobResult::InsufficientSize;
 	memcpy(outBuffer,blob.data.data(),bufferSize);
-	return true;
+	return BlobResult::Success;
 }
-bool udm::Property::GetBlobData(const BlobLz4 &blobLz4,void *outBuffer,size_t bufferSize)
+udm::BlobResult udm::Property::GetBlobData(const BlobLz4 &blobLz4,void *outBuffer,size_t bufferSize)
 {
 	auto blob = decompress_lz4_blob(blobLz4);
 	if(blob.data.size() != bufferSize)
-		return false;
+		return BlobResult::InsufficientSize;
 	memcpy(outBuffer,blob.data.data(),bufferSize);
-	return true;
+	return BlobResult::Success;
 }
 
 udm::Blob udm::Property::GetBlobData(const BlobLz4 &blob) {return decompress_lz4_blob(blob);}
 
-bool udm::Property::GetBlobData(void *outBuffer,size_t bufferSize) const
+udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize) const
 {
-	return IsType(Type::Blob) ? GetBlobData(GetValue<Blob>(),outBuffer,bufferSize) :
-		IsType(Type::BlobLz4) ? GetBlobData(GetValue<BlobLz4>(),outBuffer,bufferSize) :
-		false;
+	switch(type)
+	{
+	case Type::Blob:
+	{
+		auto &blob = GetValue<Blob>();
+		if(optOutRequiredSize)
+			*optOutRequiredSize = blob.data.size();
+		return GetBlobData(blob,outBuffer,bufferSize);
+	}
+	case Type::BlobLz4:
+	{
+		auto &blob = GetValue<BlobLz4>();
+		if(optOutRequiredSize)
+			*optOutRequiredSize = blob.uncompressedSize;
+		return GetBlobData(blob,outBuffer,bufferSize);
+	}
+	}
+	return BlobResult::NotABlobType;
 }
 
-bool udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,Type type) const
+udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,Type type,uint64_t *optOutRequiredSize) const
 {
-	if(GetBlobData(outBuffer,bufferSize))
-		return true;
+	auto result = GetBlobData(outBuffer,bufferSize,optOutRequiredSize);
+	if(result != BlobResult::NotABlobType)
+		return result;
 	if(is_trivial_type(type))
 	{
 		if(IsType(Type::Array))
@@ -495,14 +511,16 @@ bool udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,Type type) con
 			auto &a = GetValue<Array>();
 			if(a.valueType == type)
 			{
+				if(optOutRequiredSize)
+					*optOutRequiredSize = a.GetSize() *size_of(a.valueType);
 				if(a.GetSize() *size_of(a.valueType) != bufferSize)
-					return false;
+					return BlobResult::InsufficientSize;
 				memcpy(outBuffer,a.values,bufferSize);
-				return true;
+				return BlobResult::Success;
 			}
 		}
 	}
-	return false;
+	return BlobResult::NotABlobType;
 }
 
 udm::Blob udm::Property::GetBlobData(Type &outType) const
