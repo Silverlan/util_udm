@@ -13,6 +13,8 @@
 #include <cassert>
 #include <optional>
 #include <variant>
+#include <map>
+#include <unordered_map>
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
 #include <sharedutils/util.h>
@@ -764,6 +766,8 @@ template<typename T>
 {
 	if constexpr(util::is_specialization<T,std::vector>::value)
 		return Type::Array;
+	else if constexpr(util::is_specialization<T,std::unordered_map>::value || util::is_specialization<T,std::map>::value)
+		return Type::Element;
 	else if constexpr(std::is_same_v<T,void>)
 		return Type::Nil;
 	else if constexpr(util::is_string<T>())
@@ -928,6 +932,14 @@ template<typename T>
 			for(auto i=decltype(size){0u};i<size;++i)
 				a[i] = v[i];
 		}
+		return;
+	}
+	else if constexpr(util::is_specialization<TBase,std::unordered_map>::value || util::is_specialization<TBase,std::map>::value)
+	{
+		if(type != Type::Element)
+			throw std::logic_error{"Attempted to assign map to non-element property (of type " +std::string{magic_enum::enum_name(type)} +"), this is not allowed!"};
+		for(auto &pair : v)
+			(*this)[pair.first] = pair.second;
 		return;
 	}
 	auto vType = type_to_enum<TBase>();
@@ -1132,6 +1144,22 @@ template<typename T>
 			return v;
 		}
 	}
+	else if constexpr(util::is_specialization<T,std::unordered_map>::value || util::is_specialization<T,std::map>::value)
+	{
+		if(type != Type::Element)
+			return {};
+		using TValue = decltype(T::value_type::second);
+		auto &e = GetValue<Element>();
+		T result {};
+		for(auto &pair : e.children)
+		{
+			auto val = pair.second->ToValue<TValue>();
+			if(val.has_value() == false)
+				continue;
+			result[pair.first] = std::move(val.value());
+		}
+		return result;
+	}
 	auto vs = [&](auto tag) -> std::optional<T> {
 		if constexpr(is_convertible<decltype(tag)::type,T>())
 			return static_cast<T>(const_cast<udm::Property*>(this)->GetValue<decltype(tag)::type>());
@@ -1223,7 +1251,7 @@ template<typename T>
 	if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 		return defaultValue;
 	auto val = ToValue<T>();
-	return val.has_value() ? *val : defaultValue;
+	return val.has_value() ? std::move(val.value()) : defaultValue;
 }
 
 template<typename T>
