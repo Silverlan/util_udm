@@ -4,7 +4,7 @@
 
 #include "udm.hpp"
 #include <lz4.h>
-#pragma optimize("",off)
+
 udm::Blob udm::decompress_lz4_blob(const void *compressedData,uint64_t compressedSize,uint64_t uncompressedSize)
 {
 	udm::Blob dst {};
@@ -459,7 +459,16 @@ void udm::LinkedPropertyWrapper::InitializeProperty(Type type)
 		return;
 	prev->InitializeProperty(!isArrayElement ? Type::Element : Type::Array);
 	if(prev->prop == nullptr || prev->prop->type != Type::Element)
+	{
+		if(prev->prop && prev->prop->type == Type::Array && prev->arrayIndex != std::numeric_limits<uint32_t>::max() && static_cast<Array*>(prev->prop->value)->IsValueType(Type::Element))
+		{
+			prop = static_cast<Array*>(prev->prop->value)->GetValue<Element>(prev->arrayIndex).Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
+			return;
+		}
+		if(isArrayElement && prev->prop && prev->prop->type == Type::Array)
+			prop = (*static_cast<Array*>(prev->prop->value))[arrayIndex].prop;
 		return;
+	}
 	auto &el = *static_cast<Element*>(prev->prop->value);
 	prop = el.Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
 }
@@ -479,4 +488,3 @@ bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) 
 	return prop == other.prop && arrayIndex == other.arrayIndex && propName == other.propName;
 }
 bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
-#pragma optimize("",on)

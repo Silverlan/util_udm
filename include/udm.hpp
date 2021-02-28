@@ -320,6 +320,7 @@ namespace udm
 		return compress_lz4_blob(v.data(),v.size() *sizeof(v[0]));
 	}
 	constexpr size_t size_of(Type t);
+	constexpr size_t size_of_base_type(Type t);
 	template<typename T>
 		constexpr Type type_to_enum();
 	template<typename T>
@@ -694,6 +695,7 @@ namespace udm
 		static std::shared_ptr<Data> Open(const std::string &fileName,std::string &outErr);
 		static std::shared_ptr<Data> Open(const VFilePtr &f,std::string &outErr);
 		static std::shared_ptr<Data> Create(const std::string &assetType,Version assetVersion,std::string &outErr);
+		static std::shared_ptr<Data> Create(std::string &outErr);
 
 		PProperty LoadProperty(const std::string_view &path,std::string &outErr) const;
 
@@ -755,6 +757,16 @@ constexpr size_t udm::size_of(Type t)
 	throw std::logic_error{std::string{"UDM type "} +std::string{magic_enum::enum_name(t)} +" has non-constant size!"};
 	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
 	return 0;
+}
+
+constexpr size_t udm::size_of_base_type(Type t)
+{
+	if(is_non_trivial_type(t))
+	{
+		auto tag = get_non_trivial_tag(t);
+		return std::visit([&](auto tag){return sizeof(decltype(tag)::type);},tag);
+	}
+	return size_of(t);
 }
 
 template<typename T>
@@ -919,7 +931,7 @@ template<typename T>
 		a.SetValueType(valueType);
 		a.Resize(size);
 
-		if(size_of(valueType) != sizeof(TBase::value_type))
+		if(size_of_base_type(valueType) != sizeof(TBase::value_type))
 			throw std::logic_error{"Type size mismatch!"};
 		auto vs = [this,&a,&v](auto tag) {
 			using TTag = decltype(tag)::type;

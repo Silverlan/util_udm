@@ -6,9 +6,9 @@
 #include <sharedutils/magic_enum.hpp>
 #include <sharedutils/base64.hpp>
 #include <sstream>
-#pragma optimize("",off)
 
-static void test()
+
+/*static void test()
 {
 	udm::is_convertible<float,std::string>();
 	udm::is_convertible<float>(udm::Type::String);
@@ -30,7 +30,7 @@ static void test()
 	a[0] = 5.f;
 	auto b = a[1];
 	auto f = static_cast<float>(b);
-}
+}*/
 
 udm::Type udm::ascii_type_to_enum(const char *type)
 {
@@ -578,6 +578,11 @@ std::shared_ptr<udm::Data> udm::Data::Create(const std::string &assetType,Versio
 	return udmData;
 }
 
+std::shared_ptr<udm::Data> udm::Data::Create(std::string &outErr)
+{
+	return Create("",0,outErr);
+}
+
 std::shared_ptr<udm::Data> udm::Data::Open(const std::string &fileName,std::string &outErr)
 {
 	auto f = FileManager::OpenFile(fileName.c_str(),"rb");
@@ -973,4 +978,3 @@ const udm::Element *udm::Data::operator->() const {return const_cast<Data*>(this
 udm::Element &udm::Data::operator*() {return GetAssetData()->GetValue<Element>();}
 const udm::Element &udm::Data::operator*() const {return const_cast<Data*>(this)->operator*();}
 udm::AssetData udm::Data::GetAssetData() const {return AssetData{*m_rootProperty};}
-#pragma optimize("",on)
