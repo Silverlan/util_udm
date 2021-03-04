@@ -127,7 +127,8 @@ namespace udm
 		DecompressedSizeMismatch,
 		InsufficientSize,
 		ValueTypeMismatch,
-		NotABlobType
+		NotABlobType,
+		InvalidProperty
 	};
 
 	constexpr bool is_numeric_type(Type t)
@@ -362,12 +363,16 @@ namespace udm
 		LinkedPropertyWrapper operator[](const std::string &key);
 		LinkedPropertyWrapper operator[](const char *key);
 
+		// operator udm::LinkedPropertyWrapper();
+
 		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize=nullptr) const;
 		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,Type type,uint64_t *optOutRequiredSize=nullptr) const;
 		Blob GetBlobData(Type &outType) const;
 		template<class T>
 			BlobResult GetBlobData(T &v) const
 		{
+			if(!*this)
+				return BlobResult::InvalidProperty;
 			uint64_t reqBufferSize = 0;
 			auto result = GetBlobData(v.data(),v.size() *sizeof(v[0]),&reqBufferSize);
 			if(result == BlobResult::InsufficientSize)
@@ -540,6 +545,8 @@ namespace udm
 			const T &GetValue() const;
 		template<typename T>
 			T *GetValuePtr();
+		template<typename T>
+			const T *GetValuePtr() const {return const_cast<PropertyWrapper*>(this)->GetValuePtr<T>();}
 		void *GetValuePtr(Type &outType);
 		template<typename T>
 			T ToValue(const T &defaultValue) const;
@@ -547,6 +554,31 @@ namespace udm
 			std::optional<T> ToValue() const;
 		template<typename T>
 			T operator()(const T &defaultValue) const {return ToValue<T>(defaultValue);}
+		template<typename T>
+			void operator()(T &valOut) const
+			{
+				if constexpr(util::is_specialization<T,std::vector>::value || util::is_specialization<T,std::map>::value || util::is_specialization<T,std::unordered_map>::value)
+					valOut = std::move((*this)(const_cast<const T&>(valOut)));
+				else if constexpr(std::is_enum_v<std::remove_reference_t<T>>)
+				{
+					using TEnum = std::remove_reference_t<T>;
+					auto *ptr = GetValuePtr<std::string>();
+					if(ptr)
+					{
+						valOut = ustring::string_to_enum<TEnum>(*ptr,valOut);
+						return;
+					}
+					valOut = static_cast<TEnum>((*this)(reinterpret_cast<const std::underlying_type_t<TEnum>&>(valOut)));
+				}
+				else
+				{
+					auto *ptr = GetValuePtr<T>();
+					if(ptr)
+						valOut = *ptr;
+					else
+						valOut = (*this)(const_cast<const T&>(valOut));
+				}
+			}
 		
 		// For array properties
 		uint32_t GetSize() const;
@@ -558,7 +590,8 @@ namespace udm
 		ArrayIterator<Element> begin();
 		ArrayIterator<Element> end();
 		//
-
+		
+		LinkedPropertyWrapper operator[](const std::string_view &key) const;
 		LinkedPropertyWrapper operator[](const std::string &key) const;
 		LinkedPropertyWrapper operator[](const char *key) const;
 		LinkedPropertyWrapper operator[](uint32_t idx) const;
@@ -785,7 +818,7 @@ template<typename T>
 		return Type::Element;
 	else if constexpr(std::is_same_v<T,void>)
 		return Type::Nil;
-	else if constexpr(util::is_string<T>())
+	else if constexpr(util::is_string<T>() || std::is_same_v<T,std::string_view>)
 		return Type::String;
 	else if constexpr(std::is_same_v<T,Utf8String>)
 		return Type::Utf8String;
@@ -991,45 +1024,50 @@ template<typename T>
 {
 	if(prop == nullptr)
 		throw std::runtime_error{"Cannot assign propety value: Property is invalid!"};
-	if(prop->type == Type::Array)
+	if constexpr(std::is_enum_v<std::remove_reference_t<T>>)
+		return operator=(magic_enum::enum_name(v));
+	else
 	{
-		if(arrayIndex == std::numeric_limits<uint32_t>::max())
-			throw std::runtime_error{"Cannot assign propety value to array: No index has been specified!"};
-		if(linked && !static_cast<LinkedPropertyWrapper*>(this)->propName.empty())
+		if(prop->type == Type::Array)
 		{
-			auto &a = *static_cast<Array*>(prop->value);
-			if(a.valueType != Type::Element)
-				return;
-			a.GetValue<Element>(arrayIndex).children[static_cast<LinkedPropertyWrapper*>(this)->propName] = Property::Create(v);
+			if(arrayIndex == std::numeric_limits<uint32_t>::max())
+				throw std::runtime_error{"Cannot assign propety value to array: No index has been specified!"};
+			if(linked && !static_cast<LinkedPropertyWrapper*>(this)->propName.empty())
+			{
+				auto &a = *static_cast<Array*>(prop->value);
+				if(a.valueType != Type::Element)
+					return;
+				a.GetValue<Element>(arrayIndex).children[static_cast<LinkedPropertyWrapper*>(this)->propName] = Property::Create(v);
+			}
+			else
+				static_cast<Array*>(prop->value)->SetValue(arrayIndex,v);
+			return;
 		}
-		else
-			static_cast<Array*>(prop->value)->SetValue(arrayIndex,v);
-		return;
-	}
-	if(prop->type != Type::Element)
-	{
-		*prop = v;
-		return;
-	}
-	auto &el = *static_cast<Element*>(prop->value);
-	auto &wpParent = el.parentProperty;
-	if(!wpParent)
-		throw std::runtime_error{"Attempted to change value of element property without a valid parent, this is not allowed!"};
-	auto &parent = wpParent;
-	switch(parent->type)
-	{
-	case Type::Element:
-		static_cast<Element*>(parent->value)->SetValue(el,v);
-		break;
-	/*case Type::Array:
-		if(arrayIndex == std::numeric_limits<uint32_t>::max())
-			throw std::runtime_error{"Element has parent of type " +std::string{magic_enum::enum_name(parent->type)} +", but is not indexed!"};
-		(*static_cast<Array*>(parent->value))[arrayIndex] = v;
-		break;*/
-	default:
-		throw std::runtime_error{
-			"Element has parent of type " +std::string{magic_enum::enum_name(parent->type)} +", but only " +std::string{magic_enum::enum_name(Type::Element)}/* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ +" types are allowed!"
-		};
+		if(prop->type != Type::Element)
+		{
+			*prop = v;
+			return;
+		}
+		auto &el = *static_cast<Element*>(prop->value);
+		auto &wpParent = el.parentProperty;
+		if(!wpParent)
+			throw std::runtime_error{"Attempted to change value of element property without a valid parent, this is not allowed!"};
+		auto &parent = wpParent;
+		switch(parent->type)
+		{
+		case Type::Element:
+			static_cast<Element*>(parent->value)->SetValue(el,v);
+			break;
+		/*case Type::Array:
+			if(arrayIndex == std::numeric_limits<uint32_t>::max())
+				throw std::runtime_error{"Element has parent of type " +std::string{magic_enum::enum_name(parent->type)} +", but is not indexed!"};
+			(*static_cast<Array*>(parent->value))[arrayIndex] = v;
+			break;*/
+		default:
+			throw std::runtime_error{
+				"Element has parent of type " +std::string{magic_enum::enum_name(parent->type)} +", but only " +std::string{magic_enum::enum_name(Type::Element)}/* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ +" types are allowed!"
+			};
+		}
 	}
 }
 

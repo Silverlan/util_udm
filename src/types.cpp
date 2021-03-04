@@ -262,6 +262,8 @@ udm::BlobResult udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferS
 
 udm::BlobResult udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize) const
 {
+	if(!*this)
+		return BlobResult::InvalidProperty;
 	if(IsArrayItem())
 	{
 		auto &a = *GetOwningArray();
@@ -407,7 +409,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const char *key) con
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](int32_t idx) const {return operator[](static_cast<uint32_t>(idx));}
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](size_t idx) const {return operator[](static_cast<uint32_t>(idx));}
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &key) const
+udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_view &key) const
 {
 	auto sep = key.find('.');
 	if(sep != std::string::npos)
@@ -424,7 +426,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &k
 	case Type::Element:
 	{
 		auto *el = static_cast<Element*>(prop->value);
-		auto it = el->children.find(key);
+		auto it = el->children.find(std::string{key});
 		if(it == el->children.end())
 		{
 			udm::LinkedPropertyWrapper wrapper {};
@@ -450,6 +452,8 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &k
 	}
 	return {};
 }
+
+udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &key) const {return operator[](std::string_view{key});}
 
 void udm::LinkedPropertyWrapper::InitializeProperty(Type type)
 {

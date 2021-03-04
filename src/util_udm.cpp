@@ -477,8 +477,12 @@ udm::BlobResult udm::Property::GetBlobData(const BlobLz4 &blobLz4,void *outBuffe
 
 udm::Blob udm::Property::GetBlobData(const BlobLz4 &blob) {return decompress_lz4_blob(blob);}
 
+// udm::Property::operator udm::LinkedPropertyWrapper() {return LinkedPropertyWrapper{*this};}
+
 udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize) const
 {
+	if(!*this)
+		return udm::BlobResult::InvalidProperty;
 	switch(type)
 	{
 	case Type::Blob:
