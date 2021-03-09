@@ -117,7 +117,9 @@ namespace udm
 		Element,
 		Array,
 
-		Count
+		Count,
+		Last = Array,
+		Invalid = std::numeric_limits<uint8_t>::max()
 	};
 	static std::array<Type,6> NON_TRIVIAL_TYPES = {Type::String,Type::Utf8String,Type::Blob,Type::BlobLz4,Type::Element,Type::Array};
 
@@ -185,7 +187,7 @@ namespace udm
 	  return false;
 	}
 
-	constexpr bool is_trivial_type(Type t) {return !is_non_trivial_type(t);}
+	constexpr bool is_trivial_type(Type t) {return !is_non_trivial_type(t) && t != Type::Invalid;}
 
 	constexpr const char *enum_type_to_ascii(Type t)
 	{
@@ -325,6 +327,8 @@ namespace udm
 	template<typename T>
 		constexpr Type type_to_enum();
 	template<typename T>
+		constexpr Type type_to_enum_s();
+	template<typename T>
 		constexpr Type array_value_type_to_enum();
 	template<typename TFrom,typename TTo>
 		constexpr bool is_convertible();
@@ -388,7 +392,7 @@ namespace udm
 			}
 			if(result != BlobResult::NotABlobType)
 				return result;
-			if constexpr(is_trivial_type(type_to_enum<T::value_type>()))
+			if constexpr(is_trivial_type(type_to_enum_s<T::value_type>()))
 			{
 				if(IsType(Type::Array))
 				{
@@ -812,6 +816,15 @@ template<typename T>
 template<typename T>
 	constexpr udm::Type udm::type_to_enum()
 {
+	constexpr auto type = type_to_enum_s<T>();
+	if constexpr(umath::to_integral(type) > umath::to_integral(Type::Last))
+		static_assert(false,"Unsupported type!");
+	return type;
+}
+
+template<typename T>
+	constexpr udm::Type udm::type_to_enum_s()
+{
 	if constexpr(util::is_specialization<T,std::vector>::value)
 		return Type::Array;
 	else if constexpr(util::is_specialization<T,std::unordered_map>::value || util::is_specialization<T,std::map>::value)
@@ -874,10 +887,8 @@ template<typename T>
 		return Type::Element;
 	else if constexpr(std::is_same_v<T,Array>)
 		return Type::Array;
-	else
-		static_assert(false,"Unsupported type!");
 	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
-	return Type::Nil;
+	return Type::Invalid;
 }
 
 template<typename TFrom,typename TTo>

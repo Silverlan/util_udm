@@ -421,36 +421,46 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 		wrapper.propName = key;
 		return wrapper;
 	}
-	switch(prop->type)
-	{
-	case Type::Element:
-	{
-		auto *el = static_cast<Element*>(prop->value);
-		auto it = el->children.find(std::string{key});
-		if(it == el->children.end())
+	auto getElementProperty = [](const PropertyWrapper &prop,Element &el,const std::string_view &key) {
+		auto it = el.children.find(std::string{key});
+		if(it == el.children.end())
 		{
 			udm::LinkedPropertyWrapper wrapper {};
-			wrapper.prev = linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper&>(*this)) : std::make_unique<udm::LinkedPropertyWrapper>(*this);
+			wrapper.prev = prop.linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper&>(prop)) : std::make_unique<udm::LinkedPropertyWrapper>(prop);
 			wrapper.propName = key;
 			return wrapper;
 		}
 		udm::LinkedPropertyWrapper wrapper {*it->second};
-		wrapper.prev = linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper&>(*this)) : std::make_unique<udm::LinkedPropertyWrapper>(*this);
+		wrapper.prev = prop.linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper&>(prop)) : std::make_unique<udm::LinkedPropertyWrapper>(prop);
 		wrapper.propName = key;
 		return wrapper;
-	}
-	case Type::Array:
+	};
+	Element *el = nullptr;
+	if(prop->type == Type::Element)
+		el = static_cast<Element*>(prop->value);
+	else
 	{
 		if(arrayIndex == std::numeric_limits<uint32_t>::max())
 			return {};
-		auto el = (*static_cast<Array*>(prop->value))[arrayIndex];
-		udm::LinkedPropertyWrapper wrapper {el};
-		wrapper.prev = linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper&>(*this)) : std::make_unique<udm::LinkedPropertyWrapper>(*this);
-		wrapper.propName = key;
-		return wrapper;
+		if(linked && static_cast<const LinkedPropertyWrapper&>(*this).propName.empty() == false)
+		{
+			el = &static_cast<Array*>(prop->value)->GetValue<Element>(arrayIndex);
+			auto prop = getElementProperty(*this,*el,static_cast<const LinkedPropertyWrapper&>(*this).propName);
+			el = &prop.GetValue<Element>();
+			return getElementProperty(prop,*el,key);
+		}
+		else
+		{
+			LinkedPropertyWrapper el = (*static_cast<Array*>(prop->value))[arrayIndex];
+			udm::LinkedPropertyWrapper wrapper {el};
+			wrapper.prev = linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper&>(*this)) : std::make_unique<udm::LinkedPropertyWrapper>(*this);
+			wrapper.propName = key;
+			return wrapper;
+		}
 	}
-	}
-	return {};
+	if(el == nullptr)
+		return {};
+	return getElementProperty(*this,*el,key);
 }
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &key) const {return operator[](std::string_view{key});}
