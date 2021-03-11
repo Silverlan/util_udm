@@ -55,9 +55,11 @@ project(${PROJ_NAME} CXX)
 set(CMAKE_CXX_STANDARD 17)
 # set(PRECOMPILED_HEADER "stdafx")
 
-add_external_library(sharedutils)
-add_external_library(mathutil)
-add_external_library(vfilesystem)
+link_external_library(glm)
+link_external_library(sharedutils)
+link_external_library(mathutil)
+link_external_library(vfilesystem)
+link_external_library(lz4)
 
 set(DEFINITIONS)
 
