@@ -52,6 +52,34 @@ namespace udm
 	using Mat4 = Mat4;
 	using Mat3x4 = Mat3x4;
 
+	struct Exception
+		: public std::exception
+	{
+		Exception(const std::string &msg)
+			: std::exception{msg.c_str()},m_msg{msg}
+		{}
+	private:
+		std::string m_msg;
+	};
+
+	struct InvalidUsageError : public Exception {using Exception::Exception;};
+	struct CompressionError : public Exception {using Exception::Exception;};
+	struct FileError : public Exception {using Exception::Exception;};
+	struct InvalidFormatError : public Exception {using Exception::Exception;};
+	struct PropertyLoadError : public Exception {using Exception::Exception;};
+	struct OutOfBoundsError : public Exception {using Exception::Exception;};
+
+	struct AsciiException
+		: public Exception
+	{
+		AsciiException(const std::string &msg,uint32_t lineIdx,uint32_t charIdx);
+		uint32_t lineIndex = 0;
+		uint32_t charIndex = 0;
+	};
+
+	struct SyntaxError : public AsciiException {using AsciiException::AsciiException;};
+	struct DataError : public AsciiException {using AsciiException::AsciiException;};
+
 	using Nil = std::monostate;
 	struct Blob
 	{
@@ -60,6 +88,9 @@ namespace udm
 			: data{data}
 		{}
 		std::vector<uint8_t> data;
+
+		bool operator==(const Blob &other) const {return data == other.data;}
+		bool operator!=(const Blob &other) const {return !operator==(other);}
 	};
 
 	struct BlobLz4
@@ -70,6 +101,9 @@ namespace udm
 		{}
 		size_t uncompressedSize = 0;
 		std::vector<uint8_t> compressedData;
+
+		bool operator==(const BlobLz4 &other) const {return uncompressedSize == other.uncompressedSize && compressedData == other.compressedData;}
+		bool operator!=(const BlobLz4 &other) const {return !operator==(other);}
 	};
 
 	struct Utf8String
@@ -79,6 +113,9 @@ namespace udm
 			: data{data}
 		{}
 		std::vector<uint8_t> data;
+
+		bool operator==(const Utf8String &other) const {return data == other.data;}
+		bool operator!=(const Utf8String &other) const {return !operator==(other);}
 	};
 	enum class Type : uint8_t
 	{
@@ -255,7 +292,7 @@ namespace udm
 		}
 		static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
 	}
-	Type ascii_type_to_enum(const char *type);
+	Type ascii_type_to_enum(const std::string &type);
 	void sanitize_key_name(std::string &key);
 
 	template<class T>struct tag_t{using type=T;};
@@ -367,6 +404,9 @@ namespace udm
 		LinkedPropertyWrapper operator[](const std::string &key);
 		LinkedPropertyWrapper operator[](const char *key);
 
+		bool operator==(const Property &other) const;
+		bool operator!=(const Property &other) const {return !operator==(other);}
+
 		// operator udm::LinkedPropertyWrapper();
 
 		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize=nullptr) const;
@@ -420,19 +460,19 @@ namespace udm
 			std::optional<T> ToValue() const;
 		operator bool() const {return type != Type::Nil;}
 		
-		bool Read(const VFilePtr &f,std::string &outErr);
-		bool Read(Type type,const VFilePtr &f,std::string &outErr);
+		bool Read(const VFilePtr &f);
+		bool Read(Type type,const VFilePtr &f);
 		void Write(VFilePtrReal &f) const;
 
 		void ToAscii(std::stringstream &ss,const std::string &propName,const std::string &prefix="");
 		
 		static void ToAscii(std::stringstream &ss,const std::string &propName,Type type,const DataValue value,const std::string &prefix="");
-		bool Read(const VFilePtr &f,Blob &outBlob,std::string &outErr);
-		bool Read(const VFilePtr &f,BlobLz4 &outBlob,std::string &outErr);
-		bool Read(const VFilePtr &f,Utf8String &outStr,std::string &outErr);
-		bool Read(const VFilePtr &f,Element &outEl,std::string &outErr);
-		bool Read(const VFilePtr &f,Array &outArray,std::string &outErr);
-		bool Read(const VFilePtr &f,String &outStr,std::string &outErr);
+		bool Read(const VFilePtr &f,Blob &outBlob);
+		bool Read(const VFilePtr &f,BlobLz4 &outBlob);
+		bool Read(const VFilePtr &f,Utf8String &outStr);
+		bool Read(const VFilePtr &f,Element &outEl);
+		bool Read(const VFilePtr &f,Array &outArray);
+		bool Read(const VFilePtr &f,String &outStr);
 		static void Write(VFilePtrReal &f,const Blob &blob);
 		static void Write(VFilePtrReal &f,const BlobLz4 &blob);
 		static void Write(VFilePtrReal &f,const Utf8String &str);
@@ -662,6 +702,9 @@ namespace udm
 		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
 		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element);
 		void ToAscii(std::stringstream &ss,const std::optional<std::string> &prefix={}) const;
+
+		bool operator==(const Element &other) const;
+		bool operator!=(const Element &other) const {return !operator==(other);}
 	private:
 		friend PropertyWrapper;
 		template<typename T>
@@ -676,11 +719,15 @@ namespace udm
 		uint32_t size = 0;
 		void *values = nullptr;
 		PropertyWrapper fromProperty {};
+
+		bool operator==(const Array &other) const;
+		bool operator!=(const Array &other) const {return !operator==(other);}
 		
 		void SetValueType(Type valueType);
 		bool IsValueType(Type pvalueType) const {return pvalueType == valueType;}
 		uint32_t GetSize() const {return size;}
 		void Resize(uint32_t newSize);
+		void *GetValuePtr(uint32_t idx);
 		PropertyWrapper operator[](uint32_t idx);
 		const PropertyWrapper operator[](uint32_t idx) const {return const_cast<Array*>(this)->operator[](idx);}
 		template<typename T>
@@ -721,28 +768,40 @@ namespace udm
 		LinkedPropertyWrapper operator->() const {return GetData();}
 	};
 
+	enum class FormatType : uint8_t
+	{
+		Binary = 0,
+		Ascii
+	};
+
+	class AsciiReader;
 	class Data
 	{
 	public:
 		static constexpr auto KEY_ASSET_TYPE = "assetType";
 		static constexpr auto KEY_ASSET_VERSION = "assetVersion";
 		static constexpr auto KEY_ASSET_DATA = "assetData";
-		static std::shared_ptr<Data> Load(const std::string &fileName,std::string &outErr);
-		static std::shared_ptr<Data> Load(const VFilePtr &f,std::string &outErr);
-		static std::shared_ptr<Data> Open(const std::string &fileName,std::string &outErr);
-		static std::shared_ptr<Data> Open(const VFilePtr &f,std::string &outErr);
-		static std::shared_ptr<Data> Create(const std::string &assetType,Version assetVersion,std::string &outErr);
-		static std::shared_ptr<Data> Create(std::string &outErr);
+		static std::optional<FormatType> GetFormatType(const std::string &fileName,std::string &outErr);
+		static std::optional<FormatType> GetFormatType(const VFilePtr &f,std::string &outErr);
+		static std::shared_ptr<Data> Load(const std::string &fileName);
+		static std::shared_ptr<Data> Load(const VFilePtr &f);
+		static std::shared_ptr<Data> Open(const std::string &fileName);
+		static std::shared_ptr<Data> Open(const VFilePtr &f);
+		static std::shared_ptr<Data> Create(const std::string &assetType,Version assetVersion);
+		static std::shared_ptr<Data> Create();
 
-		PProperty LoadProperty(const std::string_view &path,std::string &outErr) const;
+		PProperty LoadProperty(const std::string_view &path) const;
 
-		bool Save(const std::string &fileName,std::string &outErr) const;
-		bool Save(VFilePtrReal &f,std::string &outErr) const;
-		bool SaveAscii(const std::string &fileName,std::string &outErr) const;
-		bool SaveAscii(VFilePtrReal &f,std::string &outErr) const;
+		bool Save(const std::string &fileName) const;
+		bool Save(VFilePtrReal &f) const;
+		bool SaveAscii(const std::string &fileName) const;
+		bool SaveAscii(VFilePtrReal &f) const;
 		Element &GetRootElement() {return *static_cast<Element*>(m_rootProperty->value);}
 		const Element &GetRootElement() const {return const_cast<Data*>(this)->GetRootElement();}
 		AssetData GetAssetData() const;
+
+		bool operator==(const Data &other) const;
+		bool operator!=(const Data &other) const {return !operator==(other);}
 		
 		LinkedPropertyWrapper operator[](const std::string &key) const;
 		Element *operator->();
@@ -762,10 +821,11 @@ namespace udm
 		static std::string ReadKey(const VFilePtr &f);
 		static void WriteKey(VFilePtrReal &f,const std::string &key);
 	private:
-		bool ValidateHeaderProperties(std::string &outErr);
+		friend AsciiReader;
+		bool ValidateHeaderProperties();
 		static void SkipProperty(VFilePtr &f,Type type);
-		PProperty LoadProperty(Type type,const std::string_view &path,std::string &outErr) const;
-		static PProperty ReadProperty(const VFilePtr &f,std::string &outErr);
+		PProperty LoadProperty(Type type,const std::string_view &path) const;
+		static PProperty ReadProperty(const VFilePtr &f);
 		static void WriteProperty(VFilePtrReal &f,const Property &o);
 		Data()=default;
 		Header m_header;
@@ -1034,7 +1094,7 @@ template<typename T>
 	void udm::PropertyWrapper::operator=(T &&v)
 {
 	if(prop == nullptr)
-		throw std::runtime_error{"Cannot assign propety value: Property is invalid!"};
+		throw std::runtime_error{"Cannot assign property value: Property is invalid!"};
 	if constexpr(std::is_enum_v<std::remove_reference_t<T>>)
 		return operator=(magic_enum::enum_name(v));
 	else

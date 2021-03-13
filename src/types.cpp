@@ -4,16 +4,16 @@
 
 #include "udm.hpp"
 #include <lz4.h>
-
+#pragma optimize("",off)
 udm::Blob udm::decompress_lz4_blob(const void *compressedData,uint64_t compressedSize,uint64_t uncompressedSize)
 {
 	udm::Blob dst {};
 	dst.data.resize(uncompressedSize);
 	auto size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressedData),reinterpret_cast<char*>(dst.data.data()),compressedSize,uncompressedSize);
 	if(size < 0)
-		throw std::runtime_error{"Unable to decompress LZ4 blob data buffer of size " +std::to_string(compressedSize)};
+		throw CompressionError{"Unable to decompress LZ4 blob data buffer of size " +std::to_string(compressedSize)};
 	if(size != uncompressedSize)
-		throw std::runtime_error{"LZ4 blob data decompression size mismatch!"};
+		throw CompressionError{"LZ4 blob data decompression size mismatch!"};
 	return dst;
 }
 
@@ -29,7 +29,7 @@ udm::BlobLz4 udm::compress_lz4_blob(const void *data,uint64_t srcSize)
 	compressed.compressedData.resize(LZ4_compressBound(srcSize));
 	auto size = LZ4_compress_default(reinterpret_cast<const char*>(data),reinterpret_cast<char*>(compressed.compressedData.data()),srcSize,compressed.compressedData.size() *sizeof(compressed.compressedData.front()));
 	if(size < 0)
-		throw std::runtime_error{"Unable to compress blob data buffer of size " +std::to_string(srcSize)};
+		throw CompressionError{"Unable to compress blob data buffer of size " +std::to_string(srcSize)};
 	compressed.compressedData.resize(size);
 	return compressed;
 }
@@ -93,6 +93,31 @@ void udm::Property::Clear()
 
 udm::Array::~Array() {Clear();}
 
+bool udm::Array::operator==(const Array &other) const
+{
+	if(size != other.size || valueType != other.valueType)
+		return false;
+	if(is_trivial_type(valueType))
+	{
+		auto sz = size_of(valueType);
+		return memcmp(values,other.values,sz *size);
+	}
+	auto tag = get_non_trivial_tag(valueType);
+	return std::visit([this,&other](auto tag) -> bool {
+		using T = decltype(tag)::type;
+		auto *ptr0 = static_cast<T*>(values);
+		auto *ptr1 = static_cast<T*>(other.values);
+		for(auto i=decltype(size){0u};i<size;++i)
+		{
+			if(*ptr0 != *ptr1)
+				return false;
+			++ptr0;
+			++ptr1;
+		}
+		return true;
+	},tag);
+}
+
 void udm::Array::SetValueType(Type valueType)
 {
 	if(valueType == this->valueType)
@@ -100,6 +125,11 @@ void udm::Array::SetValueType(Type valueType)
 	Clear();
 	this->valueType = valueType;
 	Resize(size);
+}
+
+void *udm::Array::GetValuePtr(uint32_t idx)
+{
+	return static_cast<uint8_t*>(values) +idx *size_of_base_type(valueType);
 }
 
 void udm::Array::Resize(uint32_t newSize)
@@ -117,8 +147,8 @@ void udm::Array::Resize(uint32_t newSize)
 				auto numCpy = umath::min(newSize,size);
 				for(auto i=decltype(numCpy){0u};i<numCpy;++i)
 					newValues[i] = static_cast<T*>(values)[i];
-				if(newSize > size)
-					memset(newValues +size,0,(newSize -size) *sizeof(T));
+				for(auto i=size;i<newSize;++i)
+					newValues[i] = {}; // Default initialize
 				Clear();
 			}
 			values = newValues;
@@ -336,12 +366,12 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 				}
 			}
 		}
-		throw std::logic_error{"Attempted to add key-value to indexed property with invalid array reference!"};
+		throw InvalidUsageError{"Attempted to add key-value to indexed property with invalid array reference!"};
 	}
 	if(prop == nullptr && linked)
 		static_cast<udm::LinkedPropertyWrapper&>(*this).InitializeProperty();
 	if(prop == nullptr || prop->type != Type::Element)
-		throw std::logic_error{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
+		throw InvalidUsageError{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
 	auto wrapper = static_cast<Element*>(prop->value)->AddArray(path,size,type);
 	static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
 	return wrapper;
@@ -365,12 +395,12 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 				}
 			}
 		}
-		throw std::logic_error{"Attempted to add key-value to indexed property with invalid array reference!"};
+		throw InvalidUsageError{"Attempted to add key-value to indexed property with invalid array reference!"};
 	}
 	if(prop == nullptr && linked)
 		static_cast<udm::LinkedPropertyWrapper&>(*this).InitializeProperty();
 	if(prop == nullptr || prop->type != Type::Element)
-		throw std::logic_error{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
+		throw InvalidUsageError{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
 	auto wrapper = static_cast<Element*>(prop->value)->Add(path,type);
 	static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
 	return wrapper;
@@ -502,3 +532,4 @@ bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) 
 	return prop == other.prop && arrayIndex == other.arrayIndex && propName == other.propName;
 }
 bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
+#pragma optimize("",on)
