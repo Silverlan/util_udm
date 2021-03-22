@@ -382,7 +382,12 @@ std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix
 	ss<<"]";
 	return ss.str();
 }
-std::string udm::Property::ToAsciiValue(const String &str,const std::string &prefix) {return '\"' +str +'\"';}
+std::string udm::Property::ToAsciiValue(const String &str,const std::string &prefix)
+{
+	auto val = str;
+	ustring::replace(val,"\\","\\\\");
+	return '\"' +val +'\"';
+}
 		
 std::string udm::Property::ToAsciiValue(const Vector2 &v,const std::string &prefix) {return '[' +std::to_string(v.x) +',' +std::to_string(v.y) +']';}
 std::string udm::Property::ToAsciiValue(const Vector3 &v,const std::string &prefix) {return '[' +std::to_string(v.x) +',' +std::to_string(v.y) +',' +std::to_string(v.z) +']';}
@@ -599,6 +604,34 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 		if(optOutRequiredSize)
 			*optOutRequiredSize = blob.uncompressedSize;
 		return GetBlobData(blob,outBuffer,bufferSize);
+	}
+	case Type::Array:
+	{
+		auto &a = GetValue<Array>();
+		auto byteSize = a.GetSize() *size_of_base_type(a.valueType);
+		if(optOutRequiredSize)
+			*optOutRequiredSize = byteSize;
+		if(bufferSize != byteSize)
+			return BlobResult::InsufficientSize;
+		if(is_non_trivial_type(a.valueType))
+		{
+			auto tag = get_non_trivial_tag(a.valueType);
+			std::visit([this,outBuffer,&a](auto tag) {
+				using T = decltype(tag)::type;
+				auto n = a.GetSize();
+				auto *srcPtr = static_cast<T*>(a.values);
+				auto *dstPtr = static_cast<T*>(outBuffer);
+				for(auto i=decltype(n){0u};i<n;++i)
+				{
+					*dstPtr = *srcPtr;
+					++srcPtr;
+					++dstPtr;
+				}
+			},tag);
+		}
+		else
+			memcpy(outBuffer,a.values,bufferSize);
+		return BlobResult::Success;
 	}
 	}
 	return BlobResult::NotABlobType;
@@ -959,13 +992,13 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) c
 std::string udm::AssetData::GetAssetType() const
 {
 	auto prop = (*this)["assetType"];
-	auto *val = prop ? prop->GetValuePtr<std::string>() : nullptr;
+	auto *val = prop ? prop.GetValuePtr<std::string>() : nullptr;
 	return val ? *val : "";
 }
 udm::Version udm::AssetData::GetAssetVersion() const
 {
 	auto prop = (*this)["assetVersion"];
-	auto *version = prop ? prop->GetValuePtr<Version>() : nullptr;
+	auto *version = prop ? prop.GetValuePtr<Version>() : nullptr;
 	return version ? *version : Version{0};
 }
 void udm::AssetData::SetAssetType(const std::string &assetType) {(*this)[Data::KEY_ASSET_TYPE] = assetType;}

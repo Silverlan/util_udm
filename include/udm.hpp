@@ -369,13 +369,15 @@ namespace udm
 		constexpr Type array_value_type_to_enum();
 	template<typename TFrom,typename TTo>
 		constexpr bool is_convertible();
+	template<typename TFrom,typename TTo>
+		constexpr TTo convert(const TFrom &from);
 	template<typename TTo>
 		constexpr bool is_convertible_from(Type tFrom);
 	template<typename TFrom>
 		constexpr bool is_convertible(Type tTo);
 	constexpr bool is_convertible(Type tFrom,Type tTo);
 	
-	class LinkedPropertyWrapper;
+	struct LinkedPropertyWrapper;
 	struct Array;
 	struct Property;
 	using PProperty = std::shared_ptr<Property>;
@@ -548,12 +550,26 @@ namespace udm
 		ArrayIterator(const ArrayIterator &other);
 		ArrayIterator &operator++();
 		ArrayIterator operator++(int);
+		ArrayIterator operator+(uint32_t n);
 		reference operator*();
 		pointer operator->();
 		bool operator==(const ArrayIterator &other) const;
 		bool operator!=(const ArrayIterator &other) const;
+
+		udm::LinkedPropertyWrapper &GetProperty() {return m_curProperty;}
 	private:
 		udm::LinkedPropertyWrapper m_curProperty;
+	};
+
+	struct PropertyWrapper;
+	class ElementIterator;
+	struct ElementIteratorWrapper
+	{
+		ElementIteratorWrapper(PropertyWrapper &prop);
+		ElementIterator begin();
+		ElementIterator end();
+	private:
+		PropertyWrapper &m_prop;
 	};
 
 	struct PropertyWrapper
@@ -633,14 +649,21 @@ namespace udm
 			ArrayIterator<T> end();
 		ArrayIterator<Element> begin();
 		ArrayIterator<Element> end();
+		LinkedPropertyWrapper operator[](uint32_t idx) const;
+		LinkedPropertyWrapper operator[](int32_t idx) const;
+		LinkedPropertyWrapper operator[](size_t idx) const;
+		//
+
+		// For element properties
+		ElementIterator begin_el();
+		ElementIterator end_el();
+		ElementIteratorWrapper ElIt();
+		uint32_t GetChildCount() const;
 		//
 		
 		LinkedPropertyWrapper operator[](const std::string_view &key) const;
 		LinkedPropertyWrapper operator[](const std::string &key) const;
 		LinkedPropertyWrapper operator[](const char *key) const;
-		LinkedPropertyWrapper operator[](uint32_t idx) const;
-		LinkedPropertyWrapper operator[](int32_t idx) const;
-		LinkedPropertyWrapper operator[](size_t idx) const;
 		bool operator==(const PropertyWrapper &other) const;
 		bool operator!=(const PropertyWrapper &other) const;
 		Property *operator*();
@@ -686,7 +709,7 @@ namespace udm
 		std::string propName;
 
 		// For internal use only!
-		void InitializeProperty(Type type=Type::Element);
+		void InitializeProperty(Type type=Type::Element,bool getOnly=false);
 	};
 
 	struct Element
@@ -705,10 +728,47 @@ namespace udm
 
 		bool operator==(const Element &other) const;
 		bool operator!=(const Element &other) const {return !operator==(other);}
+
+		ElementIterator begin();
+		ElementIterator end();
 	private:
 		friend PropertyWrapper;
 		template<typename T>
 			void SetValue(Element &child,T &&v);
+	};
+
+	struct ElementIteratorPair
+	{
+		ElementIteratorPair(std::unordered_map<std::string,PProperty>::iterator &it);
+		ElementIteratorPair();
+		bool operator==(const ElementIteratorPair &other) const;
+		bool operator!=(const ElementIteratorPair &other) const;
+		std::string_view key;
+		LinkedPropertyWrapper property;
+	};
+
+	class ElementIterator
+	{
+	public:
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = ElementIteratorPair&;
+		using difference_type = std::ptrdiff_t;
+		using pointer = ElementIteratorPair*;
+		using reference = ElementIteratorPair&;
+	
+		ElementIterator();
+		ElementIterator(udm::Element &e);
+		ElementIterator(udm::Element &e,std::unordered_map<std::string,PProperty>::iterator it);
+		ElementIterator(const ElementIterator &other);
+		ElementIterator &operator++();
+		ElementIterator operator++(int);
+		reference operator*();
+		pointer operator->();
+		bool operator==(const ElementIterator &other) const;
+		bool operator!=(const ElementIterator &other) const;
+	private:
+		std::unordered_map<std::string,PProperty>::iterator m_iterator {};
+		ElementIteratorPair m_pair;
 	};
 
 	struct Array;
@@ -832,6 +892,45 @@ namespace udm
 		VFilePtr m_file = nullptr;
 		PProperty m_rootProperty = nullptr;
 	};
+
+	template<typename TEnum>
+		constexpr std::string_view enum_to_string(TEnum e)
+	{
+		return magic_enum::enum_name(e);
+	}
+
+	template<typename TEnum>
+		static TEnum string_to_enum(udm::LinkedPropertyWrapper &udmEnum,TEnum def)
+	{
+		std::string str;
+		udmEnum(str);
+		auto e = magic_enum::enum_cast<TEnum>(str);
+		return e.has_value() ? *e : def;
+	}
+
+	template<typename TEnum>
+		static void to_enum_value(udm::LinkedPropertyWrapper &udmEnum,TEnum &def)
+	{
+		std::string str;
+		udmEnum(str);
+		auto e = magic_enum::enum_cast<TEnum>(str);
+		def = e.has_value() ? *e : def;
+	}
+
+	template<typename TEnum>
+		void write_flag(udm::LinkedPropertyWrapper &udm,TEnum flags,TEnum flag,const std::string_view &name)
+	{
+		if(umath::is_flag_set(flags,flag) == false)
+			return;
+		udm[name] = true;
+	}
+	template<typename TEnum>
+		void read_flag(udm::LinkedPropertyWrapper &udm,TEnum &flags,TEnum flag,const std::string_view &name)
+	{
+		if(!udm)
+			return;
+		umath::set_flag(flags,flag,udm[name](false));
+	}
 };
 
 constexpr size_t udm::size_of(Type t)
@@ -954,7 +1053,17 @@ template<typename T>
 template<typename TFrom,typename TTo>
 	constexpr bool udm::is_convertible()
 {
+	if constexpr(std::is_same_v<TFrom,std::string_view> && std::is_same_v<TTo,std::string>)
+		return true;
 	return std::is_convertible_v<TFrom,TTo>;
+}
+
+template<typename TFrom,typename TTo>
+	constexpr TTo udm::convert(const TFrom &from)
+{
+	if constexpr(std::is_same_v<TFrom,std::string_view> && std::is_same_v<TTo,std::string>)
+		return std::string{from};
+	return static_cast<TTo>(from);
 }
 		
 template<typename TTo>
@@ -1065,7 +1174,7 @@ template<typename T>
 	auto vs = [this,&v](auto tag) {
 		using TTag = decltype(tag)::type;
 		if constexpr(is_convertible<TBase,TTag>())
-			*static_cast<TTag*>(value) = v;
+			*static_cast<TTag*>(value) = convert<TBase,TTag>(v);
 	};
 	if(is_numeric_type(vType))
 		std::visit(vs,get_numeric_tag(vType));
@@ -1459,6 +1568,15 @@ template<typename T>
 {
 	auto it = *this;
 	it.operator++();
+	return it;
+}
+
+template<typename T>
+	udm::ArrayIterator<T> udm::ArrayIterator<T>::operator+(uint32_t n)
+{
+	auto it = *this;
+	for(auto i=decltype(n){0u};i<n;++i)
+		it.operator++();
 	return it;
 }
 

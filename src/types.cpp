@@ -241,8 +241,10 @@ void udm::PropertyWrapper::operator=(Property &other)
 
 udm::PropertyWrapper::operator bool() const
 {
+	if(linked)
+		const_cast<LinkedPropertyWrapper&>(static_cast<const LinkedPropertyWrapper&>(*this)).InitializeProperty(Type::Element,true);
 	if(arrayIndex == std::numeric_limits<uint32_t>::max())
-		return prop;
+		return prop && prop->type != Type::Nil;
 	auto *a = GetOwningArray();
 	if(a == nullptr || !linked)
 		return false;
@@ -348,12 +350,60 @@ void udm::PropertyWrapper::Resize(uint32_t size)
 udm::ArrayIterator<udm::Element> udm::PropertyWrapper::begin() {return begin<Element>();}
 udm::ArrayIterator<udm::Element> udm::PropertyWrapper::end() {return end<Element>();}
 
+uint32_t udm::PropertyWrapper::GetChildCount() const
+{
+	auto *e = GetValuePtr<Element>();
+	return e ? e->children.size() : 0;
+}
+udm::ElementIterator udm::PropertyWrapper::begin_el()
+{
+	if(!static_cast<bool>(*this))
+		return ElementIterator{};
+	auto *e = GetValuePtr<Element>();
+	if(e == nullptr)
+		return ElementIterator{};
+	return e->begin();
+}
+udm::ElementIterator udm::PropertyWrapper::end_el()
+{
+	if(!static_cast<bool>(*this))
+		return ElementIterator{};
+	auto *e = GetValuePtr<Element>();
+	if(e == nullptr)
+		return ElementIterator{};
+	return e->end();
+}
+udm::ElementIteratorWrapper udm::PropertyWrapper::ElIt() {return ElementIteratorWrapper{*this};}
+
 udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type)
 {
 	if(arrayIndex != std::numeric_limits<uint32_t>::max())
 	{
+		if(IsArrayItem())
+		{
+			auto &a = *static_cast<Array*>(prop->value);
+			if(a.valueType == Type::Element)
+			{
+				auto *e = &a.GetValue<Element>(arrayIndex);
+				if(linked)
+				{
+					auto &linkedWrapper = static_cast<LinkedPropertyWrapper&>(*this);
+					if(linkedWrapper.propName.empty() == false)
+					{
+						auto child = (*e)[linkedWrapper.propName];
+						e = child.GetValuePtr<Element>();
+					}
+				}
+				if(!e)
+					throw InvalidUsageError{"Attempted to add key-value to invalid array element!"};
+				auto wrapper = e->AddArray(path,size,type);
+				static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
+				return wrapper;
+			}
+		}
 		if(linked)
 		{
+			// TODO: Is this obsolete?
 			auto &linkedWrapper = static_cast<LinkedPropertyWrapper&>(*this);
 			if(linkedWrapper.prev && linkedWrapper.prev->prop && linkedWrapper.prev->prop->type == Type::Array)
 			{
@@ -429,10 +479,21 @@ udm::Property *udm::PropertyWrapper::operator*() {return prop;}
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](uint32_t idx) const
 {
-	udm::LinkedPropertyWrapper wrapper {};
-	wrapper.prev = linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper&>(*this)) : std::make_unique<udm::LinkedPropertyWrapper>(*this);
-	wrapper.arrayIndex = idx;
-	return wrapper;
+	auto *a = GetValuePtr<Array>();
+	if(a == nullptr)
+		return {};
+	auto vs = [this,a,idx](auto tag) {
+		using TTag = decltype(tag)::type;
+		auto it = const_cast<PropertyWrapper*>(this)->begin<TTag>() +idx;
+		return it.GetProperty();
+	};
+	if(is_numeric_type(a->valueType))
+		return std::visit(vs,get_numeric_tag(a->valueType));
+	else if(is_generic_type(a->valueType))
+		return std::visit(vs,get_generic_tag(a->valueType));
+	else if(is_non_trivial_type(a->valueType))
+		return std::visit(vs,get_non_trivial_tag(a->valueType));
+	return {};
 }
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const char *key) const {return operator[](std::string{key});}
@@ -476,6 +537,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 		{
 			el = &static_cast<Array*>(prop->value)->GetValue<Element>(arrayIndex);
 			auto prop = getElementProperty(*this,*el,static_cast<const LinkedPropertyWrapper&>(*this).propName);
+			prop.InitializeProperty(); // TODO: Don't initialize if this is used as a getter
 			el = &prop.GetValue<Element>();
 			return getElementProperty(prop,*el,key);
 		}
@@ -495,7 +557,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &key) const {return operator[](std::string_view{key});}
 
-void udm::LinkedPropertyWrapper::InitializeProperty(Type type)
+void udm::LinkedPropertyWrapper::InitializeProperty(Type type,bool getOnly)
 {
 	assert(type == Type::Element || type == Type::Array);
 	auto isArrayElement = (arrayIndex != std::numeric_limits<uint32_t>::max());
@@ -514,6 +576,13 @@ void udm::LinkedPropertyWrapper::InitializeProperty(Type type)
 		return;
 	}
 	auto &el = *static_cast<Element*>(prev->prop->value);
+	if(getOnly)
+	{
+		auto it = el.children.find(propName);
+		if(it != el.children.end())
+			prop = it->second.get();
+		return;
+	}
 	prop = el.Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
 }
 
@@ -532,4 +601,68 @@ bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) 
 	return prop == other.prop && arrayIndex == other.arrayIndex && propName == other.propName;
 }
 bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
+
+udm::ElementIteratorPair::ElementIteratorPair(std::unordered_map<std::string,PProperty>::iterator &it)
+	: key{it->first},property{*it->second}
+{}
+udm::ElementIteratorPair::ElementIteratorPair()=default;
+bool udm::ElementIteratorPair::operator==(const ElementIteratorPair &other) const
+{
+	return key == other.key && property == other.property;
+}
+bool udm::ElementIteratorPair::operator!=(const ElementIteratorPair &other) const {return !operator==(other);}
+
+udm::ElementIteratorWrapper::ElementIteratorWrapper(PropertyWrapper &prop)
+	: m_prop{prop}
+{}
+
+udm::ElementIterator udm::ElementIteratorWrapper::begin() {return m_prop.begin_el();}
+udm::ElementIterator udm::ElementIteratorWrapper::end() {return m_prop.end_el();}
+
+udm::ElementIterator::ElementIterator()
+	: m_iterator{}
+{}
+
+udm::ElementIterator::ElementIterator(udm::Element &e)
+	: ElementIterator{e,e.children.begin()}
+{}
+
+udm::ElementIterator::ElementIterator(udm::Element &e,std::unordered_map<std::string,PProperty>::iterator it)
+	: m_iterator{it},m_pair{it}
+{}
+
+udm::ElementIterator::ElementIterator(const ElementIterator &other)
+	: m_iterator{other.m_iterator},m_pair{other.m_pair}
+{}
+
+udm::ElementIterator &udm::ElementIterator::operator++()
+{
+	++m_iterator;
+	m_pair = ElementIteratorPair{m_iterator};
+	return *this;
+}
+
+udm::ElementIterator udm::ElementIterator::operator++(int)
+{
+	auto it = *this;
+	it.operator++();
+	return it;
+}
+
+typename udm::ElementIterator::reference udm::ElementIterator::operator*() {return m_pair;}
+
+typename udm::ElementIterator::pointer udm::ElementIterator::operator->() {return &m_pair;}
+
+bool udm::ElementIterator::operator==(const ElementIterator &other) const {return m_iterator == other.m_iterator;}
+
+bool udm::ElementIterator::operator!=(const ElementIterator &other) const {return !operator==(other);}
+
+udm::ElementIterator udm::Element::begin()
+{
+	return ElementIterator{*this,children.begin()};
+}
+udm::ElementIterator udm::Element::end()
+{
+	return ElementIterator{*this,children.end()};
+}
 #pragma optimize("",on)
