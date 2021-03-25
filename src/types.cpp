@@ -477,6 +477,13 @@ void udm::Element::AddChild(const std::string &key,const PProperty &o)
 
 udm::Property *udm::PropertyWrapper::operator*() {return prop;}
 
+udm::LinkedPropertyWrapper udm::PropertyWrapper::Prop(const std::string_view &key) const
+{
+	auto sep = key.find('.');
+	if(sep != std::string::npos)
+		return Prop(key.substr(0,sep)).Prop(key.substr(sep +1));
+}
+
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](uint32_t idx) const
 {
 	auto *a = GetValuePtr<Array>();
@@ -502,9 +509,6 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](size_t idx) const {r
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_view &key) const
 {
-	auto sep = key.find('.');
-	if(sep != std::string::npos)
-		return (*this)[key.substr(0,sep)][key.substr(sep +1)];
 	if(prop == nullptr)
 	{
 		udm::LinkedPropertyWrapper wrapper {};

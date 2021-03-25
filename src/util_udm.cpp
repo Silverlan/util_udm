@@ -113,7 +113,7 @@ udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,s
 
 udm::LinkedPropertyWrapper udm::Element::Add(const std::string_view &path,Type type)
 {
-	auto end = path.find('.');
+	auto end = std::string::npos; // path.find('.');
 	auto name = path.substr(0,end);
 	if(name.empty())
 		return fromProperty;
@@ -151,8 +151,16 @@ std::optional<udm::FormatType> udm::Data::GetFormatType(const VFilePtr &f,std::s
 	auto offset = f->Tell();
 	try
 	{
-		auto udmData = Open(f);
-		return udmData ? FormatType::Binary : FormatType::Ascii;
+		try
+		{
+			auto udmData = Open(f);
+			return udmData ? FormatType::Binary : FormatType::Ascii;
+		}
+		catch(const Exception &e)
+		{
+			return FormatType::Ascii;
+		}
+		return FormatType::Ascii;
 	}
 	catch(const Exception &e)
 	{
@@ -898,7 +906,7 @@ void udm::Data::WriteKey(VFilePtrReal &f,const std::string &key)
 
 udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) const
 {
-	auto end = path.find('.');
+	auto end = std::string::npos; // path.find('.');
 	auto name = path.substr(0,end);
 	if(name.empty())
 	{
@@ -1010,11 +1018,21 @@ udm::Version udm::Data::GetAssetVersion() const {return AssetData{*m_rootPropert
 void udm::Data::SetAssetType(const std::string &assetType) {return AssetData{*m_rootProperty}.SetAssetType(assetType);}
 void udm::Data::SetAssetVersion(Version version) {return AssetData{*m_rootProperty}.SetAssetVersion(version);}
 
-void udm::Data::ToAscii(std::stringstream &ss) const
+void udm::Data::ToAscii(std::stringstream &ss,bool includeHeader) const
 {
 	assert(m_rootProperty->type == Type::Element);
 	if(m_rootProperty->type == Type::Element)
-		static_cast<Element*>(m_rootProperty->value)->ToAscii(ss);
+	{
+		if(!includeHeader)
+		{
+			auto &elRoot = *static_cast<Element*>(m_rootProperty->value);
+			auto udmAssetData = elRoot[Data::KEY_ASSET_DATA];
+			if(udmAssetData && udmAssetData->IsType(Type::Element))
+				udmAssetData->GetValue<Element>().ToAscii(ss);
+		}
+		else
+			static_cast<Element*>(m_rootProperty->value)->ToAscii(ss);
+	}
 }
 
 bool udm::Element::operator==(const Element &other) const
@@ -1125,12 +1143,15 @@ std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(const VFilePtr &f)
 		throw reader.BuildException<SyntaxError>("Block has been terminated improperly");
 	
 	auto assetData = udmData->GetAssetData();
-	auto udmAssetData = (*rootProp)["assetData"];
+	auto udmAssetData = (*rootProp)[Data::KEY_ASSET_DATA];
 	if(!udmAssetData)
 	{
 		auto assetDataProp = rootProp;
 		rootProp = Property::Create<Element>();
-		rootProp->GetValue<Element>().AddChild("assetData",assetDataProp);
+		auto &elRoot = rootProp->GetValue<Element>();
+		elRoot.AddChild(Data::KEY_ASSET_DATA,assetDataProp);
+		elRoot[Data::KEY_ASSET_VERSION] = static_cast<uint32_t>(1);
+		elRoot[Data::KEY_ASSET_TYPE] = "nil";
 	}
 	udmData->m_rootProperty = rootProp;
 	return udmData->ValidateHeaderProperties() ? udmData : nullptr;
@@ -1568,7 +1589,7 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 	return BlockResult::EndOfFile;
 }
 
-bool udm::Data::SaveAscii(const std::string &fileName) const
+bool udm::Data::SaveAscii(const std::string &fileName,bool includeHeader) const
 {
 	auto f = FileManager::OpenFile<VFilePtrReal>(fileName.c_str(),"w");
 	if(f == nullptr)
@@ -1576,12 +1597,12 @@ bool udm::Data::SaveAscii(const std::string &fileName) const
 		throw FileError{"Unable to open file!"};
 		return false;
 	}
-	return SaveAscii(f);
+	return SaveAscii(f,includeHeader);
 }
-bool udm::Data::SaveAscii(VFilePtrReal &f) const
+bool udm::Data::SaveAscii(VFilePtrReal &f,bool includeHeader) const
 {
 	std::stringstream ss;
-	ToAscii(ss);
+	ToAscii(ss,includeHeader);
 	f->WriteString(ss.str());
 	return true;
 }

@@ -661,6 +661,7 @@ namespace udm
 		uint32_t GetChildCount() const;
 		//
 		
+		LinkedPropertyWrapper Prop(const std::string_view &key) const;
 		LinkedPropertyWrapper operator[](const std::string_view &key) const;
 		LinkedPropertyWrapper operator[](const std::string &key) const;
 		LinkedPropertyWrapper operator[](const char *key) const;
@@ -854,8 +855,8 @@ namespace udm
 
 		bool Save(const std::string &fileName) const;
 		bool Save(VFilePtrReal &f) const;
-		bool SaveAscii(const std::string &fileName) const;
-		bool SaveAscii(VFilePtrReal &f) const;
+		bool SaveAscii(const std::string &fileName,bool includeHeader=true) const;
+		bool SaveAscii(VFilePtrReal &f,bool includeHeader=true) const;
 		Element &GetRootElement() {return *static_cast<Element*>(m_rootProperty->value);}
 		const Element &GetRootElement() const {return const_cast<Data*>(this)->GetRootElement();}
 		AssetData GetAssetData() const;
@@ -874,7 +875,7 @@ namespace udm
 		void SetAssetType(const std::string &assetType);
 		void SetAssetVersion(Version version);
 
-		void ToAscii(std::stringstream &ss) const;
+		void ToAscii(std::stringstream &ss,bool includeHeader=true) const;
 
 		const Header &GetHeader() const {return m_header;}
 
