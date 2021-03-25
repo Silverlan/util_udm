@@ -274,6 +274,11 @@ bool udm::PropertyWrapper::IsArrayItem() const
 	return arrayIndex != std::numeric_limits<uint32_t>::max() && prop && prop->IsType(Type::Array);
 }
 
+bool udm::PropertyWrapper::IsType(Type type) const
+{
+	return prop ? prop->IsType(type) : false;
+}
+
 udm::Array *udm::PropertyWrapper::GetOwningArray()
 {
 	if(IsArrayItem() == false)
@@ -347,8 +352,8 @@ void udm::PropertyWrapper::Resize(uint32_t size)
 		return;
 	GetValue<udm::Array>().Resize(size);
 }
-udm::ArrayIterator<udm::Element> udm::PropertyWrapper::begin() {return begin<Element>();}
-udm::ArrayIterator<udm::Element> udm::PropertyWrapper::end() {return end<Element>();}
+udm::ArrayIterator<udm::LinkedPropertyWrapper> udm::PropertyWrapper::begin() {return begin<LinkedPropertyWrapper>();}
+udm::ArrayIterator<udm::LinkedPropertyWrapper> udm::PropertyWrapper::end() {return end<LinkedPropertyWrapper>();}
 
 uint32_t udm::PropertyWrapper::GetChildCount() const
 {
@@ -542,7 +547,9 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 			el = &static_cast<Array*>(prop->value)->GetValue<Element>(arrayIndex);
 			auto prop = getElementProperty(*this,*el,static_cast<const LinkedPropertyWrapper&>(*this).propName);
 			prop.InitializeProperty(); // TODO: Don't initialize if this is used as a getter
-			el = &prop.GetValue<Element>();
+			el = prop.GetValuePtr<Element>();
+			if(el == nullptr)
+				return {};
 			return getElementProperty(prop,*el,key);
 		}
 		else

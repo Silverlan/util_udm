@@ -591,6 +591,7 @@ namespace udm
 		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
 		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element);
 		bool IsArrayItem() const;
+		bool IsType(Type type) const;
 
 		Array *GetOwningArray();
 		const Array *GetOwningArray() const {return const_cast<PropertyWrapper*>(this)->GetOwningArray();}
@@ -647,8 +648,8 @@ namespace udm
 			ArrayIterator<T> begin();
 		template<typename T>
 			ArrayIterator<T> end();
-		ArrayIterator<Element> begin();
-		ArrayIterator<Element> end();
+		ArrayIterator<LinkedPropertyWrapper> begin();
+		ArrayIterator<LinkedPropertyWrapper> end();
 		LinkedPropertyWrapper operator[](uint32_t idx) const;
 		LinkedPropertyWrapper operator[](int32_t idx) const;
 		LinkedPropertyWrapper operator[](size_t idx) const;
@@ -806,8 +807,8 @@ namespace udm
 		{
 			return ArrayIterator<T>{*this,GetSize()};
 		}
-		ArrayIterator<Element> begin() {return begin<Element>();}
-		ArrayIterator<Element> end() {return end<Element>();}
+		ArrayIterator<LinkedPropertyWrapper> begin() {return begin<LinkedPropertyWrapper>();}
+		ArrayIterator<LinkedPropertyWrapper> end() {return end<LinkedPropertyWrapper>();}
 	private:
 		friend Property;
 		friend PropertyWrapper;
@@ -1423,7 +1424,8 @@ template<typename T>
 template<typename T>
 	T *udm::Property::GetValuePtr()
 {
-	return (this->type == type_to_enum<T>()) ? reinterpret_cast<T*>(value) : nullptr;
+	// TODO: this should never be null, but there are certain cases where it seems to happen
+	return (this && this->type == type_to_enum<T>()) ? reinterpret_cast<T*>(value) : nullptr;
 }
 
 template<class T>
@@ -1582,10 +1584,22 @@ template<typename T>
 }
 
 template<typename T>
-	typename udm::ArrayIterator<T>::reference udm::ArrayIterator<T>::operator*() {return m_curProperty.GetValue<T>();}
+	typename udm::ArrayIterator<T>::reference udm::ArrayIterator<T>::operator*()
+	{
+		if constexpr(std::is_same_v<T,udm::LinkedPropertyWrapper>)
+			return m_curProperty;
+		else
+			return m_curProperty.GetValue<T>();
+	}
 
 template<typename T>
-	typename udm::ArrayIterator<T>::pointer udm::ArrayIterator<T>::operator->() {return m_curProperty.GetValuePtr<T>();}
+	typename udm::ArrayIterator<T>::pointer udm::ArrayIterator<T>::operator->()
+	{
+		if constexpr(std::is_same_v<T,udm::LinkedPropertyWrapper>)
+			return &m_curProperty;
+		else
+			return m_curProperty.GetValuePtr<T>();
+	}
 
 template<typename T>
 	bool udm::ArrayIterator<T>::operator==(const ArrayIterator &other) const {return m_curProperty == other.m_curProperty;}

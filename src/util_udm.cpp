@@ -1358,6 +1358,8 @@ void udm::AsciiReader::ReadValueList(Type type,const std::function<bool()> &valu
 			--m_curCharPos;
 			m_file->Seek(m_file->Tell() -1);
 		}
+		else
+			SeekNextToken();
 		if(valueHandler() == false)
 			throw BuildException<DataError>("Invalid value for type '" +std::string{enum_type_to_ascii(type)} +"'");
 	}
