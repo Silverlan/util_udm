@@ -52,6 +52,13 @@ namespace udm
 	using Mat4 = Mat4;
 	using Mat3x4 = Mat3x4;
 
+	static std::string CONTROL_CHARACTERS = "{}[]$,";
+	static std::string WHITESPACE_CHARACTERS = ustring::WHITESPACE;
+	static constexpr auto PATH_SEPARATOR = '/';
+	bool is_whitespace_character(char c);
+	bool is_control_character(char c);
+	bool does_key_require_quotes(const std::string_view &key);
+
 	struct Exception
 		: public std::exception
 	{
@@ -84,10 +91,15 @@ namespace udm
 	struct Blob
 	{
 		Blob()=default;
+		Blob(const Blob&)=default;
+		Blob(Blob&&)=default;
 		Blob(std::vector<uint8_t> &&data)
 			: data{data}
 		{}
 		std::vector<uint8_t> data;
+
+		Blob &operator=(Blob &&other);
+		Blob &operator=(const Blob &other);
 
 		bool operator==(const Blob &other) const {return data == other.data;}
 		bool operator!=(const Blob &other) const {return !operator==(other);}
@@ -96,11 +108,16 @@ namespace udm
 	struct BlobLz4
 	{
 		BlobLz4()=default;
+		BlobLz4(const BlobLz4&)=default;
+		BlobLz4(BlobLz4&&)=default;
 		BlobLz4(std::vector<uint8_t> &&compressedData,size_t uncompressedSize)
 			: compressedData{compressedData},uncompressedSize{uncompressedSize}
 		{}
 		size_t uncompressedSize = 0;
 		std::vector<uint8_t> compressedData;
+
+		BlobLz4 &operator=(BlobLz4 &&other);
+		BlobLz4 &operator=(const BlobLz4 &other);
 
 		bool operator==(const BlobLz4 &other) const {return uncompressedSize == other.uncompressedSize && compressedData == other.compressedData;}
 		bool operator!=(const BlobLz4 &other) const {return !operator==(other);}
@@ -113,6 +130,9 @@ namespace udm
 			: data{data}
 		{}
 		std::vector<uint8_t> data;
+
+		Utf8String &operator=(Utf8String &&other);
+		Utf8String &operator=(const Utf8String &other);
 
 		bool operator==(const Utf8String &other) const {return data == other.data;}
 		bool operator!=(const Utf8String &other) const {return !operator==(other);}
@@ -153,12 +173,13 @@ namespace udm
 
 		Element,
 		Array,
+		Reference,
 
 		Count,
 		Last = Array,
 		Invalid = std::numeric_limits<uint8_t>::max()
 	};
-	static std::array<Type,6> NON_TRIVIAL_TYPES = {Type::String,Type::Utf8String,Type::Blob,Type::BlobLz4,Type::Element,Type::Array};
+	static std::array<Type,7> NON_TRIVIAL_TYPES = {Type::String,Type::Utf8String,Type::Blob,Type::BlobLz4,Type::Element,Type::Array,Type::Reference};
 
 	enum class BlobResult : uint8_t
 	{
@@ -218,9 +239,10 @@ namespace udm
 		case Type::BlobLz4:
 		case Type::Element:
 		case Type::Array:
+		case Type::Reference:
 			return true;
 	  }
-	  static_assert(NON_TRIVIAL_TYPES.size() == 6,"Update this list when new non-trivial types have been added!");
+	  static_assert(NON_TRIVIAL_TYPES.size() == 7,"Update this list when new non-trivial types have been added!");
 	  return false;
 	}
 
@@ -289,8 +311,10 @@ namespace udm
 			return "array";
 		case Type::Element:
 			return "element";
+		case Type::Reference:
+			return "ref";
 		}
-		static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
+		static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
 	}
 	Type ascii_type_to_enum(const std::string &type);
 	void sanitize_key_name(std::string &key);
@@ -336,7 +360,8 @@ namespace udm
 
 	struct Element;
 	struct Array;
-	constexpr std::variant<tag_t<String>,tag_t<Utf8String>,tag_t<Blob>,tag_t<BlobLz4>,tag_t<Element>,tag_t<Array>> get_non_trivial_tag(Type e)
+	struct Reference;
+	constexpr std::variant<tag_t<String>,tag_t<Utf8String>,tag_t<Blob>,tag_t<BlobLz4>,tag_t<Element>,tag_t<Array>,tag_t<Reference>> get_non_trivial_tag(Type e)
 	{
 		switch(e)
 		{
@@ -346,8 +371,9 @@ namespace udm
 			case Type::BlobLz4: return tag<BlobLz4>;
 			case Type::Element: return tag<Element>;
 			case Type::Array: return tag<Array>;
+			case Type::Reference: return tag<Reference>;
 		}
-		static_assert(NON_TRIVIAL_TYPES.size() == 6,"Update this list when new non-trivial types have been added!");
+		static_assert(NON_TRIVIAL_TYPES.size() == 7,"Update this list when new non-trivial types have been added!");
 	}
 
 	Blob decompress_lz4_blob(const BlobLz4 &data);
@@ -475,12 +501,14 @@ namespace udm
 		bool Read(const VFilePtr &f,Element &outEl);
 		bool Read(const VFilePtr &f,Array &outArray);
 		bool Read(const VFilePtr &f,String &outStr);
+		bool Read(const VFilePtr &f,Reference &outRef);
 		static void Write(VFilePtrReal &f,const Blob &blob);
 		static void Write(VFilePtrReal &f,const BlobLz4 &blob);
 		static void Write(VFilePtrReal &f,const Utf8String &str);
 		static void Write(VFilePtrReal &f,const Element &el);
 		static void Write(VFilePtrReal &f,const Array &a);
 		static void Write(VFilePtrReal &f,const String &str);
+		static void Write(VFilePtrReal &f,const Reference &ref);
 		
 		static std::string ToAsciiValue(const Nil &nil,const std::string &prefix="");
 		static std::string ToAsciiValue(const Blob &blob,const std::string &prefix="");
@@ -489,6 +517,7 @@ namespace udm
 		static std::string ToAsciiValue(const Element &el,const std::string &prefix="");
 		static std::string ToAsciiValue(const Array &a,const std::string &prefix="");
 		static std::string ToAsciiValue(const String &str,const std::string &prefix="");
+		static std::string ToAsciiValue(const Reference &ref,const std::string &prefix="");
 		
 		static std::string ToAsciiValue(const Vector2 &v,const std::string &prefix="");
 		static std::string ToAsciiValue(const Vector3 &v,const std::string &prefix="");
@@ -522,7 +551,11 @@ namespace udm
 	};
 
 	using Version = uint32_t;
-	static constexpr Version VERSION = 1;
+	/* Version history:
+	* 1: Initial version
+	* 2: Added references
+	*/
+	static constexpr Version VERSION = 2;
 	static constexpr auto *HEADER_IDENTIFIER = "UDMB";
 #pragma pack(push,1)
 	struct Header
@@ -565,11 +598,11 @@ namespace udm
 	class ElementIterator;
 	struct ElementIteratorWrapper
 	{
-		ElementIteratorWrapper(PropertyWrapper &prop);
+		ElementIteratorWrapper(LinkedPropertyWrapper &prop);
 		ElementIterator begin();
 		ElementIterator end();
 	private:
-		PropertyWrapper &m_prop;
+		LinkedPropertyWrapper &m_prop;
 	};
 
 	struct PropertyWrapper
@@ -592,6 +625,8 @@ namespace udm
 		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element);
 		bool IsArrayItem() const;
 		bool IsType(Type type) const;
+		Type GetType() const;
+		void Merge(const PropertyWrapper &other);
 
 		Array *GetOwningArray();
 		const Array *GetOwningArray() const {return const_cast<PropertyWrapper*>(this)->GetOwningArray();}
@@ -662,7 +697,7 @@ namespace udm
 		uint32_t GetChildCount() const;
 		//
 		
-		LinkedPropertyWrapper Prop(const std::string_view &key) const;
+		LinkedPropertyWrapper GetFromPath(const std::string_view &key) const;
 		LinkedPropertyWrapper operator[](const std::string_view &key) const;
 		LinkedPropertyWrapper operator[](const std::string &key) const;
 		LinkedPropertyWrapper operator[](const char *key) const;
@@ -675,6 +710,8 @@ namespace udm
 		operator bool() const;
 		Property *prop = nullptr;
 		uint32_t arrayIndex = std::numeric_limits<uint32_t>::max();
+
+		LinkedPropertyWrapper *GetLinked();
 	protected:
 		bool linked = false;
 	};
@@ -707,11 +744,28 @@ namespace udm
 		bool operator!=(const LinkedPropertyWrapper &other) const;
 		template<typename T>
 			void operator=(T &&v);
+		void operator=(PropertyWrapper &&v);
+		void operator=(LinkedPropertyWrapper &&v);
+		std::string GetPath() const;
+		PProperty ClaimOwnership() const;
 		std::unique_ptr<LinkedPropertyWrapper> prev = nullptr;
 		std::string propName;
 
 		// For internal use only!
 		void InitializeProperty(Type type=Type::Element,bool getOnly=false);
+		Property *GetProperty(std::vector<uint32_t> *optOutArrayIndices=nullptr) const;
+	};
+
+	struct Reference
+	{
+		PropertyWrapper property;
+		std::string path;
+
+		Reference &operator=(Reference &&other);
+		Reference &operator=(const Reference &other);
+
+		bool operator==(const Reference &other) const {return property == other.property;}
+		bool operator!=(const Reference &other) const {return !operator==(other);}
 	};
 
 	struct Element
@@ -728,8 +782,12 @@ namespace udm
 		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element);
 		void ToAscii(std::stringstream &ss,const std::optional<std::string> &prefix={}) const;
 
+		void Merge(const Element &other);
+
 		bool operator==(const Element &other) const;
 		bool operator!=(const Element &other) const {return !operator==(other);}
+		Element &operator=(Element &&other);
+		Element &operator=(const Element &other);
 
 		ElementIterator begin();
 		ElementIterator end();
@@ -784,6 +842,11 @@ namespace udm
 
 		bool operator==(const Array &other) const;
 		bool operator!=(const Array &other) const {return !operator==(other);}
+
+		void Merge(const Array &other);
+
+		Array &operator=(Array &&other);
+		Array &operator=(const Array &other);
 		
 		void SetValueType(Type valueType);
 		bool IsValueType(Type pvalueType) const {return pvalueType == valueType;}
@@ -953,7 +1016,7 @@ constexpr size_t udm::size_of(Type t)
 		},tag);
 	}
 	throw std::logic_error{std::string{"UDM type "} +std::string{magic_enum::enum_name(t)} +" has non-constant size!"};
-	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
+	static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
 	return 0;
 }
 
@@ -1048,7 +1111,9 @@ template<typename T>
 		return Type::Element;
 	else if constexpr(std::is_same_v<T,Array>)
 		return Type::Array;
-	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
+	else if constexpr(std::is_same_v<T,Reference>)
+		return Type::Reference;
+	static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
 	return Type::Invalid;
 }
 
@@ -1106,7 +1171,7 @@ template<typename TFrom>
 
 	if(tTo == Type::String)
 		return is_convertible<TFrom,String>();
-	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
+	static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
 	return false;
 }
 
@@ -1126,7 +1191,7 @@ constexpr bool udm::is_convertible(Type tFrom,Type tTo)
 
 	if(tFrom == Type::String)
 		return is_convertible<String>(tTo);
-	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
+	static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
 	return false;
 }
 
@@ -1271,6 +1336,8 @@ template<typename T>
 template<typename T>
 	T &udm::Array::GetValue(uint32_t idx)
 {
+	if(idx >= size)
+		throw OutOfBoundsError{"Array index " +std::to_string(idx) +" out of bounds of array of size " +std::to_string(size) +"!"};
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	auto vs = [this,idx](auto tag) -> T& {
 		using TTag = decltype(tag)::type;
@@ -1335,7 +1402,6 @@ template<typename T>
 template<typename T>
 	T &udm::Property::GetValue()
 {
-	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
 	return GetValue<T>(type_to_enum<T>());
 }
 
@@ -1408,7 +1474,7 @@ template<typename T>
 	
 	if(is_non_trivial_type(type))
 		return std::visit(vs,get_non_trivial_tag(type));
-	static_assert(umath::to_integral(Type::Count) == 29,"Update this list when new types are added!");
+	static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
 	return {};
 }
 
@@ -1498,7 +1564,10 @@ template<typename T>
 	auto *a = GetValuePtr<Array>();
 	if(a == nullptr)
 		return ArrayIterator<T>{};
-	return a->begin<T>();
+	auto it = a->begin<T>();
+	if(linked)
+		it.GetProperty().prev = std::make_unique<LinkedPropertyWrapper>(*static_cast<LinkedPropertyWrapper*>(this));
+	return it;
 }
 template<typename T>
 	udm::ArrayIterator<T> udm::PropertyWrapper::end()

@@ -3,205 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "udm.hpp"
-#include <lz4.h>
+
 #pragma optimize("",off)
-udm::Blob udm::decompress_lz4_blob(const void *compressedData,uint64_t compressedSize,uint64_t uncompressedSize)
-{
-	udm::Blob dst {};
-	dst.data.resize(uncompressedSize);
-	auto size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressedData),reinterpret_cast<char*>(dst.data.data()),compressedSize,uncompressedSize);
-	if(size < 0)
-		throw CompressionError{"Unable to decompress LZ4 blob data buffer of size " +std::to_string(compressedSize)};
-	if(size != uncompressedSize)
-		throw CompressionError{"LZ4 blob data decompression size mismatch!"};
-	return dst;
-}
-
-udm::Blob udm::decompress_lz4_blob(const BlobLz4 &data)
-{
-	return decompress_lz4_blob(data.compressedData.data(),data.compressedData.size(),data.uncompressedSize);
-}
-
-udm::BlobLz4 udm::compress_lz4_blob(const void *data,uint64_t srcSize)
-{
-	udm::BlobLz4 compressed {};
-	compressed.uncompressedSize = srcSize;
-	compressed.compressedData.resize(LZ4_compressBound(srcSize));
-	auto size = LZ4_compress_default(reinterpret_cast<const char*>(data),reinterpret_cast<char*>(compressed.compressedData.data()),srcSize,compressed.compressedData.size() *sizeof(compressed.compressedData.front()));
-	if(size < 0)
-		throw CompressionError{"Unable to compress blob data buffer of size " +std::to_string(srcSize)};
-	compressed.compressedData.resize(size);
-	return compressed;
-}
-
-udm::BlobLz4 udm::compress_lz4_blob(const Blob &data) {return compress_lz4_blob(data.data.data(),data.data.size());}
-
-udm::PProperty udm::Property::Create(Type type)
-{
-	auto prop = std::shared_ptr<Property>{new Property{}};
-	prop->type = type;
-	prop->Initialize();
-	if(type == Type::Element)
-		static_cast<Element*>(prop->value)->fromProperty = *prop;
-	else if(type == Type::Array)
-		static_cast<Array*>(prop->value)->fromProperty = *prop;
-	return prop;
-}
-
-udm::Property::Property(Property &&other)
-{
-	type = other.type;
-	value = other.value;
-
-	other.type = Type::Nil;
-	other.value = nullptr;
-}
-
-udm::Property::~Property() {Clear();}
-
-void udm::Property::Initialize()
-{
-	Clear();
-	if(is_non_trivial_type(type))
-	{
-		auto tag = get_non_trivial_tag(type);
-		std::visit([&](auto tag){value = new decltype(tag)::type{};},tag);
-		return;
-	}
-	if(type == Type::Nil)
-		return;
-	auto size = size_of(type);
-	value = new uint8_t[size];
-}
-
-void udm::Property::Clear()
-{
-	if(value == nullptr)
-		return;
-	if(is_trivial_type(type))
-		delete[] static_cast<uint8_t*>(value);
-	else
-	{
-		if(is_non_trivial_type(type))
-		{
-			auto tag = get_non_trivial_tag(type);
-			std::visit([&](auto tag){delete static_cast<decltype(tag)::type*>(this->value);},tag);
-		}
-	}
-	value = nullptr;
-}
-
-udm::Array::~Array() {Clear();}
-
-bool udm::Array::operator==(const Array &other) const
-{
-	if(size != other.size || valueType != other.valueType)
-		return false;
-	if(is_trivial_type(valueType))
-	{
-		auto sz = size_of(valueType);
-		return memcmp(values,other.values,sz *size);
-	}
-	auto tag = get_non_trivial_tag(valueType);
-	return std::visit([this,&other](auto tag) -> bool {
-		using T = decltype(tag)::type;
-		auto *ptr0 = static_cast<T*>(values);
-		auto *ptr1 = static_cast<T*>(other.values);
-		for(auto i=decltype(size){0u};i<size;++i)
-		{
-			if(*ptr0 != *ptr1)
-				return false;
-			++ptr0;
-			++ptr1;
-		}
-		return true;
-	},tag);
-}
-
-void udm::Array::SetValueType(Type valueType)
-{
-	if(valueType == this->valueType)
-		return;
-	Clear();
-	this->valueType = valueType;
-	Resize(size);
-}
-
-void *udm::Array::GetValuePtr(uint32_t idx)
-{
-	return static_cast<uint8_t*>(values) +idx *size_of_base_type(valueType);
-}
-
-void udm::Array::Resize(uint32_t newSize)
-{
-	if(newSize == size)
-		return;
-	if(is_non_trivial_type(valueType))
-	{
-		auto tag = get_non_trivial_tag(valueType);
-		return std::visit([this,newSize](auto tag) {
-			using T = decltype(tag)::type;
-			auto *newValues = new T[newSize];
-			if(values)
-			{
-				auto numCpy = umath::min(newSize,size);
-				for(auto i=decltype(numCpy){0u};i<numCpy;++i)
-					newValues[i] = static_cast<T*>(values)[i];
-				for(auto i=size;i<newSize;++i)
-					newValues[i] = {}; // Default initialize
-				Clear();
-			}
-			values = newValues;
-			size = newSize;
-			
-			// Also see udm::Property::Read (with array overload)
-			if constexpr(std::is_same_v<T,Element> || std::is_same_v<T,Array>)
-			{
-				auto *p = static_cast<T*>(values);
-				for(auto i=decltype(size){0u};i<size;++i)
-					p[i].fromProperty = PropertyWrapper{*this,i};
-			}
-		},tag);
-		return;
-	}
-
-	auto sizeBytes = newSize *size_of(valueType);
-	auto *newValues = new uint8_t[sizeBytes];
-	if(values)
-	{
-		auto cpySizeBytes = umath::min(size *size_of(valueType),sizeBytes);
-		memcpy(newValues,values,cpySizeBytes);
-		if(sizeBytes > cpySizeBytes)
-			memset(newValues +cpySizeBytes,0,sizeBytes -cpySizeBytes);
-		Clear();
-	}
-	values = newValues;
-	size = newSize;
-}
-
-udm::PropertyWrapper udm::Array::operator[](uint32_t idx)
-{
-	return PropertyWrapper{*this,idx};
-}
-
-void udm::Array::Clear()
-{
-	if(values == nullptr)
-		return;
-	if(is_trivial_type(valueType))
-		delete[] static_cast<uint8_t*>(values);
-	else
-	{
-		auto tag = get_non_trivial_tag(valueType);
-		std::visit([&](auto tag){
-			using T = decltype(tag)::type;
-			delete[] static_cast<T*>(this->values);
-		},tag);
-	}
-	values = nullptr;
-	size = 0;
-}
-
 udm::PropertyWrapper::PropertyWrapper(Property &o)
 	: prop{&o}
 {}
@@ -211,22 +14,32 @@ udm::PropertyWrapper::PropertyWrapper(const PropertyWrapper &other)
 {
 	static_assert(sizeof(PropertyWrapper) == 16,"Update this function when the struct has changed!");
 }
-
 udm::PropertyWrapper::PropertyWrapper(Array &array,uint32_t idx)
 	: PropertyWrapper{array.fromProperty}
 {
 	arrayIndex = idx;
+	if(array.fromProperty.prop && array.fromProperty.prop->GetValuePtr<Array>() != &array)
+	{
+		// Note: This is a special case where the from-property of the array does not point to the array,
+		// which means this is a sub-array of another array (since array items do not have properties themselves).
+		// We'll set 'prop' to nullptr, but keep the array index, to indicate that this is a sub-array.
+		prop = nullptr;
+	}
 }
 
 void udm::PropertyWrapper::operator=(const PropertyWrapper &other) {operator=(const_cast<PropertyWrapper&>(other));}
 void udm::PropertyWrapper::operator=(PropertyWrapper &other)
 {
+	if(this == &other)
+		return;
 	prop = other.prop;
 	arrayIndex = other.arrayIndex;
 	static_assert(sizeof(PropertyWrapper) == 16,"Update this function when the struct has changed!");
 }
 void udm::PropertyWrapper::operator=(PropertyWrapper &&other)
 {
+	if(this == &other)
+		return;
 	prop = other.prop;
 	arrayIndex = other.arrayIndex;
 	static_assert(sizeof(PropertyWrapper) == 16,"Update this function when the struct has changed!");
@@ -244,7 +57,12 @@ udm::PropertyWrapper::operator bool() const
 	if(linked)
 		const_cast<LinkedPropertyWrapper&>(static_cast<const LinkedPropertyWrapper&>(*this)).InitializeProperty(Type::Element,true);
 	if(arrayIndex == std::numeric_limits<uint32_t>::max())
-		return prop && prop->type != Type::Nil;
+	{
+		auto *tmpProp = prop;
+		if(linked && !prop)
+			tmpProp = static_cast<const LinkedPropertyWrapper&>(*this).GetProperty();
+		return tmpProp && tmpProp->type != Type::Nil;
+	}
 	auto *a = GetOwningArray();
 	if(a == nullptr || !linked)
 		return false;
@@ -260,7 +78,7 @@ void *udm::PropertyWrapper::GetValuePtr(Type &outType)
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
 			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr(outType);
 		outType = a.valueType;
-		return static_cast<uint8_t*>(a.values) +arrayIndex *size_of(a.valueType);
+		return static_cast<uint8_t*>(a.values) +arrayIndex *size_of_base_type(a.valueType);
 	}
 	return (*this)->GetValuePtr(outType);
 }
@@ -271,12 +89,45 @@ bool udm::PropertyWrapper::IsArrayItem() const
 		static_cast<const LinkedPropertyWrapper&>(*this).prev &&
 		static_cast<const LinkedPropertyWrapper&>(*this).prev->prop &&
 		static_cast<const LinkedPropertyWrapper&>(*this).prev->prop->IsType(Type::Array);*/
-	return arrayIndex != std::numeric_limits<uint32_t>::max() && prop && prop->IsType(Type::Array);
+	if(arrayIndex == std::numeric_limits<uint32_t>::max())
+		return false;
+	if(prop)
+		return prop->IsType(Type::Array);
+	if(!linked)
+		return false;
+	// May be an array of an array
+	auto *propLinked = static_cast<const LinkedPropertyWrapper&>(*this).GetProperty();
+	return propLinked && propLinked->IsType(Type::Array);
 }
 
 bool udm::PropertyWrapper::IsType(Type type) const
 {
 	return prop ? prop->IsType(type) : false;
+}
+
+udm::Type udm::PropertyWrapper::GetType() const
+{
+	return prop ? prop->type : Type::Nil;
+}
+
+void udm::PropertyWrapper::Merge(const PropertyWrapper &other)
+{
+	if(IsType(Type::Element) && other.IsType(Type::Element))
+	{
+		auto *e = GetValuePtr<Element>();
+		auto *eOther = other.GetValuePtr<Element>();
+		if(e && eOther)
+			e->Merge(*eOther);
+		return;
+	}
+	if(IsType(Type::Array) && other.IsType(Type::Array))
+	{
+		auto *a = GetValuePtr<Array>();
+		auto *aOther = other.GetValuePtr<Array>();
+		if(a && aOther)
+			a->Merge(*aOther);
+		return;
+	}
 }
 
 udm::Array *udm::PropertyWrapper::GetOwningArray()
@@ -367,7 +218,10 @@ udm::ElementIterator udm::PropertyWrapper::begin_el()
 	auto *e = GetValuePtr<Element>();
 	if(e == nullptr)
 		return ElementIterator{};
-	return e->begin();
+	auto it = e->begin();
+	if(linked)
+		(*it).property.prev = std::make_unique<LinkedPropertyWrapper>(*static_cast<LinkedPropertyWrapper*>(this));
+	return it;
 }
 udm::ElementIterator udm::PropertyWrapper::end_el()
 {
@@ -378,7 +232,12 @@ udm::ElementIterator udm::PropertyWrapper::end_el()
 		return ElementIterator{};
 	return e->end();
 }
-udm::ElementIteratorWrapper udm::PropertyWrapper::ElIt() {return ElementIteratorWrapper{*this};}
+udm::ElementIteratorWrapper udm::PropertyWrapper::ElIt()
+{
+	if(linked)
+		return ElementIteratorWrapper{*static_cast<LinkedPropertyWrapper*>(this)};
+	return ElementIteratorWrapper{LinkedPropertyWrapper{*this}};
+}
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type)
 {
@@ -461,12 +320,6 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 	return wrapper;
 }
 
-udm::LinkedPropertyWrapper::LinkedPropertyWrapper(const LinkedPropertyWrapper &other)
-	: PropertyWrapper{other},propName{other.propName},prev{other.prev ? std::make_unique<LinkedPropertyWrapper>(*other.prev) : nullptr}
-{
-	linked = true;
-}
-
 void udm::Element::AddChild(const std::string &key,const PProperty &o)
 {
 	children[key] = o;
@@ -482,11 +335,41 @@ void udm::Element::AddChild(const std::string &key,const PProperty &o)
 
 udm::Property *udm::PropertyWrapper::operator*() {return prop;}
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::Prop(const std::string_view &key) const
+udm::LinkedPropertyWrapper udm::PropertyWrapper::GetFromPath(const std::string_view &key) const
 {
-	auto sep = key.find('.');
-	if(sep != std::string::npos)
-		return Prop(key.substr(0,sep)).Prop(key.substr(sep +1));
+	if(key.empty())
+		return {};
+	auto end = key.find(PATH_SEPARATOR);
+	auto baseKeyName = key.substr(0,end);
+	std::vector<uint32_t> arrayIndices {};
+	while(baseKeyName.back() == ']')
+	{
+		auto st = baseKeyName.rfind('[');
+		if(st == std::string::npos)
+			return {};
+		auto arrayIndex = util::to_uint(std::string{baseKeyName.substr(st +1,baseKeyName.length() -st -2)});
+		arrayIndices.push_back(arrayIndex);
+		baseKeyName = baseKeyName.substr(0,st);
+	}
+	if(baseKeyName.front() == '\"')
+	{
+		uint32_t idx = 0;
+		while(idx < baseKeyName.length())
+		{
+			if(baseKeyName[idx] == '\"')
+				break;
+			++idx;
+		}
+		if(idx >= baseKeyName.length())
+			return {};
+		baseKeyName = baseKeyName.substr(1,idx -1);
+	}
+	auto prop = (*this)[baseKeyName];
+	for(auto it=arrayIndices.rbegin();it!=arrayIndices.rend();++it)
+		prop = prop[*it];
+	if(end != std::string::npos)
+		return prop.GetFromPath(key.substr(end +1));
+	return prop;
 }
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](uint32_t idx) const
@@ -568,35 +451,6 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &key) const {return operator[](std::string_view{key});}
 
-void udm::LinkedPropertyWrapper::InitializeProperty(Type type,bool getOnly)
-{
-	assert(type == Type::Element || type == Type::Array);
-	auto isArrayElement = (arrayIndex != std::numeric_limits<uint32_t>::max());
-	if(prop || prev == nullptr || (propName.empty() && !isArrayElement))
-		return;
-	prev->InitializeProperty(!isArrayElement ? Type::Element : Type::Array);
-	if(prev->prop == nullptr || prev->prop->type != Type::Element)
-	{
-		if(prev->prop && prev->prop->type == Type::Array && prev->arrayIndex != std::numeric_limits<uint32_t>::max() && static_cast<Array*>(prev->prop->value)->IsValueType(Type::Element))
-		{
-			prop = static_cast<Array*>(prev->prop->value)->GetValue<Element>(prev->arrayIndex).Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
-			return;
-		}
-		if(isArrayElement && prev->prop && prev->prop->type == Type::Array)
-			prop = (*static_cast<Array*>(prev->prop->value))[arrayIndex].prop;
-		return;
-	}
-	auto &el = *static_cast<Element*>(prev->prop->value);
-	if(getOnly)
-	{
-		auto it = el.children.find(propName);
-		if(it != el.children.end())
-			prop = it->second.get();
-		return;
-	}
-	prop = el.Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
-}
-
 bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
 {
 	if(linked != other.linked)
@@ -607,73 +461,5 @@ bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
 }
 bool udm::PropertyWrapper::operator!=(const PropertyWrapper &other) const {return !operator==(other);}
 
-bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) const
-{
-	return prop == other.prop && arrayIndex == other.arrayIndex && propName == other.propName;
-}
-bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
-
-udm::ElementIteratorPair::ElementIteratorPair(std::unordered_map<std::string,PProperty>::iterator &it)
-	: key{it->first},property{*it->second}
-{}
-udm::ElementIteratorPair::ElementIteratorPair()=default;
-bool udm::ElementIteratorPair::operator==(const ElementIteratorPair &other) const
-{
-	return key == other.key && property == other.property;
-}
-bool udm::ElementIteratorPair::operator!=(const ElementIteratorPair &other) const {return !operator==(other);}
-
-udm::ElementIteratorWrapper::ElementIteratorWrapper(PropertyWrapper &prop)
-	: m_prop{prop}
-{}
-
-udm::ElementIterator udm::ElementIteratorWrapper::begin() {return m_prop.begin_el();}
-udm::ElementIterator udm::ElementIteratorWrapper::end() {return m_prop.end_el();}
-
-udm::ElementIterator::ElementIterator()
-	: m_iterator{}
-{}
-
-udm::ElementIterator::ElementIterator(udm::Element &e)
-	: ElementIterator{e,e.children.begin()}
-{}
-
-udm::ElementIterator::ElementIterator(udm::Element &e,std::unordered_map<std::string,PProperty>::iterator it)
-	: m_iterator{it},m_pair{it}
-{}
-
-udm::ElementIterator::ElementIterator(const ElementIterator &other)
-	: m_iterator{other.m_iterator},m_pair{other.m_pair}
-{}
-
-udm::ElementIterator &udm::ElementIterator::operator++()
-{
-	++m_iterator;
-	m_pair = ElementIteratorPair{m_iterator};
-	return *this;
-}
-
-udm::ElementIterator udm::ElementIterator::operator++(int)
-{
-	auto it = *this;
-	it.operator++();
-	return it;
-}
-
-typename udm::ElementIterator::reference udm::ElementIterator::operator*() {return m_pair;}
-
-typename udm::ElementIterator::pointer udm::ElementIterator::operator->() {return &m_pair;}
-
-bool udm::ElementIterator::operator==(const ElementIterator &other) const {return m_iterator == other.m_iterator;}
-
-bool udm::ElementIterator::operator!=(const ElementIterator &other) const {return !operator==(other);}
-
-udm::ElementIterator udm::Element::begin()
-{
-	return ElementIterator{*this,children.begin()};
-}
-udm::ElementIterator udm::Element::end()
-{
-	return ElementIterator{*this,children.end()};
-}
+udm::LinkedPropertyWrapper *udm::PropertyWrapper::GetLinked() {return linked ? static_cast<LinkedPropertyWrapper*>(this) : nullptr;}
 #pragma optimize("",on)
