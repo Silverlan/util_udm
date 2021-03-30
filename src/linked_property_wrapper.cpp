@@ -115,7 +115,7 @@ void udm::LinkedPropertyWrapper::InitializeProperty(Type type,bool getOnly)
 			{
 				for(auto it=arrayIndices.rbegin();it!=arrayIndices.rend() -1;++it)
 				{
-					if(a->valueType != Type::Array)
+					if(a->GetValueType() != Type::Array)
 						return;
 					a = static_cast<Array*>(a->GetValuePtr(*it));
 				}
@@ -144,7 +144,9 @@ void udm::LinkedPropertyWrapper::InitializeProperty(Type type,bool getOnly)
 
 bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) const
 {
-	return prop == other.prop && arrayIndex == other.arrayIndex && propName == other.propName;
+	auto res = (prop == other.prop && arrayIndex == other.arrayIndex && propName == other.propName);
+	// UDM_ASSERT_COMPARISON(res);
+	return res;
 }
 bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
 #pragma optimize("",on)

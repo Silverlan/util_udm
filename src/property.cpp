@@ -14,7 +14,7 @@ udm::PProperty udm::Property::Create(Type type)
 	prop->Initialize();
 	if(type == Type::Element)
 		static_cast<Element*>(prop->value)->fromProperty = *prop;
-	else if(type == Type::Array)
+	else if(is_array_type(type))
 		static_cast<Array*>(prop->value)->fromProperty = *prop;
 	return prop;
 }
@@ -29,6 +29,45 @@ udm::Property::Property(Property &&other)
 }
 
 udm::Property::~Property() {Clear();}
+
+void udm::Property::SetAppropriatePrecision(std::stringstream &ss,Type type)
+{
+	switch(type)
+	{
+	case Type::Float:
+	case Type::Vector2:
+	case Type::Vector3:
+	case Type::Vector4:
+	case Type::Quaternion:
+	case Type::EulerAngles:
+	case Type::Transform:
+	case Type::ScaledTransform:
+	case Type::Mat4:
+	case Type::Mat3x4:
+	case Type::Half:
+		ss<<std::fixed;
+		ss.precision(4);
+		break;
+	case Type::Double:
+		ss<<std::fixed;
+		ss.precision(8);
+		break;
+	}
+	static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
+}
+void udm::Property::RemoveTrailingZeroes(std::string &str)
+{
+	auto pos = str.find_last_not_of('0');
+	if(pos == std::string::npos || pos == str.length() -1)
+		return;
+	auto sep = str.find('.');
+	if(sep == std::string::npos)
+		return;
+	int offset{1};
+	if(pos == sep)
+		offset = 0;
+	str.erase(pos +offset,std::string::npos);
+}
 
 void udm::Property::Initialize()
 {
@@ -99,7 +138,7 @@ bool udm::Property::Read(const VFilePtr &f,Element &el)
 	{
 		auto &name = stringTable[i];
 		auto prop = Property::Create();
-		if(prop->Read(f)== false)
+		if(prop->Read(f) == false)
 			return false;
 		el.children[std::move(name)] = prop;
 	}
@@ -122,216 +161,94 @@ bool udm::Property::Read(const VFilePtr &f,Reference &outRef)
 	outRef.path = std::move(str);
 	return true;
 }
+bool udm::Property::ReadStructHeader(const VFilePtr &f,StructDescription &strct)
+{
+	auto n = f->Read<StructDescription::MemberCountType>();
+	strct.types.resize(n);
+	f->Read(strct.types.data(),n *sizeof(Type));
+	strct.names.resize(n);
+	for(auto i=decltype(n){0u};i<n;++i)
+		Read(f,strct.names[i]);
+	return true;
+}
+bool udm::Property::Read(const VFilePtr &f,Struct &strct)
+{
+	f->Seek(f->Tell() +sizeof(StructDescription::SizeType));
+	ReadStructHeader(f,strct.description);
+	auto dataSize = strct->GetDataSizeRequirement();
+	strct.data.resize(dataSize);
+	f->Read(strct.data.data(),dataSize);
+	return true;
+}
 bool udm::Property::Read(const VFilePtr &f,Array &a)
 {
 	a.Clear();
-	a.valueType = f->Read<decltype(a.valueType)>();
-	a.size = f->Read<decltype(a.size)>();
+	a.SetValueType(f->Read<decltype(a.GetValueType())>());
+	a.Resize(f->Read<decltype(a.GetSize())>());
+	auto *ptr = a.GetValues();
 	a.fromProperty = {*this};
-	if(is_non_trivial_type(a.valueType))
+	if(is_non_trivial_type(a.GetValueType()))
 	{
 		f->Seek(f->Tell() +sizeof(uint64_t)); // Skip size
-		auto tag = get_non_trivial_tag(a.valueType);
-		return std::visit([this,&f,&a](auto tag) {
+
+		if(a.GetValueType() == Type::Struct)
+		{
+			f->Seek(f->Tell() +sizeof(StructDescription::SizeType));
+			auto *structInfo = a.GetStructuredDataInfo();
+			assert(structInfo);
+			if(!structInfo)
+				throw ImplementationError{"Invalid array structure info!"};
+			ReadStructHeader(f,*structInfo);
+		}
+
+		auto tag = get_non_trivial_tag(a.GetValueType());
+		return std::visit([this,&f,&a,ptr](auto tag) {
 			using T = decltype(tag)::type;
-			a.values = new T[a.size];
-			for(auto i=decltype(a.size){0u};i<a.size;++i)
+			auto size = a.GetSize();
+			for(auto i=decltype(size){0u};i<size;++i)
 			{
-				if(Read(f,static_cast<T*>(a.values)[i]) == false)
+				if(Read(f,static_cast<T*>(ptr)[i]) == false)
 					return false;
 			}
 
 			// Also see udm::Array::Resize
 			if constexpr(std::is_same_v<T,Element> || std::is_same_v<T,Array>)
 			{
-				auto *p = static_cast<T*>(a.values);
-				for(auto i=decltype(a.size){0u};i<a.size;++i)
+				auto *p = static_cast<T*>(ptr);
+				for(auto i=decltype(size){0u};i<size;++i)
 					p[i].fromProperty = PropertyWrapper{a,i};
 			}
 			return true;
 		},tag);
 	}
-
-	auto size = a.size *size_of(a.valueType);
-	a.values = new uint8_t[size];
-	f->Read(a.values,size);
+	
+	auto size = a.GetSize() *size_of(a.GetValueType());
+	f->Read(ptr,size);
 	return true;
 }
 
-std::string udm::Property::ToAsciiValue(const Nil &nil,const std::string &prefix) {return "";}
-std::string udm::Property::ToAsciiValue(const Blob &blob,const std::string &prefix)
+bool udm::Property::Read(const VFilePtr &f,ArrayLz4 &a)
 {
-	try
-	{
-		return util::base64_encode(blob.data.data(),blob.data.size());
-	}
-	catch(const std::runtime_error &e)
-	{
-		throw CompressionError{e.what()};
-	}
-	return "";
-}
-std::string udm::Property::ToAsciiValue(const BlobLz4 &blob,const std::string &prefix)
-{
-	try
-	{
-		return "[" +std::to_string(blob.uncompressedSize) +"][" +util::base64_encode(blob.compressedData.data(),blob.compressedData.size()) +"]";
-	}
-	catch(const std::runtime_error &e)
-	{
-		throw CompressionError{e.what()};
-	}
-	return "";
-}
-std::string udm::Property::ToAsciiValue(const Utf8String &utf8,const std::string &prefix)
-{
-	try
-	{
-		return "[base64][" +util::base64_encode(utf8.data.data(),utf8.data.size()) +']';
-	}
-	catch(const std::runtime_error &e)
-	{
-		throw CompressionError{e.what()};
-	}
-	return "";
-}
-std::string udm::Property::ToAsciiValue(const Element &el,const std::string &prefix)
-{
-	// Unreachable
-	throw std::runtime_error{"Cannot convert value of type Element to ASCII!"};
-}
-std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix)
-{
-	std::stringstream ss;
-	ss<<"[";
-	ss<<enum_type_to_ascii(a.valueType)<<';'<<a.GetSize();
-	ss<<"][";
+	// Note: Any changes made here may affect udm::Data::SkipProperty as well
+	auto compressedSize = f->Read<size_t>();
+	a.Clear();
+	a.m_valueType = f->Read<decltype(a.GetValueType())>();
 
-	if(a.valueType == Type::Element)
+	if(a.GetValueType() == Type::Struct)
 	{
-		auto *ptr = static_cast<Element*>(a.values);
-		for(auto i=decltype(a.size){0u};i<a.size;++i)
-		{
-			if(i > 0)
-				ss<<',';
-			ss<<"\n";
-			ss<<prefix<<"\t{\n";
-			ptr->ToAscii(ss,prefix +"\t");
-			ss<<"\n"<<prefix<<"\t}";
-			++ptr;
-		}
-		if(a.size > 0)
-			ss<<"\n"<<prefix;
+		f->Seek(f->Tell() +sizeof(StructDescription::SizeType));
+		a.m_structuredDataInfo = std::make_unique<StructDescription>();
+		ReadStructHeader(f,*a.m_structuredDataInfo);
 	}
-	else if(is_numeric_type(a.valueType))
-	{
-		auto tag = get_numeric_tag(a.valueType);
-		std::visit([&a,&ss](auto tag) {
-			using T = decltype(tag)::type;
-			auto *ptr = static_cast<T*>(a.values);
-			for(auto i=decltype(a.size){0u};i<a.size;++i)
-			{
-				if(i > 0)
-					ss<<",";
-				NumericTypeToString(*ptr,ss);
-				++ptr;
-			}
-		},tag);
-	}
-	else
-	{
-		auto vs = [&a,&ss,&prefix](auto tag){
-			using T = decltype(tag)::type;
-			auto *ptr = static_cast<T*>(a.values);
-			for(auto i=decltype(a.size){0u};i<a.size;++i)
-			{
-				if(i > 0)
-					ss<<",";
-				ss<<ToAsciiValue(*ptr,prefix);
-				++ptr;
-			}
-		};
-		if(is_generic_type(a.valueType))
-			std::visit(vs,get_generic_tag(a.valueType));
-		else if(is_non_trivial_type(a.valueType))
-			std::visit(vs,get_non_trivial_tag(a.valueType));
-	}
-	ss<<"]";
-	return ss.str();
-}
-std::string udm::Property::ToAsciiValue(const String &str,const std::string &prefix)
-{
-	auto val = str;
-	ustring::replace(val,"\\","\\\\");
-	return '\"' +val +'\"';
-}
-std::string udm::Property::ToAsciiValue(const Reference &ref,const std::string &prefix)
-{
-	return ToAsciiValue(ref.path,prefix);
-}
-		
-std::string udm::Property::ToAsciiValue(const Vector2 &v,const std::string &prefix) {return '[' +std::to_string(v.x) +',' +std::to_string(v.y) +']';}
-std::string udm::Property::ToAsciiValue(const Vector3 &v,const std::string &prefix) {return '[' +std::to_string(v.x) +',' +std::to_string(v.y) +',' +std::to_string(v.z) +']';}
-std::string udm::Property::ToAsciiValue(const Vector4 &v,const std::string &prefix) {return '[' +std::to_string(v.x) +',' +std::to_string(v.y) +',' +std::to_string(v.z) +',' +std::to_string(v.w) +']';}
-std::string udm::Property::ToAsciiValue(const Quaternion &q,const std::string &prefix) {return '[' +std::to_string(q.w) +',' +std::to_string(q.x) +',' +std::to_string(q.y) +',' +std::to_string(q.z) +']';}
-std::string udm::Property::ToAsciiValue(const EulerAngles &a,const std::string &prefix) {return '[' +std::to_string(a.p) +',' +std::to_string(a.y) +',' +std::to_string(a.r) +']';}
-std::string udm::Property::ToAsciiValue(const Srgba &srgb,const std::string &prefix) {return '[' +std::to_string(srgb[0]) +',' +std::to_string(srgb[1]) +',' +std::to_string(srgb[2]) +',' +std::to_string(srgb[3]) +']';}
-std::string udm::Property::ToAsciiValue(const HdrColor &col,const std::string &prefix) {return '[' +std::to_string(col[0]) +',' +std::to_string(col[1]) +',' +std::to_string(col[2]) +']';}
-std::string udm::Property::ToAsciiValue(const Transform &t,const std::string &prefix)
-{
-	auto &pos = t.GetOrigin();
-	auto &rot = t.GetRotation();
-	std::string s = "[";
-	s += "[" +std::to_string(pos.x) +',' +std::to_string(pos.y) +',' +std::to_string(pos.z) +"]";
-	s += "[" +std::to_string(rot.w) +',' +std::to_string(rot.x) +',' +std::to_string(rot.y) +',' +std::to_string(rot.z) +"]";
-	s += "]";
-	return s;
-}
-std::string udm::Property::ToAsciiValue(const ScaledTransform &t,const std::string &prefix)
-{
-	auto &pos = t.GetOrigin();
-	auto &rot = t.GetRotation();
-	auto &scale = t.GetScale();
-	std::string s = "[";
-	s += "[" +std::to_string(pos.x) +',' +std::to_string(pos.y) +',' +std::to_string(pos.z) +"]";
-	s += "[" +std::to_string(rot.w) +',' +std::to_string(rot.x) +',' +std::to_string(rot.y) +',' +std::to_string(rot.z) +"]";
-	s += "[" +std::to_string(scale.x) +',' +std::to_string(scale.y) +',' +std::to_string(scale.z) +"]";
-	s += "]";
-	return s;
-}
-std::string udm::Property::ToAsciiValue(const Mat4 &m,const std::string &prefix)
-{
-	std::string s {"["};
-	for(uint8_t i=0;i<4;++i)
-	{
-		s += '[';
-		for(uint8_t j=0;j<4;++j)
-		{
-			if(i > 0 || j > 0)
-				s += ',';
-			s += std::to_string(m[i][j]);
-		}
-		s += ']';
-	}
-	s += "]";
-	return s;
-}
-std::string udm::Property::ToAsciiValue(const Mat3x4 &m,const std::string &prefix)
-{
-	std::string s {"["};
-	for(uint8_t i=0;i<3;++i)
-	{
-		s += '[';
-		for(uint8_t j=0;j<4;++j)
-		{
-			if(i > 0 || j > 0)
-				s += ',';
-			s += std::to_string(m[i][j]);
-		}
-		s += ']';
-	}
-	s += "]";
-	return s;
+
+	a.m_size = f->Read<decltype(a.GetSize())>();
+	a.fromProperty = {*this};
+
+	auto &blob = a.GetCompressedBlob();
+	blob.uncompressedSize = a.GetByteSize();
+	blob.compressedData.resize(compressedSize);
+	f->Read(blob.compressedData.data(),compressedSize);
+	return true;
 }
 
 void udm::Property::Write(VFilePtrReal &f,const Blob &blob)
@@ -356,8 +273,7 @@ void udm::Property::Write(VFilePtrReal &f,const Utf8String &str)
 void udm::Property::Write(VFilePtrReal &f,const Element &el)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	auto offsetToSize = f->Tell();
-	f->Write<uint64_t>(0);
+	auto offsetToSize = WriteBlockSize<uint64_t>(f);
 
 	f->Write<uint32_t>(el.children.size());
 	for(auto &pair : el.children)
@@ -366,27 +282,34 @@ void udm::Property::Write(VFilePtrReal &f,const Element &el)
 	for(auto &pair : el.children)
 		pair.second->Write(f);
 
-	auto startOffset = offsetToSize +sizeof(uint64_t);
-	auto curOffset = f->Tell();
-	f->Seek(offsetToSize);
-	f->Write<uint64_t>(curOffset -startOffset);
-	f->Seek(curOffset);
+	WriteBlockSize<uint64_t>(f,offsetToSize);
 }
 void udm::Property::Write(VFilePtrReal &f,const Array &a)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	f->Write(a.valueType);
-	f->Write(a.size);
-	if(is_non_trivial_type(a.valueType))
+	f->Write(a.GetValueType());
+	f->Write(a.GetSize());
+	if(is_non_trivial_type(a.GetValueType()))
 	{
 		auto offsetToSize = f->Tell();
 		f->Write<uint64_t>(0);
 
-		auto tag = get_non_trivial_tag(a.valueType);
+		if(a.GetValueType() == Type::Struct)
+		{
+			auto *structInfo = a.GetStructuredDataInfo();
+			assert(structInfo);
+			if(!structInfo)
+				throw ImplementationError{"Invalid array structure info!"};
+			auto offsetToSize = WriteBlockSize<StructDescription::SizeType>(f);
+			WriteStructHeader(f,*structInfo);
+			WriteBlockSize<StructDescription::SizeType>(f,offsetToSize);
+		}
+
+		auto tag = get_non_trivial_tag(a.GetValueType());
 		std::visit([&](auto tag){
 			using T = decltype(tag)::type;
-			for(auto i=decltype(a.size){0u};i<a.size;++i)
-				Property::Write(f,static_cast<T*>(a.values)[i]);
+			for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
+				Property::Write(f,static_cast<const T*>(a.GetValues())[i]);
 		},tag);
 
 		auto startOffset = offsetToSize +sizeof(uint64_t);
@@ -396,7 +319,28 @@ void udm::Property::Write(VFilePtrReal &f,const Array &a)
 		f->Seek(curOffset);
 		return;
 	}
-	f->Write(a.values,a.size *size_of(a.valueType));
+	f->Write(a.GetValues(),a.GetSize() *size_of(a.GetValueType()));
+}
+void udm::Property::Write(VFilePtrReal &f,const ArrayLz4 &a)
+{
+	// Note: Any changes made here may affect udm::Data::SkipProperty as well
+	auto &blob = a.GetCompressedBlob();
+	f->Write<size_t>(blob.compressedData.size());
+	f->Write(a.GetValueType());
+
+	if(a.GetValueType() == Type::Struct)
+	{
+		auto *structInfo = a.GetStructuredDataInfo();
+		assert(structInfo);
+		if(!structInfo)
+			throw ImplementationError{"Invalid array structure info!"};
+		auto offsetToSize = WriteBlockSize<StructDescription::SizeType>(f);
+		WriteStructHeader(f,*structInfo);
+		WriteBlockSize<StructDescription::SizeType>(f,offsetToSize);
+	}
+
+	f->Write(a.GetSize());
+	f->Write(blob.compressedData.data(),blob.compressedData.size());
 }
 void udm::Property::Write(VFilePtrReal &f,const String &str)
 {
@@ -414,6 +358,26 @@ void udm::Property::Write(VFilePtrReal &f,const String &str)
 void udm::Property::Write(VFilePtrReal &f,const Reference &ref)
 {
 	Write(f,ref.path);
+}
+void udm::Property::WriteStructHeader(VFilePtrReal &f,const StructDescription &strct)
+{
+	auto n = strct.GetMemberCount();
+	if(n == 0)
+		throw ImplementationError{"Attempted to write empty struct. This is not allowed!"};
+	f->Write(n);
+	f->Write(strct.types.data(),n *sizeof(Type));
+	for(auto i=decltype(n){0u};i<n;++i)
+		Write(f,strct.names[i]);
+}
+void udm::Property::Write(VFilePtrReal &f,const Struct &strct)
+{
+	// Note: Any changes made here may affect udm::Data::SkipProperty as well
+	auto offsetToSize = WriteBlockSize<StructDescription::SizeType>(f);
+
+	WriteStructHeader(f,strct.description);
+	f->Write(strct.data.data(),strct.data.size());
+	
+	WriteBlockSize<StructDescription::SizeType>(f,offsetToSize);
 }
 
 void udm::Property::Write(VFilePtrReal &f) const
@@ -436,17 +400,23 @@ udm::LinkedPropertyWrapper udm::Property::operator[](const char *key) {return op
 
 bool udm::Property::operator==(const Property &other) const
 {
-	if(type != other.type)
+	auto res = (type == other.type);
+	UDM_ASSERT_COMPARISON(res);
+	if(!res)
 		return false;
 	if(is_trivial_type(type))
 	{
 		auto sz = size_of(type);
-		return memcmp(value,other.value,sz) == 0;
+		res = (memcmp(value,other.value,sz) == 0);
+		UDM_ASSERT_COMPARISON(res);
+		return res;
 	}
 	auto tag = get_non_trivial_tag(type);
 	return std::visit([this,&other](auto tag) -> bool {
 		using T = decltype(tag)::type;
-		return *static_cast<T*>(value) == *static_cast<T*>(other.value);
+		auto res = (*static_cast<T*>(value) == *static_cast<T*>(other.value));
+		UDM_ASSERT_COMPARISON(res);
+		return res;
 	},tag);
 }
 
@@ -470,6 +440,68 @@ udm::Blob udm::Property::GetBlobData(const BlobLz4 &blob) {return decompress_lz4
 
 // udm::Property::operator udm::LinkedPropertyWrapper() {return LinkedPropertyWrapper{*this};}
 
+bool udm::Property::Compress()
+{
+	switch(type)
+	{
+	case Type::Array:
+	case Type::ArrayLz4:
+	{
+		auto &a = GetValue<Array>();
+		if(!is_trivial_type(a.GetValueType()))
+			return false;
+		auto blobLz4 = udm::compress_lz4_blob(a.GetValues(),size_of(a.GetValueType()) *a.GetSize());
+		Clear();
+		type = Type::BlobLz4;
+		auto *newBlob = new BlobLz4 {};
+		*newBlob = std::move(blobLz4);
+		value = newBlob;
+		return true;
+	}
+	case Type::Blob:
+	{
+		auto blobLz4 = udm::compress_lz4_blob(GetValue<Blob>());
+		Clear();
+		type = Type::BlobLz4;
+		auto *newBlob = new BlobLz4 {};
+		*newBlob = std::move(blobLz4);
+		value = newBlob;
+		return true;
+	}
+	}
+	return false;
+}
+bool udm::Property::Decompress(const std::optional<Type> arrayValueType)
+{
+	if(type != Type::BlobLz4)
+		return false;
+	if(!arrayValueType.has_value())
+	{
+		auto blob = udm::decompress_lz4_blob(GetValue<BlobLz4>());
+		Clear();
+		type = Type::Blob;
+		auto *newBlob = new Blob {};
+		*newBlob = std::move(blob);
+		value = newBlob;
+		return true;
+	}
+	if(!is_trivial_type(*arrayValueType))
+		return false;
+	auto &blobCompressed = GetValue<BlobLz4>();
+	if((blobCompressed.uncompressedSize %size_of(*arrayValueType)) != 0)
+		return false;
+	auto *a = new Array {};
+	a->SetValueType(*arrayValueType);
+	auto numItems = blobCompressed.uncompressedSize /size_of(*arrayValueType);
+	a->Resize(numItems);
+	udm::decompress_lz4_blob(blobCompressed.compressedData.data(),blobCompressed.compressedData.size(),blobCompressed.uncompressedSize,a->GetValues());
+
+	Clear();
+	type = Type::Array;
+	value = a;
+	return true;
+}
+
 udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize) const
 {
 	if(!*this)
@@ -491,20 +523,21 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 		return GetBlobData(blob,outBuffer,bufferSize);
 	}
 	case Type::Array:
+	case Type::ArrayLz4:
 	{
 		auto &a = GetValue<Array>();
-		auto byteSize = a.GetSize() *size_of_base_type(a.valueType);
+		auto byteSize = a.GetSize() *size_of_base_type(a.GetValueType());
 		if(optOutRequiredSize)
 			*optOutRequiredSize = byteSize;
 		if(bufferSize != byteSize)
 			return BlobResult::InsufficientSize;
-		if(is_non_trivial_type(a.valueType))
+		if(is_non_trivial_type(a.GetValueType()))
 		{
-			auto tag = get_non_trivial_tag(a.valueType);
+			auto tag = get_non_trivial_tag(a.GetValueType());
 			std::visit([this,outBuffer,&a](auto tag) {
 				using T = decltype(tag)::type;
 				auto n = a.GetSize();
-				auto *srcPtr = static_cast<T*>(a.values);
+				auto *srcPtr = static_cast<const T*>(a.GetValues());
 				auto *dstPtr = static_cast<T*>(outBuffer);
 				for(auto i=decltype(n){0u};i<n;++i)
 				{
@@ -515,7 +548,7 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 			},tag);
 		}
 		else
-			memcpy(outBuffer,a.values,bufferSize);
+			memcpy(outBuffer,a.GetValues(),bufferSize);
 		return BlobResult::Success;
 	}
 	}
@@ -529,16 +562,16 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,Typ
 		return result;
 	if(is_trivial_type(type))
 	{
-		if(IsType(Type::Array))
+		if(is_array_type(this->type))
 		{
 			auto &a = GetValue<Array>();
-			if(a.valueType == type)
+			if(a.GetValueType() == type)
 			{
 				if(optOutRequiredSize)
-					*optOutRequiredSize = a.GetSize() *size_of(a.valueType);
-				if(a.GetSize() *size_of(a.valueType) != bufferSize)
+					*optOutRequiredSize = a.GetSize() *size_of(a.GetValueType());
+				if(a.GetSize() *size_of(a.GetValueType()) != bufferSize)
 					return BlobResult::InsufficientSize;
-				memcpy(outBuffer,a.values,bufferSize);
+				memcpy(outBuffer,a.GetValues(),bufferSize);
 				return BlobResult::Success;
 			}
 		}
@@ -555,12 +588,12 @@ udm::Blob udm::Property::GetBlobData(Type &outType) const
 		return decompress_lz4_blob(GetValue<BlobLz4>());
 	if(is_trivial_type(type))
 	{
-		if(IsType(Type::Array))
+		if(is_array_type(this->type))
 		{
 			auto &a = GetValue<Array>();
 			udm::Blob blob {};
-			blob.data.resize(a.GetSize() *size_of(a.valueType));
-			memcpy(blob.data.data(),a.values,blob.data.size());
+			blob.data.resize(a.GetSize() *size_of(a.GetValueType()));
+			memcpy(blob.data.data(),a.GetValues(),blob.data.size());
 			return blob;
 		}
 	}
@@ -632,7 +665,10 @@ void udm::Property::ToAscii(std::stringstream &ss,const std::string &propName,co
 		ss<<'\n'<<prefix<<"}";
 		return;
 	}
-	ss<<prefix<<"$"<<enum_type_to_ascii(type)<<" ";
+	ss<<prefix<<"$"<<enum_type_to_ascii(type);
+	if(type == Type::Struct)
+		ss<<(*static_cast<Struct*>(value))->GetTemplateArgumentList();
+	ss<<" ";
 	if(does_key_require_quotes(propName))
 		ss<<'\"'<<propName<<'\"';
 	else

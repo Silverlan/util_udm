@@ -30,7 +30,9 @@ namespace udm
 		std::string ReadString();
 		std::string ReadString(char initialC);
 		void ReadValue(Type type,void *outData);
-		void ReadValueList(Type type,const std::function<bool()> &valueHandler);
+		void ReadStructValue(const StructDescription &strct,void *outData);
+		void ReadValueList(Type type,const std::function<bool()> &valueHandler,bool enableSubLists=true);
+		void ReadTemplateParameterList(std::vector<Type> &outTypes,std::vector<std::string> &outNames);
 		template<typename T,typename TBase>
 			void ReadTypedValueList(T &outData);
 		template<typename T>
@@ -72,8 +74,11 @@ udm::Type udm::ascii_type_to_enum(const std::string &type)
 		{"double",Type::Double},
 		{"bool",Type::Boolean},
 		{"vec2",Type::Vector2},
+		{"vec2i",Type::Vector2i},
 		{"vec3",Type::Vector3},
+		{"vec3i",Type::Vector3i},
 		{"vec4",Type::Vector4},
+		{"vec4i",Type::Vector4i},
 		{"quat",Type::Quaternion},
 		{"ang",Type::EulerAngles},
 		{"srgba",Type::Srgba},
@@ -85,10 +90,13 @@ udm::Type udm::ascii_type_to_enum(const std::string &type)
 		{"blob",Type::Blob},
 		{"lz4",Type::BlobLz4},
 		{"array",Type::Array},
+		{"arrayLz4",Type::ArrayLz4},
 		{"element",Type::Element},
-		{"ref",Type::Reference}
+		{"ref",Type::Reference},
+		{"struct",Type::Struct},
+		{"half",Type::Half}
 	};
-	static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
+	static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 	auto it = namedTypeToEnum.find(type);
 	return (it != namedTypeToEnum.end()) ? it->second : Type::Invalid;
 }
@@ -104,7 +112,60 @@ template<typename T>
 	ReadTypedValueList<T,float>(outData);
 }
 
-void udm::AsciiReader::ReadValueList(Type type,const std::function<bool()> &valueHandler)
+void udm::AsciiReader::ReadTemplateParameterList(std::vector<Type> &outTypes,std::vector<std::string> &outNames)
+{
+	auto t = ReadNextToken();
+	if(t != '<')
+		throw BuildException<SyntaxError>("Expected '<' to initiate template parameter list, got '" +std::string{t} +"'");
+	SeekNextToken();
+	t = PeekNextChar();
+	for(;;)
+	{
+		switch(t)
+		{
+		case '>':
+		{
+			if(outTypes.empty())
+				throw BuildException<SyntaxError>("Structs with empty template parameter lists are not allowed, at least one type has to be specified!");
+			MoveCursorForward(1);
+			return;
+		}
+		case ':':
+			throw BuildException<SyntaxError>("Unexpected token '" +std::string{t} +"'");
+			return;
+		case EOF:
+			throw BuildException<SyntaxError>("Unexpected EOF");
+			return;
+		}
+		if(!outTypes.empty())
+		{
+			if(t != ',')
+				throw BuildException<SyntaxError>("Unexpected token '" +std::string{t} +"'");
+			MoveCursorForward(1);
+		}
+
+		auto stype = ReadString();
+		auto type = ascii_type_to_enum(stype);
+		if(type == Type::Invalid)
+			throw BuildException<SyntaxError>("Invalid type '" +stype +"' specified in template parameter list!");
+		if(!is_trivial_type(type))
+			throw BuildException<SyntaxError>("Non-trivial type '" +stype +"' specified in template parameter list, only trivial types are allowed!");
+		outTypes.push_back(type);
+
+		SeekNextToken();
+		t = PeekNextChar();
+		if(t == ':')
+		{
+			MoveCursorForward(1);
+			outNames.push_back(ReadString());
+			t = PeekNextChar();
+		}
+		else
+			outNames.push_back("");
+	}
+}
+
+void udm::AsciiReader::ReadValueList(Type type,const std::function<bool()> &valueHandler,bool enableSubLists)
 {
 	auto t = ReadNextToken();
 	if(t != '[')
@@ -113,7 +174,7 @@ void udm::AsciiReader::ReadValueList(Type type,const std::function<bool()> &valu
 	for(;;)
 	{
 		t = ReadNextToken();
-		if(t == '[')
+		if(t == '[' && enableSubLists)
 		{
 			if(type != Type::Array)
 			{
@@ -187,7 +248,34 @@ constexpr bool is_float_based_type(udm::Type type)
 	case udm::Type::Mat3x4:
 		return true;
 	}
+	static_assert(umath::to_integral(udm::Type::Count) == 36,"Update this list when new types are added!");
 	return false;
+}
+
+void udm::AsciiReader::ReadStructValue(const StructDescription &strct,void *outData)
+{
+	auto &types = strct.types;
+	auto &names = strct.names;
+	auto t = ReadNextToken();
+	if(t != '[')
+		throw BuildException<SyntaxError>("Expected '[' to initiate value list, got '" +std::string{t} +"'");
+	uint64_t offset = 0;
+	auto *ptr = static_cast<uint8_t*>(outData);
+	for(auto i=decltype(types.size()){0u};i<types.size();++i)
+	{
+		if(i > 0)
+		{
+			t = ReadNextToken();
+			if(t != ',')
+				throw BuildException<SyntaxError>("Expected ',' to continue value list, got '" +std::string{t} +"'");
+		}
+		auto type = types[i];
+		ReadValue(type,ptr +offset);
+		offset += size_of(type);
+	}
+	t = ReadNextToken();
+	if(t != ']')
+		throw BuildException<SyntaxError>("Expected ']' to close value list, got '" +std::string{t} +"'");
 }
 
 void udm::AsciiReader::ReadValue(Type type,void *outData)
@@ -276,6 +364,15 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 	case Type::HdrColor:
 		ReadTypedValueList<HdrColor,HdrColor::value_type>(*static_cast<HdrColor*>(outData));
 		break;
+	case Type::Vector2i:
+		ReadTypedValueList<Vector2i,Vector2i::value_type>(*static_cast<Vector2i*>(outData));
+		break;
+	case Type::Vector3i:
+		ReadTypedValueList<Vector3i,Vector3i::value_type>(*static_cast<Vector3i*>(outData));
+		break;
+	case Type::Vector4i:
+		ReadTypedValueList<Vector4i,Vector4i::value_type>(*static_cast<Vector4i*>(outData));
+		break;
 	case Type::Blob:
 	{
 		auto &blob = *static_cast<Blob*>(outData);
@@ -305,39 +402,102 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 		break;
 	}
 	case Type::Array:
+	case Type::ArrayLz4:
 	{
+		auto t = ReadNextToken();
+		if(t != '[')
+			throw BuildException<SyntaxError>("Expected '[' to initiate value list, got '" +std::string{t} +"'");
 		auto valueType = Type::Invalid;
-		uint32_t size = 10;
-		ReadValueList(type,[this,&valueType,&size]() -> bool {
-			auto valueTypeStr = ReadString();
-			auto sep = valueTypeStr.find(';');
-			if(sep != std::string::npos)
-			{
-				size = util::to_uint(valueTypeStr.substr(sep +1));
-				valueTypeStr = valueTypeStr.substr(0,sep);
-			}
-			valueType = ascii_type_to_enum(valueTypeStr);
-			return valueType != Type::Invalid;
-		});
+		auto sValueType = ReadString();
+		valueType = ascii_type_to_enum(sValueType);
 		if(valueType == Type::Invalid)
-			throw BuildException<SyntaxError>("Missing values for array");
-
+			throw BuildException<SyntaxError>("Invalid value type '" +sValueType +"' specified for array!");
+		
 		auto &a = *static_cast<Array*>(outData);
 		a.SetValueType(valueType);
+
+		if(valueType == Type::Struct)
+		{
+			auto *strct = a.GetStructuredDataInfo();
+			if(!strct)
+				throw ImplementationError{"Invalid array structure info!"};
+			auto &types = strct->types;
+			auto &names = strct->names;
+			ReadTemplateParameterList(types,names);
+		}
+
+		t = ReadNextToken();
+		std::optional<uint32_t> size {};
+		if(t == ';')
+		{
+			size = uint32_t{};
+			ReadValue(Type::UInt32,&*size);
+			t = ReadNextToken();
+		}
+
+		if(t != ']')
+			throw BuildException<SyntaxError>("Expected ']' to close value list, got '" +std::string{t} +"'");
+
+		if(type == Type::ArrayLz4)
+		{
+			if(size.has_value() == false)
+				throw BuildException<SyntaxError>("Missing size for compressed array");
+
+			auto &a = *static_cast<ArrayLz4*>(outData);
+			a.InitializeSize(*size);
+			auto &blob = a.GetCompressedBlob();
+			ReadBlobData(blob.compressedData);
+			break;
+		}
+		
+		if(!size.has_value())
+			*size = 10;
+		auto szValue = a.GetValueSize();
+		a.Resize(*size);
+
 		uint32_t numValues = 0;
-		a.Resize(size);
-		ReadValueList(valueType,[this,valueType,&a,&numValues]() -> bool {
+		auto *p = static_cast<uint8_t*>(a.GetValues());
+		std::function<void(uint32_t)> fReadValue = nullptr;
+		if(valueType == Type::Struct)
+		{
+			auto &strct = *a.GetStructuredDataInfo();
+			fReadValue = [this,&strct,&p,szValue](uint32_t idx) {
+				ReadStructValue(strct,p);
+				p += szValue;
+			};
+		}
+		else
+		{
+			fReadValue = [this,&p,valueType,szValue](uint32_t idx) {
+				ReadValue(valueType,p);
+				p += szValue;
+			};
+		}
+
+		ReadValueList(valueType,[this,&fReadValue,&a,&numValues]() -> bool {
 			if(numValues >= a.GetSize())
 				a.Resize(numValues *2 +20);
-			ReadValue(valueType,a.GetValuePtr(numValues));
+			fReadValue(numValues);
 			++numValues;
 			return true;
-		});
+		},false);
 		a.Resize(numValues);
 		break;
 	}
+	case Type::Half:
+		*static_cast<Half*>(outData) = util::to_float(ReadString());
+		break;
+	case Type::Struct:
+	{
+		auto &strct = *static_cast<Struct*>(outData);
+		auto &types = strct->types;
+		auto &names = strct->names;
+		strct.data.resize(strct->GetDataSizeRequirement());
+		ReadStructValue(*strct,strct.data.data());
+		break;
+	}
 	};
-	static_assert(umath::to_integral(Type::Count) == 30,"Update this list when new types are added!");
+	static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 }
 
 udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &parent)
@@ -353,9 +513,16 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 			auto eType = ascii_type_to_enum(type.c_str());
 			if(eType == udm::Type::Invalid)
 				throw BuildException<SyntaxError>("Invalid keyvalue type '" +type +"' found");
+			auto prop = Property::Create(eType);
+			if(eType == Type::Struct)
+			{
+				auto &strct = prop->GetValue<Struct>();
+				auto &types = strct->types;
+				auto &names = strct->names;
+				ReadTemplateParameterList(types,names);
+			}
 			auto key = ReadString(ReadNextToken());
 			SeekNextToken();
-			auto prop = Property::Create(eType);
 			ReadValue(eType,prop->value);
 			parent.AddChild(key,prop);
 			continue;
@@ -581,7 +748,7 @@ template<typename T,typename TBase>
 {
 	static_assert((sizeof(T) %sizeof(TBase)) == 0);
 	constexpr auto numExpectedValues = sizeof(T) /sizeof(TBase);
-	std::array<float,numExpectedValues> values;
+	std::array<TBase,numExpectedValues> values;
 	uint32_t idx = 0;
 	constexpr auto type = udm::type_to_enum<TBase>();
 	ReadValueList(type,[this,&type,&values,&idx]() -> bool {
@@ -593,5 +760,285 @@ template<typename T,typename TBase>
 	if(idx != values.size())
 		throw BuildException<SyntaxError>("Expected " +std::to_string(values.size()) +" values for property definition, got " +std::to_string(idx) +" at");
 	memcpy(&outData,values.data(),sizeof(outData));
+}
+
+std::string udm::Property::ToAsciiValue(const Nil &nil,const std::string &prefix) {return "";}
+std::string udm::Property::ToAsciiValue(const Blob &blob,const std::string &prefix)
+{
+	try
+	{
+		return "[" +util::base64_encode(blob.data.data(),blob.data.size()) +"]";
+	}
+	catch(const std::runtime_error &e)
+	{
+		throw CompressionError{e.what()};
+	}
+	return "";
+}
+std::string udm::Property::ToAsciiValue(const BlobLz4 &blob,const std::string &prefix)
+{
+	try
+	{
+		return "[" +std::to_string(blob.uncompressedSize) +"][" +util::base64_encode(blob.compressedData.data(),blob.compressedData.size()) +"]";
+	}
+	catch(const std::runtime_error &e)
+	{
+		throw CompressionError{e.what()};
+	}
+	return "";
+}
+std::string udm::Property::ToAsciiValue(const Utf8String &utf8,const std::string &prefix)
+{
+	try
+	{
+		return "[base64][" +util::base64_encode(utf8.data.data(),utf8.data.size()) +']';
+	}
+	catch(const std::runtime_error &e)
+	{
+		throw CompressionError{e.what()};
+	}
+	return "";
+}
+std::string udm::Property::ToAsciiValue(const Element &el,const std::string &prefix)
+{
+	// Unreachable
+	throw std::runtime_error{"Cannot convert value of type Element to ASCII!"};
+}
+std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix)
+{
+	auto valueType = a.GetValueType();
+	std::stringstream ss;
+	ss<<"[";
+	ss<<enum_type_to_ascii(valueType);
+	if(valueType == Type::Struct)
+		ss<<a.GetStructuredDataInfo()->GetTemplateArgumentList();
+	ss<<';'<<a.GetSize();
+	ss<<"][";
+
+	if(valueType == Type::Element)
+	{
+		auto *ptr = static_cast<const Element*>(a.GetValues());
+		for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
+		{
+			if(i > 0)
+				ss<<',';
+			ss<<"\n";
+			ss<<prefix<<"\t{\n";
+			ptr->ToAscii(ss,prefix +"\t");
+			ss<<"\n"<<prefix<<"\t}";
+			++ptr;
+		}
+		if(a.GetSize() > 0)
+			ss<<"\n"<<prefix;
+	}
+	else if(valueType == Type::Struct)
+	{
+		auto *ptr = static_cast<const uint8_t*>(a.GetValues());
+		auto &strctDesc = *a.GetStructuredDataInfo();
+		auto sz = strctDesc.GetDataSizeRequirement();
+		auto insertNewLine = true;
+
+		// Note: We want some nice, clear formatting for the structured data. Putting everything into a separate line would
+		// bloat the file, so we'll put multiple items into the same line until we reach maxLenPerLine characters, then we
+		// use the number of items we've written so far as a reference for when to put the next new-lines (to ensure that
+		// each line has the same number of items).
+		uint32_t curLen = 0;
+		constexpr uint32_t maxLenPerLine = 160;
+		std::optional<uint32_t> nPerLine {};
+		auto n = a.GetSize();
+		auto subPrefix = prefix +'\t';
+		for(auto i=decltype(n){0u};i<n;++i)
+		{
+			if(i > 0)
+				ss<<',';
+			if(insertNewLine)
+			{
+				ss<<"\n"<<subPrefix;
+				curLen = 0;
+				insertNewLine = false;
+			}
+			else
+				ss<<' ';
+			auto l = ss.tellp();
+			ss<<StructToAsciiValue(strctDesc,ptr);
+			curLen += ss.tellp() -l;
+			if(nPerLine.has_value())
+			{
+				if(((i -1) %*nPerLine) == 0)
+					insertNewLine = true;
+			}
+			else if(curLen > maxLenPerLine)
+			{
+				insertNewLine = true;
+				nPerLine = i +1;
+			}
+
+			ptr += sz;
+		}
+		if(n > 0)
+			ss<<'\n'<<prefix;
+	}
+	else if(is_numeric_type(valueType))
+	{
+		auto tag = get_numeric_tag(valueType);
+		std::visit([&a,&ss](auto tag) {
+			using T = decltype(tag)::type;
+			auto *ptr = static_cast<const T*>(a.GetValues());
+			for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
+			{
+				if(i > 0)
+					ss<<",";
+				NumericTypeToString(*ptr,ss);
+				++ptr;
+			}
+		},tag);
+	}
+	else
+	{
+		auto vs = [&a,&ss,&prefix](auto tag){
+			using T = decltype(tag)::type;
+			auto *ptr = static_cast<const T*>(a.GetValues());
+			for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
+			{
+				if(i > 0)
+					ss<<",";
+				ss<<ToAsciiValue(*ptr,prefix);
+				++ptr;
+			}
+		};
+		if(is_generic_type(valueType))
+			std::visit(vs,get_generic_tag(valueType));
+		else if(is_non_trivial_type(valueType))
+			std::visit(vs,get_non_trivial_tag(valueType));
+	}
+	ss<<"]";
+	return ss.str();
+}
+std::string udm::Property::ToAsciiValue(const ArrayLz4 &a,const std::string &prefix)
+{
+	auto valueType = a.GetValueType();
+	try
+	{
+		auto &blob = a.GetCompressedBlob();
+		auto stype = std::string{enum_type_to_ascii(valueType)};
+		if(valueType == Type::Struct)
+			stype += a.GetStructuredDataInfo()->GetTemplateArgumentList();
+		return "[" +stype +';' +std::to_string(a.GetSize()) +"][" +util::base64_encode(blob.compressedData.data(),blob.compressedData.size()) +"]";
+	}
+	catch(const std::runtime_error &e)
+	{
+		throw CompressionError{e.what()};
+	}
+	return "";
+}
+std::string udm::Property::ToAsciiValue(const String &str,const std::string &prefix)
+{
+	auto val = str;
+	ustring::replace(val,"\\","\\\\");
+	return '\"' +val +'\"';
+}
+std::string udm::Property::ToAsciiValue(const Reference &ref,const std::string &prefix)
+{
+	return ToAsciiValue(ref.path,prefix);
+}
+std::string udm::Property::StructToAsciiValue(const StructDescription &strct,const void *data,const std::string &prefix)
+{
+	std::stringstream ss;
+	ss<<prefix<<'[';
+	auto n = strct.GetMemberCount();
+	auto *ptr = static_cast<const uint8_t*>(data);
+	for(auto i=decltype(n){0u};i<n;++i)
+	{
+		if(i > 0)
+			ss<<',';
+		auto type = strct.types[i];
+		if(is_numeric_type(type))
+		{
+			std::visit([ptr,&ss](auto tag) {
+				using T = decltype(tag)::type;
+				NumericTypeToString(*reinterpret_cast<const T*>(ptr),ss);
+			},get_numeric_tag(type));
+		}
+		else if(is_generic_type(type))
+		{
+			std::visit([ptr,&ss](auto tag) {
+				using T = decltype(tag)::type;
+				ss<<ToAsciiValue(*reinterpret_cast<const T*>(ptr));
+			},get_generic_tag(type));
+		}
+		else
+			throw InvalidUsageError{"Non-trivial types are not allowed for structs!"};
+		ptr += size_of(type);
+	}
+	ss<<']';
+	return ss.str();
+}
+std::string udm::Property::ToAsciiValue(const Struct &strct,const std::string &prefix) {return StructToAsciiValue(*strct,strct.data.data(),prefix);}
+		
+std::string udm::Property::ToAsciiValue(const Vector2 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +']';}
+std::string udm::Property::ToAsciiValue(const Vector2i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +']';}
+std::string udm::Property::ToAsciiValue(const Vector3 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +']';}
+std::string udm::Property::ToAsciiValue(const Vector3i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +']';}
+std::string udm::Property::ToAsciiValue(const Vector4 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +',' +NumericTypeToString(v.w) +']';}
+std::string udm::Property::ToAsciiValue(const Vector4i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +',' +NumericTypeToString(v.w) +']';}
+std::string udm::Property::ToAsciiValue(const Quaternion &q,const std::string &prefix) {return '[' +NumericTypeToString(q.w) +',' +NumericTypeToString(q.x) +',' +NumericTypeToString(q.y) +',' +NumericTypeToString(q.z) +']';}
+std::string udm::Property::ToAsciiValue(const EulerAngles &a,const std::string &prefix) {return '[' +NumericTypeToString(a.p) +',' +NumericTypeToString(a.y) +',' +NumericTypeToString(a.r) +']';}
+std::string udm::Property::ToAsciiValue(const Srgba &srgb,const std::string &prefix) {return '[' +NumericTypeToString(srgb[0]) +',' +NumericTypeToString(srgb[1]) +',' +NumericTypeToString(srgb[2]) +',' +NumericTypeToString(srgb[3]) +']';}
+std::string udm::Property::ToAsciiValue(const HdrColor &col,const std::string &prefix) {return '[' +NumericTypeToString(col[0]) +',' +NumericTypeToString(col[1]) +',' +NumericTypeToString(col[2]) +']';}
+std::string udm::Property::ToAsciiValue(const Transform &t,const std::string &prefix)
+{
+	auto &pos = t.GetOrigin();
+	auto &rot = t.GetRotation();
+	std::string s = "[";
+	s += "[" +NumericTypeToString(pos.x) +',' +NumericTypeToString(pos.y) +',' +NumericTypeToString(pos.z) +"]";
+	s += "[" +NumericTypeToString(rot.w) +',' +NumericTypeToString(rot.x) +',' +NumericTypeToString(rot.y) +',' +NumericTypeToString(rot.z) +"]";
+	s += "]";
+	return s;
+}
+std::string udm::Property::ToAsciiValue(const ScaledTransform &t,const std::string &prefix)
+{
+	auto &pos = t.GetOrigin();
+	auto &rot = t.GetRotation();
+	auto &scale = t.GetScale();
+	std::string s = "[";
+	s += "[" +NumericTypeToString(pos.x) +',' +NumericTypeToString(pos.y) +',' +NumericTypeToString(pos.z) +"]";
+	s += "[" +NumericTypeToString(rot.w) +',' +NumericTypeToString(rot.x) +',' +NumericTypeToString(rot.y) +',' +NumericTypeToString(rot.z) +"]";
+	s += "[" +NumericTypeToString(scale.x) +',' +NumericTypeToString(scale.y) +',' +NumericTypeToString(scale.z) +"]";
+	s += "]";
+	return s;
+}
+std::string udm::Property::ToAsciiValue(const Mat4 &m,const std::string &prefix)
+{
+	std::string s {"["};
+	for(uint8_t i=0;i<4;++i)
+	{
+		s += '[';
+		for(uint8_t j=0;j<4;++j)
+		{
+			if(j > 0)
+				s += ',';
+			s += NumericTypeToString(m[i][j]);
+		}
+		s += ']';
+	}
+	s += "]";
+	return s;
+}
+std::string udm::Property::ToAsciiValue(const Mat3x4 &m,const std::string &prefix)
+{
+	std::string s {"["};
+	for(uint8_t i=0;i<3;++i)
+	{
+		s += '[';
+		for(uint8_t j=0;j<4;++j)
+		{
+			if(j > 0)
+				s += ',';
+			s += NumericTypeToString(m[i][j]);
+		}
+		s += ']';
+	}
+	s += "]";
+	return s;
 }
 #pragma optimize("",on)

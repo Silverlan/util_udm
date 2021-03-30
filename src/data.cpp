@@ -86,6 +86,158 @@ std::shared_ptr<udm::Data> udm::Data::Create()
 	return Create("",0);
 }
 
+bool udm::Data::DebugTest()
+{
+	try
+	{
+		auto data = udm::Data::Create();
+		auto udmData = data->GetAssetData().GetData();
+		auto el = udmData["first"]["second"]["third"];
+		el["stringTest"] = "Test";
+		el["floatTest"] = 5.f;
+		el["path/test/value"] = Vector3{1,2,3};
+
+		el["NIL"] = udm::Nil{};
+		el["STRING"] = udm::String{"Hello"};
+		el["UTF8STRING"] = udm::Utf8String{};
+		el["INT8"] = udm::Int8{6};
+		el["UINT8"] = udm::UInt8{5};
+		el["INT16"] = udm::Int16{4};
+		el["UINT16"] = udm::UInt16{1'234};
+		el["INT32"] = udm::Int32{6'655};
+		el["UINT32"] = udm::UInt32{3'645};
+		el["INT64"] = udm::Int64{5'345'465};
+		el["UINT64"] = udm::UInt64{5'343'242};
+		el["FLOAT"] = udm::Float{123.5411};
+		el["DOUBLE"] = udm::Double{864.546};
+		el["BOOLEAN"] = udm::Boolean{true};
+
+		el["VECTOR2"] = udm::Vector2{7,8};
+		el["VECTOR3"] = udm::Vector3{4,3,5};
+		el["VECTOR4"] = udm::Vector4{8,4,6,3};
+		el["QUATERNION"] = udm::Quaternion{4,8,6,5};
+		el["EULERANGLES"] = udm::EulerAngles{4,3,5};
+		el["SRGBA"] = udm::Srgba{255,128,54,44};
+		el["HDRCOLOR"] = udm::HdrColor{800,500,12};
+		el["TRANSFORM"] = udm::Transform{Vector3{6,4,7},Quat{1,8,5,4}};
+		el["SCALEDTRANSFORM"] = udm::ScaledTransform{Vector3{9,6,7},Quat{4,3,6,4},Vector3{4,6,3}};
+		el["MAT4"] = umat::identity();
+		el["MAT3X4"] = udm::Mat3x4{6,5,8,4,6,4,5,7,5,6,3,2};
+	
+		el["BLOB"] = udm::Blob{};
+		el["BLOBLZ4"] = udm::BlobLz4{};
+		el["REFERENCE"] = udm::Reference{"path/test/value"};
+
+		auto a = el.AddArray("ARRAY",{},udm::Type::Int32);
+		a.Resize(12);
+		a[0] = 5;
+		a[1] = 3;
+		a[4] = 6;
+		a[11] = 11;
+
+		std::vector<float> testData;
+		testData.resize(100);
+		for(auto i=decltype(testData.size()){0u};i<testData.size();++i)
+			testData[i] = i;
+
+		std::vector<uint8_t> testDataBytes {};
+		testDataBytes.resize(testData.size() *sizeof(testData[0]));
+		el["float_blob"] = udm::Blob{std::move(testDataBytes)};
+		el["float_blob_lz4"] = udm::compress_lz4_blob(testData);
+		el["float_array"] = testData;
+
+		el["halfTest"] = Half{0.573f};
+		
+		struct TestStruct
+		{
+			Float f;
+			Vector3 v;
+			Int8 i;
+			Half h;
+		};
+		auto structDef = StructDescription::Define<float,Vector3,int8_t,Half,uint8_t>({"Float","Vector3","Int8","Half","Padding"});
+		el["structTest"] = Struct{structDef};
+		// TODO: Assign struct values?
+
+		auto test = el["path/test"];
+		auto elArray = test.AddArray("elements",5);
+		elArray[3]["sub-element"]["1"] = Vector3{1,1,1};
+
+		//udmData.AddArray("test",1,udm::Type::Float);
+		//udmData["test"][0] = 5.f;
+		auto aCompressed = udmData.AddArray("compressedArray",10,Type::Float,true);
+		for(auto i=0;i<10;++i)
+			udmData["compressedArray"][i] = i;
+
+		auto structArray = udmData.AddArray(
+			"structArray",
+			structDef,
+			10
+		);
+		structArray[0] = TestStruct{5.f,Vector3{3,3,3},2,0.34f};
+		
+		auto aCompressedStructArray = udmData.AddArray(
+			"compressedStructArray",
+			structDef,
+			10,true
+		);
+
+		if(*data != *data)
+			throw Exception {"Internal library error: UDM data does not match itself?"};
+
+		//auto aNested = el["path"]["nestedArrays"][0][0];
+		//aNested["a"] = 5.f;
+		//aNested["b"] = 3.f;
+
+		auto fTestFileIo = [&data](const std::string &fileName,bool binary) {
+			auto fw = FileManager::OpenFile<VFilePtrReal>(fileName.c_str(),binary ? "wb" : "w");
+			if(fw)
+			{
+				if(binary)
+					data->Save(fw);
+				else
+					data->SaveAscii(fw);
+				fw = nullptr;
+			}
+			else
+				throw Exception {"Unable to write '" +fileName +"'"};
+
+			auto fr = FileManager::OpenFile(fileName.c_str(),binary ? "rb" : "r");
+			if(fr)
+			{
+				auto udmDataLoad = udm::Data::Load(fr);
+				if(udmDataLoad == nullptr)
+					throw Exception {"Failed to load '" +fileName +"'"};
+				auto same = (*data == *udmDataLoad);
+				if(!same)
+					throw Exception {"Mismatch between written data and loaded data!"};
+
+				auto udmCompressedArray = udmDataLoad->GetAssetData().GetData()["compressedArray"];
+				int val = -1;
+				udmCompressedArray[3](val);
+				if(val != 3)
+					throw Exception {"Incorrect compressed array value!"};
+
+				std::vector<float> arrayData;
+				udmCompressedArray.GetBlobData(arrayData);
+				if(arrayData != std::vector<float>{0,1,2,3,4,5,6,7,8,9})
+					throw Exception {"Incorrect compressed array value!"};
+
+			}
+			else
+				throw Exception {"Unable to load '" +fileName +"'"};
+		};
+		fTestFileIo("udm_test.udm",false);
+		fTestFileIo("udm_test.udm_b",true);
+	}
+	catch(const Exception &e)
+	{
+		std::cout<<"UDM debug test failed: "<<e.what()<<std::endl;
+		return false;
+	}
+	return true;
+}
+
 std::shared_ptr<udm::Data> udm::Data::Open(const std::string &fileName)
 {
 	auto f = FileManager::OpenFile(fileName.c_str(),"rb");
@@ -176,6 +328,35 @@ std::shared_ptr<udm::Data> udm::Data::Load(const VFilePtr &f)
 	return udmData->ValidateHeaderProperties() ? udmData : nullptr;
 }
 
+void udm::Data::ResolveReferences()
+{
+	auto root = GetAssetData().GetData();
+	std::function<void(LinkedPropertyWrapper&)> resolveReferences = nullptr;
+	resolveReferences = [&resolveReferences,&root](LinkedPropertyWrapper &prop) {
+		if(!prop)
+			return;
+		if(prop.IsType(Type::Element))
+		{
+			for(auto pair : prop.ElIt())
+				resolveReferences(pair.property);
+		}
+		else if(prop.IsType(Type::Array))
+		{
+			if(prop.GetValue<Array>().IsValueType(Type::Element))
+			{
+				for(auto child : prop)
+					resolveReferences(child);
+			}
+		}
+		else if(prop.IsType(Type::Reference))
+		{
+			auto &ref = prop.GetValue<Reference>();
+			ref.InitializeProperty(root);
+		}
+	};
+	resolveReferences(root);
+}
+
 udm::PProperty udm::Data::LoadProperty(const std::string_view &path) const
 {
 	auto f = m_file;
@@ -227,17 +408,32 @@ void udm::Data::SkipProperty(VFilePtr &f,Type type)
 	}
 	case Type::Array:
 	{
+		using TSize = decltype(std::declval<Array>().GetSize());
 		auto valueType = f->Read<Type>();
 		if(is_non_trivial_type(valueType))
 		{
-			f->Seek(f->Tell() +sizeof(decltype(Array::size)));
+			f->Seek(f->Tell() +sizeof(TSize));
 			auto sizeBytes = f->Read<uint64_t>();
 			f->Seek(f->Tell() +sizeBytes);
 			break;
 		}
-		auto size = f->Read<decltype(Array::size)>();
-		auto n = f->Read<decltype(Array::size)>();
-		f->Seek(f->Tell() +n *size_of(valueType));
+		auto size = f->Read<TSize>();
+		f->Seek(f->Tell() +size *size_of(valueType));
+		break;
+	}
+	case Type::ArrayLz4:
+	{
+		auto compressedSize = f->Read<size_t>();
+		auto valueType = f->Read<Type>();
+		
+		if(valueType == Type::Struct)
+		{
+			auto offsetToEndOfStructuredDataHeader = f->Read<StructDescription::SizeType>();
+			f->Seek(f->Tell() +offsetToEndOfStructuredDataHeader);
+		}
+
+		using TSize = decltype(std::declval<Array>().GetSize());
+		f->Seek(f->Tell() +sizeof(TSize) +compressedSize);
 		break;
 	}
 	case Type::Element:
@@ -246,8 +442,14 @@ void udm::Data::SkipProperty(VFilePtr &f,Type type)
 		f->Seek(f->Tell() +size);
 		break;
 	}
+	case Type::Struct:
+	{
+		auto size = f->Read<StructDescription::SizeType>();
+		f->Seek(f->Tell() +size);
+		break;
 	}
-	static_assert(NON_TRIVIAL_TYPES.size() == 7);
+	}
+	static_assert(NON_TRIVIAL_TYPES.size() == 9);
 }
 
 std::string udm::Data::ReadKey(const VFilePtr &f)
@@ -296,7 +498,8 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) c
 			}
 			auto i = ustring::to_int(str);
 			auto valueType = f->Read<Type>();
-			auto n = f->Read<decltype(Array::size)>();
+			using TSize = decltype(std::declval<Array>().GetSize());
+			auto n = f->Read<TSize>();
 			if(i >= n || i < 0)
 			{
 				throw PropertyLoadError{"Array index out of bounds!"};
@@ -395,6 +598,7 @@ void udm::Data::ToAscii(std::stringstream &ss,bool includeHeader) const
 		else
 			static_cast<Element*>(m_rootProperty->value)->ToAscii(ss);
 	}
+	auto x =sizeof(Reference);
 }
 
 bool udm::Data::Save(VFilePtrReal &f) const
@@ -417,6 +621,8 @@ bool udm::Data::operator==(const Data &other) const
 	auto data1 = other.GetAssetData().GetData();
 	if(!data0 || !data1)
 		return false;
-	return *data0.prop == *data1.prop;
+	auto res = (*data0.prop == *data1.prop);
+	UDM_ASSERT_COMPARISON(res);
+	return res;
 }
 #pragma optimize("",on)

@@ -6,9 +6,9 @@
 #include <sstream>
 
 #pragma optimize("",off)
-udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type)
+udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,bool compressed)
 {
-	auto prop = Add(path,Type::Array);
+	auto prop = Add(path,compressed ? Type::ArrayLz4 : Type::Array);
 	if(!prop)
 		return prop;
 	auto &a = *static_cast<Array*>(prop->value);
@@ -48,9 +48,13 @@ bool udm::Element::operator==(const Element &other) const
 	for(auto &pair : children)
 	{
 		auto it = other.children.find(pair.first);
-		if(it == other.children.end())
+		auto res = (it != other.children.end());
+		UDM_ASSERT_COMPARISON(res);
+		if(!res)
 			return false;
-		if(*pair.second != *it->second)
+		res = (*pair.second == *it->second);
+		UDM_ASSERT_COMPARISON(res);
+		if(!res)
 			return false;
 	}
 	return true;
