@@ -224,4 +224,17 @@ udm::BlobLz4 &udm::BlobLz4::operator=(const BlobLz4 &other)
 	static_assert(sizeof(*this) == 32,"Update this function when the struct has changed!");
 	return *this;
 }
+
+//////////////
+
+int32_t udm::IFile::WriteString(const std::string &str)
+{
+	unsigned int pos = 0;
+	while(str[pos] != '\0')
+	{
+		Write<char>(str[pos]);
+		pos++;
+	}
+	return 0;
+}
 #pragma optimize("",on)

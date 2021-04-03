@@ -254,9 +254,9 @@ udm::ElementIteratorWrapper udm::PropertyWrapper::ElIt()
 	return ElementIteratorWrapper{LinkedPropertyWrapper{*this}};
 }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size,bool compressed)
+udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size,ArrayType arrayType)
 {
-	auto prop = AddArray(path,{},Type::Struct,compressed);
+	auto prop = AddArray(path,{},Type::Struct,arrayType);
 	auto *a = prop.GetValuePtr<Array>();
 	if(a)
 	{
@@ -269,9 +269,9 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 	return prop;
 }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size,bool compressed)
+udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size,ArrayType arrayType)
 {
-	auto prop = AddArray(path,{},Type::Struct,compressed);
+	auto prop = AddArray(path,{},Type::Struct,arrayType);
 	auto *a = prop.GetValuePtr<Array>();
 	if(a)
 	{
@@ -284,7 +284,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 	return prop;
 }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,bool compressed)
+udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,ArrayType arrayType)
 {
 	if(arrayIndex != std::numeric_limits<uint32_t>::max())
 	{
@@ -305,7 +305,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 				}
 				if(!e)
 					throw InvalidUsageError{"Attempted to add key-value to invalid array element!"};
-				auto wrapper = e->AddArray(path,size,type,compressed);
+				auto wrapper = e->AddArray(path,size,type,arrayType);
 				static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
 				return wrapper;
 			}
@@ -319,7 +319,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 				auto &a = *static_cast<Array*>(linkedWrapper.prev->prop->value);
 				if(a.GetValueType() == Type::Element)
 				{
-					auto wrapper = a.GetValue<Element>(arrayIndex).AddArray(path,size,type,compressed);
+					auto wrapper = a.GetValue<Element>(arrayIndex).AddArray(path,size,type,arrayType);
 					static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
 					return wrapper;
 				}
@@ -331,7 +331,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 		static_cast<udm::LinkedPropertyWrapper&>(*this).InitializeProperty();
 	if(prop == nullptr || prop->type != Type::Element)
 		throw InvalidUsageError{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
-	auto wrapper = static_cast<Element*>(prop->value)->AddArray(path,size,type,compressed);
+	auto wrapper = static_cast<Element*>(prop->value)->AddArray(path,size,type,arrayType);
 	static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
 	return wrapper;
 }

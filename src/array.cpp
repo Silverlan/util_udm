@@ -4,6 +4,8 @@
 
 #include "udm.hpp"
 #include <lz4.h>
+#include <sharedutils/datastream.h>
+#include <sharedutils/scope_guard.h>
 #pragma optimize("",off)
 udm::Array::~Array() {Clear();}
 
@@ -277,14 +279,73 @@ udm::StructDescription *udm::ArrayLz4::GetStructuredDataInfo()
 	return m_structuredDataInfo.get();
 }
 void udm::ArrayLz4::ClearUncompressedMemory() {Compress();}
+
+struct StreamData
+	: public udm::IFile
+{
+	StreamData()=default;
+	DataStream &GetDataStream() {return m_ds;}
+	virtual size_t Read(void *data,size_t size) override
+	{
+		m_ds->Read(data,size);
+		return size;
+	}
+	virtual size_t Write(const void *data,size_t size) override
+	{
+		m_ds->Write(static_cast<const uint8_t*>(data),size);
+		return size;
+	}
+	virtual size_t Tell() override
+	{
+		return m_ds->GetOffset();
+	}
+	virtual void Seek(size_t offset,Whence whence) override
+	{
+		switch(whence)
+		{
+		case Whence::Set:
+			m_ds->SetOffset(offset);
+			break;
+		case Whence::End:
+			m_ds->SetOffset(m_ds->GetInternalSize() +offset);
+			break;
+		case Whence::Cur:
+			m_ds->SetOffset(m_ds->GetOffset() +offset);
+			break;
+		}
+	}
+	virtual int32_t ReadChar() override
+	{
+		return m_ds->Read<char>();
+	}
+private:
+	DataStream m_ds;
+};
+
 void udm::ArrayLz4::Compress()
 {
 	if(m_state == State::Compressed)
 		return;
-	m_state = State::Compressed;
+	util::ScopeGuard sgState {[this]() {m_state = State::Compressed;}};
 	auto *p = GetValuePtr();
 	if(!p)
 		return;
+	if(m_valueType == Type::Element)
+	{
+		auto n = GetSize();
+		auto f = std::make_unique<StreamData>();
+		f->IFile::Write<uint32_t>(n);
+		for(auto it=begin<Element>();it!=end<Element>();++it)
+		{
+			auto &el = *it;
+			Property::Write(*f,el);
+		}
+		auto &ds = f->GetDataStream();
+		m_compressedBlob = udm::compress_lz4_blob(ds->GetData(),ds->GetInternalSize());
+		ReleaseValues();
+		return;
+	}
+
 	m_compressedBlob = udm::compress_lz4_blob(p,GetByteSize());
 	auto *pStrct = Array::GetStructuredDataInfo();
 	if(pStrct)
@@ -301,6 +362,24 @@ void udm::ArrayLz4::Decompress()
 	if(GetValuePtr())
 		throw ImplementationError{"Attempted to decompress array which has a valid data pointer!"}; // Unreachable
 	m_state = State::Uncompressed;
+
+	if(m_valueType == Type::Element)
+	{
+		auto f = std::make_unique<StreamData>();
+		auto &ds = f->GetDataStream();
+		ds->Resize(m_compressedBlob.uncompressedSize);
+		udm::decompress_lz4_blob(m_compressedBlob.compressedData.data(),m_compressedBlob.compressedData.size(),m_compressedBlob.uncompressedSize,ds->GetData());
+		ds->SetOffset(0);
+
+		auto numElements = f->IFile::Read<uint32_t>();
+		m_values = AllocateData(numElements *sizeof(Element));
+		auto prop = fromProperty;
+		for(auto i=decltype(numElements){0u};i<numElements;++i)
+			prop->Read(*f,GetValue<Element>(i));
+		m_compressedBlob = {};
+		return;
+	}
+
 	auto uncompressedSize = GetByteSize();
 	if(uncompressedSize > 0)
 	{
@@ -348,7 +427,7 @@ udm::ArrayLz4 &udm::ArrayLz4::operator=(const ArrayLz4 &other)
 }
 void udm::ArrayLz4::SetValueType(Type valueType)
 {
-	if(!is_trivial_type(valueType) && valueType != Type::Struct)
+	if(!is_trivial_type(valueType) && valueType != Type::Struct && valueType != Type::Element)
 		throw InvalidUsageError{"Attempted to create compressed array of type '" +std::string{magic_enum::enum_name(valueType)} +"', which is not a trivial type! Only trivial types are allowed for compressed arrays!"};
 	Array::SetValueType(valueType);
 }

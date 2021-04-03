@@ -12,7 +12,7 @@ namespace udm
 	class AsciiReader
 	{
 	public:
-		static std::shared_ptr<udm::Data> LoadAscii(const VFilePtr &f);
+		static std::shared_ptr<udm::Data> LoadAscii(std::unique_ptr<IFile> &&f);
 	private:
 		enum class BlockResult : uint8_t
 		{
@@ -41,7 +41,7 @@ namespace udm
 		BlockResult ReadBlockKeyValues(Element &parent);
 		char ReadChar();
 
-		VFilePtr m_file;
+		std::unique_ptr<IFile> m_file;
 		uint32_t m_curCharPos = 0; // Current character relative to current line
 		uint32_t m_curLine = 0;
 	};
@@ -425,13 +425,20 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 			auto &names = strct->names;
 			ReadTemplateParameterList(types,names);
 		}
-
 		t = ReadNextToken();
 		std::optional<uint32_t> size {};
 		if(t == ';')
 		{
 			size = uint32_t{};
 			ReadValue(Type::UInt32,&*size);
+			t = ReadNextToken();
+		}
+
+		std::optional<uint64_t> uncompressedSize {};
+		if(t == ';')
+		{
+			uncompressedSize = uint64_t{};
+			ReadValue(Type::UInt64,&*uncompressedSize);
 			t = ReadNextToken();
 		}
 
@@ -443,9 +450,17 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 			if(size.has_value() == false)
 				throw BuildException<SyntaxError>("Missing size for compressed array");
 
+			if(valueType == Type::Element)
+			{
+				if(uncompressedSize.has_value() == false)
+					throw BuildException<SyntaxError>("Missing uncompressed size for compressed array");
+			}
+
 			auto &a = *static_cast<ArrayLz4*>(outData);
 			a.InitializeSize(*size);
 			auto &blob = a.GetCompressedBlob();
+			if(uncompressedSize.has_value())
+				blob.uncompressedSize = *uncompressedSize;
 			ReadBlobData(blob.compressedData);
 			break;
 		}
@@ -456,21 +471,20 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 		a.Resize(*size);
 
 		uint32_t numValues = 0;
-		auto *p = static_cast<uint8_t*>(a.GetValues());
 		std::function<void(uint32_t)> fReadValue = nullptr;
 		if(valueType == Type::Struct)
 		{
 			auto &strct = *a.GetStructuredDataInfo();
-			fReadValue = [this,&strct,&p,szValue](uint32_t idx) {
+			fReadValue = [this,&strct,&a,szValue](uint32_t idx) {
+				auto *p = static_cast<uint8_t*>(a.GetValues()) +idx *szValue;
 				ReadStructValue(strct,p);
-				p += szValue;
 			};
 		}
 		else
 		{
-			fReadValue = [this,&p,valueType,szValue](uint32_t idx) {
+			fReadValue = [this,&a,valueType,szValue](uint32_t idx) {
+				auto *p = static_cast<uint8_t*>(a.GetValues()) +idx *szValue;
 				ReadValue(valueType,p);
-				p += szValue;
 			};
 		}
 
@@ -548,7 +562,7 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 	return BlockResult::EndOfFile;
 }
 
-bool udm::Data::SaveAscii(const std::string &fileName,bool includeHeader) const
+bool udm::Data::SaveAscii(const std::string &fileName,AsciiSaveFlags flags) const
 {
 	auto f = FileManager::OpenFile<VFilePtrReal>(fileName.c_str(),"w");
 	if(f == nullptr)
@@ -556,22 +570,24 @@ bool udm::Data::SaveAscii(const std::string &fileName,bool includeHeader) const
 		throw FileError{"Unable to open file!"};
 		return false;
 	}
-	return SaveAscii(f,includeHeader);
+	auto fp = std::make_unique<VFilePtr>(f);
+	return SaveAscii(*fp,flags);
 }
-bool udm::Data::SaveAscii(VFilePtrReal &f,bool includeHeader) const
+bool udm::Data::SaveAscii(IFile &f,AsciiSaveFlags flags) const
 {
 	std::stringstream ss;
-	ToAscii(ss,includeHeader);
-	f->WriteString(ss.str());
+	ToAscii(ss,flags);
+	f.WriteString(ss.str());
 	return true;
 }
+bool udm::Data::SaveAscii(const ::VFilePtr &f,AsciiSaveFlags flags) const {return SaveAscii(VFilePtr{f},flags);}
 
-std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(const VFilePtr &f)
+std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(std::unique_ptr<IFile> &&f)
 {
 	auto udmData = std::shared_ptr<udm::Data>{new udm::Data{}};
 	auto rootProp = Property::Create<Element>();
 	AsciiReader reader {};
-	reader.m_file = f;
+	reader.m_file = std::move(f);
 	auto res = reader.ReadBlockKeyValues(rootProp->GetValue<Element>());
 	if(res != BlockResult::EndOfFile)
 		throw reader.BuildException<SyntaxError>("Block has been terminated improperly");
@@ -593,9 +609,9 @@ std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(const VFilePtr &f)
 
 namespace udm
 {
-	std::shared_ptr<udm::Data> load_ascii(const VFilePtr &f)
+	std::shared_ptr<udm::Data> load_ascii(std::unique_ptr<IFile> &&f)
 	{
-		return udm::AsciiReader::LoadAscii(f);
+		return udm::AsciiReader::LoadAscii(std::move(f));
 	}
 };
 
@@ -739,8 +755,7 @@ std::string udm::AsciiReader::ReadString(char initialC)
 
 std::string udm::AsciiReader::ReadString()
 {
-	auto &f = m_file;
-	return ReadString(f->ReadChar());
+	return ReadString(m_file->ReadChar());
 }
 
 template<typename T,typename TBase>
@@ -762,8 +777,8 @@ template<typename T,typename TBase>
 	memcpy(&outData,values.data(),sizeof(outData));
 }
 
-std::string udm::Property::ToAsciiValue(const Nil &nil,const std::string &prefix) {return "";}
-std::string udm::Property::ToAsciiValue(const Blob &blob,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Nil &nil,const std::string &prefix) {return "";}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Blob &blob,const std::string &prefix)
 {
 	try
 	{
@@ -775,7 +790,7 @@ std::string udm::Property::ToAsciiValue(const Blob &blob,const std::string &pref
 	}
 	return "";
 }
-std::string udm::Property::ToAsciiValue(const BlobLz4 &blob,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const BlobLz4 &blob,const std::string &prefix)
 {
 	try
 	{
@@ -787,7 +802,7 @@ std::string udm::Property::ToAsciiValue(const BlobLz4 &blob,const std::string &p
 	}
 	return "";
 }
-std::string udm::Property::ToAsciiValue(const Utf8String &utf8,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Utf8String &utf8,const std::string &prefix)
 {
 	try
 	{
@@ -799,22 +814,15 @@ std::string udm::Property::ToAsciiValue(const Utf8String &utf8,const std::string
 	}
 	return "";
 }
-std::string udm::Property::ToAsciiValue(const Element &el,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Element &el,const std::string &prefix)
 {
 	// Unreachable
 	throw std::runtime_error{"Cannot convert value of type Element to ASCII!"};
 }
-std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix)
+void udm::Property::ArrayValuesToAscii(AsciiSaveFlags flags,std::stringstream &ss,const Array &a,const std::string &prefix)
 {
-	auto valueType = a.GetValueType();
-	std::stringstream ss;
 	ss<<"[";
-	ss<<enum_type_to_ascii(valueType);
-	if(valueType == Type::Struct)
-		ss<<a.GetStructuredDataInfo()->GetTemplateArgumentList();
-	ss<<';'<<a.GetSize();
-	ss<<"][";
-
+	auto valueType = a.GetValueType();
 	if(valueType == Type::Element)
 	{
 		auto *ptr = static_cast<const Element*>(a.GetValues());
@@ -824,7 +832,7 @@ std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix
 				ss<<',';
 			ss<<"\n";
 			ss<<prefix<<"\t{\n";
-			ptr->ToAscii(ss,prefix +"\t");
+			ptr->ToAscii(flags,ss,prefix +"\t");
 			ss<<"\n"<<prefix<<"\t}";
 			++ptr;
 		}
@@ -843,7 +851,7 @@ std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix
 		// use the number of items we've written so far as a reference for when to put the next new-lines (to ensure that
 		// each line has the same number of items).
 		uint32_t curLen = 0;
-		constexpr uint32_t maxLenPerLine = 160;
+		constexpr uint32_t maxLenPerLine = 100;
 		std::optional<uint32_t> nPerLine {};
 		auto n = a.GetSize();
 		auto subPrefix = prefix +'\t';
@@ -860,11 +868,11 @@ std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix
 			else
 				ss<<' ';
 			auto l = ss.tellp();
-			ss<<StructToAsciiValue(strctDesc,ptr);
+			ss<<StructToAsciiValue(flags,strctDesc,ptr);
 			curLen += ss.tellp() -l;
 			if(nPerLine.has_value())
 			{
-				if(((i -1) %*nPerLine) == 0)
+				if(((i +1) %*nPerLine) == 0)
 					insertNewLine = true;
 			}
 			else if(curLen > maxLenPerLine)
@@ -895,14 +903,14 @@ std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix
 	}
 	else
 	{
-		auto vs = [&a,&ss,&prefix](auto tag){
+		auto vs = [&a,&ss,&prefix,flags](auto tag){
 			using T = decltype(tag)::type;
 			auto *ptr = static_cast<const T*>(a.GetValues());
 			for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
 			{
 				if(i > 0)
 					ss<<",";
-				ss<<ToAsciiValue(*ptr,prefix);
+				ss<<ToAsciiValue(flags,*ptr,prefix);
 				++ptr;
 			}
 		};
@@ -912,18 +920,40 @@ std::string udm::Property::ToAsciiValue(const Array &a,const std::string &prefix
 			std::visit(vs,get_non_trivial_tag(valueType));
 	}
 	ss<<"]";
-	return ss.str();
 }
-std::string udm::Property::ToAsciiValue(const ArrayLz4 &a,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Array &a,const std::string &prefix)
 {
 	auto valueType = a.GetValueType();
+	std::stringstream ss;
+	ss<<"[";
+	ss<<enum_type_to_ascii(valueType);
+	if(valueType == Type::Struct)
+		ss<<a.GetStructuredDataInfo()->GetTemplateArgumentList();
+	ss<<';'<<a.GetSize();
+	ss<<"]";
+	ArrayValuesToAscii(flags,ss,a,prefix);
+	return ss.str();
+}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const ArrayLz4 &a,const std::string &prefix)
+{
+	auto valueType = a.GetValueType();
+	auto &blob = a.GetCompressedBlob();
+	auto stype = std::string{enum_type_to_ascii(valueType)};
+	if(valueType == Type::Struct)
+		stype += a.GetStructuredDataInfo()->GetTemplateArgumentList();
+	auto r = "[" +stype +';' +std::to_string(a.GetSize());
+	if(valueType == Type::Element)
+		r += ';' +std::to_string(blob.uncompressedSize);
+	r += "]";
+	if(umath::is_flag_set(flags,AsciiSaveFlags::DontCompressLz4Arrays))
+	{
+		std::stringstream ss;
+		ArrayValuesToAscii(flags,ss,a,prefix);
+		return r +ss.str();
+	}
 	try
 	{
-		auto &blob = a.GetCompressedBlob();
-		auto stype = std::string{enum_type_to_ascii(valueType)};
-		if(valueType == Type::Struct)
-			stype += a.GetStructuredDataInfo()->GetTemplateArgumentList();
-		return "[" +stype +';' +std::to_string(a.GetSize()) +"][" +util::base64_encode(blob.compressedData.data(),blob.compressedData.size()) +"]";
+		return r +"[" +util::base64_encode(blob.compressedData.data(),blob.compressedData.size()) +"]";
 	}
 	catch(const std::runtime_error &e)
 	{
@@ -931,17 +961,17 @@ std::string udm::Property::ToAsciiValue(const ArrayLz4 &a,const std::string &pre
 	}
 	return "";
 }
-std::string udm::Property::ToAsciiValue(const String &str,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const String &str,const std::string &prefix)
 {
 	auto val = str;
 	ustring::replace(val,"\\","\\\\");
 	return '\"' +val +'\"';
 }
-std::string udm::Property::ToAsciiValue(const Reference &ref,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Reference &ref,const std::string &prefix)
 {
-	return ToAsciiValue(ref.path,prefix);
+	return ToAsciiValue(flags,ref.path,prefix);
 }
-std::string udm::Property::StructToAsciiValue(const StructDescription &strct,const void *data,const std::string &prefix)
+std::string udm::Property::StructToAsciiValue(AsciiSaveFlags flags,const StructDescription &strct,const void *data,const std::string &prefix)
 {
 	std::stringstream ss;
 	ss<<prefix<<'[';
@@ -961,9 +991,9 @@ std::string udm::Property::StructToAsciiValue(const StructDescription &strct,con
 		}
 		else if(is_generic_type(type))
 		{
-			std::visit([ptr,&ss](auto tag) {
+			std::visit([ptr,&ss,flags](auto tag) {
 				using T = decltype(tag)::type;
-				ss<<ToAsciiValue(*reinterpret_cast<const T*>(ptr));
+				ss<<ToAsciiValue(flags,*reinterpret_cast<const T*>(ptr));
 			},get_generic_tag(type));
 		}
 		else
@@ -973,19 +1003,19 @@ std::string udm::Property::StructToAsciiValue(const StructDescription &strct,con
 	ss<<']';
 	return ss.str();
 }
-std::string udm::Property::ToAsciiValue(const Struct &strct,const std::string &prefix) {return StructToAsciiValue(*strct,strct.data.data(),prefix);}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Struct &strct,const std::string &prefix) {return StructToAsciiValue(flags,*strct,strct.data.data(),prefix);}
 		
-std::string udm::Property::ToAsciiValue(const Vector2 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +']';}
-std::string udm::Property::ToAsciiValue(const Vector2i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +']';}
-std::string udm::Property::ToAsciiValue(const Vector3 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +']';}
-std::string udm::Property::ToAsciiValue(const Vector3i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +']';}
-std::string udm::Property::ToAsciiValue(const Vector4 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +',' +NumericTypeToString(v.w) +']';}
-std::string udm::Property::ToAsciiValue(const Vector4i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +',' +NumericTypeToString(v.w) +']';}
-std::string udm::Property::ToAsciiValue(const Quaternion &q,const std::string &prefix) {return '[' +NumericTypeToString(q.w) +',' +NumericTypeToString(q.x) +',' +NumericTypeToString(q.y) +',' +NumericTypeToString(q.z) +']';}
-std::string udm::Property::ToAsciiValue(const EulerAngles &a,const std::string &prefix) {return '[' +NumericTypeToString(a.p) +',' +NumericTypeToString(a.y) +',' +NumericTypeToString(a.r) +']';}
-std::string udm::Property::ToAsciiValue(const Srgba &srgb,const std::string &prefix) {return '[' +NumericTypeToString(srgb[0]) +',' +NumericTypeToString(srgb[1]) +',' +NumericTypeToString(srgb[2]) +',' +NumericTypeToString(srgb[3]) +']';}
-std::string udm::Property::ToAsciiValue(const HdrColor &col,const std::string &prefix) {return '[' +NumericTypeToString(col[0]) +',' +NumericTypeToString(col[1]) +',' +NumericTypeToString(col[2]) +']';}
-std::string udm::Property::ToAsciiValue(const Transform &t,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Vector2 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Vector2i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Vector3 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Vector3i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Vector4 &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +',' +NumericTypeToString(v.w) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Vector4i &v,const std::string &prefix) {return '[' +NumericTypeToString(v.x) +',' +NumericTypeToString(v.y) +',' +NumericTypeToString(v.z) +',' +NumericTypeToString(v.w) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Quaternion &q,const std::string &prefix) {return '[' +NumericTypeToString(q.w) +',' +NumericTypeToString(q.x) +',' +NumericTypeToString(q.y) +',' +NumericTypeToString(q.z) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const EulerAngles &a,const std::string &prefix) {return '[' +NumericTypeToString(a.p) +',' +NumericTypeToString(a.y) +',' +NumericTypeToString(a.r) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Srgba &srgb,const std::string &prefix) {return '[' +NumericTypeToString(srgb[0]) +',' +NumericTypeToString(srgb[1]) +',' +NumericTypeToString(srgb[2]) +',' +NumericTypeToString(srgb[3]) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const HdrColor &col,const std::string &prefix) {return '[' +NumericTypeToString(col[0]) +',' +NumericTypeToString(col[1]) +',' +NumericTypeToString(col[2]) +']';}
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Transform &t,const std::string &prefix)
 {
 	auto &pos = t.GetOrigin();
 	auto &rot = t.GetRotation();
@@ -995,7 +1025,7 @@ std::string udm::Property::ToAsciiValue(const Transform &t,const std::string &pr
 	s += "]";
 	return s;
 }
-std::string udm::Property::ToAsciiValue(const ScaledTransform &t,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const ScaledTransform &t,const std::string &prefix)
 {
 	auto &pos = t.GetOrigin();
 	auto &rot = t.GetRotation();
@@ -1007,7 +1037,7 @@ std::string udm::Property::ToAsciiValue(const ScaledTransform &t,const std::stri
 	s += "]";
 	return s;
 }
-std::string udm::Property::ToAsciiValue(const Mat4 &m,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Mat4 &m,const std::string &prefix)
 {
 	std::string s {"["};
 	for(uint8_t i=0;i<4;++i)
@@ -1024,7 +1054,7 @@ std::string udm::Property::ToAsciiValue(const Mat4 &m,const std::string &prefix)
 	s += "]";
 	return s;
 }
-std::string udm::Property::ToAsciiValue(const Mat3x4 &m,const std::string &prefix)
+std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Mat3x4 &m,const std::string &prefix)
 {
 	std::string s {"["};
 	for(uint8_t i=0;i<3;++i)

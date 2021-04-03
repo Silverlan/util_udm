@@ -6,9 +6,9 @@
 #include <sstream>
 
 #pragma optimize("",off)
-udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,bool compressed)
+udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,ArrayType arrayType)
 {
-	auto prop = Add(path,compressed ? Type::ArrayLz4 : Type::Array);
+	auto prop = Add(path,(arrayType == ArrayType::Compressed) ? Type::ArrayLz4 : Type::Array);
 	if(!prop)
 		return prop;
 	auto &a = *static_cast<Array*>(prop->value);
@@ -81,7 +81,7 @@ udm::Element &udm::Element::operator=(const Element &other)
 	return *this;
 }
 
-void udm::Element::ToAscii(std::stringstream &ss,const std::optional<std::string> &prefix) const
+void udm::Element::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::optional<std::string> &prefix) const
 {
 	auto childPrefix = prefix.has_value() ? (*prefix +'\t') : "";
 	auto first = true;
@@ -91,7 +91,7 @@ void udm::Element::ToAscii(std::stringstream &ss,const std::optional<std::string
 			first = false;
 		else
 			ss<<"\n";
-		pair.second->ToAscii(ss,pair.first,childPrefix);
+		pair.second->ToAscii(flags,ss,pair.first,childPrefix);
 	}
 }
 

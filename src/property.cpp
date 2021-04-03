@@ -101,34 +101,34 @@ void udm::Property::Clear()
 	value = nullptr;
 }
 
-bool udm::Property::Read(const VFilePtr &f,Blob &outBlob)
+bool udm::Property::Read(IFile &f,Blob &outBlob)
 {
-	auto size = f->Read<size_t>();
+	auto size = f.Read<size_t>();
 	outBlob.data.resize(size);
-	f->Read(outBlob.data.data(),size);
+	f.Read(outBlob.data.data(),size);
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f,BlobLz4 &outBlob)
+bool udm::Property::Read(IFile &f,BlobLz4 &outBlob)
 {
-	auto compressedSize = f->Read<size_t>();
-	auto uncompressedSize = f->Read<size_t>();
+	auto compressedSize = f.Read<size_t>();
+	auto uncompressedSize = f.Read<size_t>();
 	outBlob.uncompressedSize = uncompressedSize;
 	outBlob.compressedData.resize(compressedSize);
-	f->Read(outBlob.compressedData.data(),compressedSize);
+	f.Read(outBlob.compressedData.data(),compressedSize);
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f,Utf8String &outStr)
+bool udm::Property::Read(IFile &f,Utf8String &outStr)
 {
-	auto size = f->Read<uint32_t>();
+	auto size = f.Read<uint32_t>();
 	outStr.data.resize(size);
-	f->Read(outStr.data.data(),size);
+	f.Read(outStr.data.data(),size);
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f,Element &el)
+bool udm::Property::Read(IFile &f,Element &el)
 {
-	f->Seek(f->Tell() +sizeof(uint64_t)); // Skip size
+	f.Seek(f.Tell() +sizeof(uint64_t)); // Skip size
 
-	auto numChildren = f->Read<uint32_t>();
+	auto numChildren = f.Read<uint32_t>();
 	std::vector<std::string> stringTable {};
 	stringTable.resize(numChildren);
 	for(auto i=decltype(numChildren){0u};i<numChildren;++i)
@@ -144,16 +144,16 @@ bool udm::Property::Read(const VFilePtr &f,Element &el)
 	}
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f,String &outStr)
+bool udm::Property::Read(IFile &f,String &outStr)
 {
-	uint32_t len = f->Read<uint8_t>();
+	uint32_t len = f.Read<uint8_t>();
 	if(len == EXTENDED_STRING_IDENTIFIER)
-		len = f->Read<uint32_t>();
+		len = f.Read<uint32_t>();
 	outStr.resize(len);
-	f->Read(outStr.data(),len);
+	f.Read(outStr.data(),len);
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f,Reference &outRef)
+bool udm::Property::Read(IFile &f,Reference &outRef)
 {
 	String str;
 	if(Read(f,str) == false)
@@ -161,121 +161,129 @@ bool udm::Property::Read(const VFilePtr &f,Reference &outRef)
 	outRef.path = std::move(str);
 	return true;
 }
-bool udm::Property::ReadStructHeader(const VFilePtr &f,StructDescription &strct)
+bool udm::Property::ReadStructHeader(IFile &f,StructDescription &strct)
 {
-	auto n = f->Read<StructDescription::MemberCountType>();
+	auto n = f.Read<StructDescription::MemberCountType>();
 	strct.types.resize(n);
-	f->Read(strct.types.data(),n *sizeof(Type));
+	f.Read(strct.types.data(),n *sizeof(Type));
 	strct.names.resize(n);
 	for(auto i=decltype(n){0u};i<n;++i)
 		Read(f,strct.names[i]);
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f,Struct &strct)
+bool udm::Property::Read(IFile &f,Struct &strct)
 {
-	f->Seek(f->Tell() +sizeof(StructDescription::SizeType));
+	f.Seek(f.Tell() +sizeof(StructDescription::SizeType));
 	ReadStructHeader(f,strct.description);
 	auto dataSize = strct->GetDataSizeRequirement();
 	strct.data.resize(dataSize);
-	f->Read(strct.data.data(),dataSize);
+	f.Read(strct.data.data(),dataSize);
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f,Array &a)
+bool udm::Property::Read(IFile &f,Array &a)
 {
 	a.Clear();
-	a.SetValueType(f->Read<decltype(a.GetValueType())>());
-	a.Resize(f->Read<decltype(a.GetSize())>());
+	a.SetValueType(f.Read<decltype(a.GetValueType())>());
+	a.Resize(f.Read<decltype(a.GetSize())>());
 	auto *ptr = a.GetValues();
 	a.fromProperty = {*this};
 	if(is_non_trivial_type(a.GetValueType()))
 	{
-		f->Seek(f->Tell() +sizeof(uint64_t)); // Skip size
+		f.Seek(f.Tell() +sizeof(uint64_t)); // Skip size
 
 		if(a.GetValueType() == Type::Struct)
 		{
-			f->Seek(f->Tell() +sizeof(StructDescription::SizeType));
+			f.Seek(f.Tell() +sizeof(StructDescription::SizeType));
 			auto *structInfo = a.GetStructuredDataInfo();
 			assert(structInfo);
 			if(!structInfo)
 				throw ImplementationError{"Invalid array structure info!"};
 			ReadStructHeader(f,*structInfo);
-		}
 
-		auto tag = get_non_trivial_tag(a.GetValueType());
-		return std::visit([this,&f,&a,ptr](auto tag) {
-			using T = decltype(tag)::type;
-			auto size = a.GetSize();
-			for(auto i=decltype(size){0u};i<size;++i)
-			{
-				if(Read(f,static_cast<T*>(ptr)[i]) == false)
-					return false;
-			}
-
-			// Also see udm::Array::Resize
-			if constexpr(std::is_same_v<T,Element> || std::is_same_v<T,Array>)
-			{
-				auto *p = static_cast<T*>(ptr);
-				for(auto i=decltype(size){0u};i<size;++i)
-					p[i].fromProperty = PropertyWrapper{a,i};
-			}
+			auto szBytes = a.GetByteSize();
+			f.Read(a.GetValues(),szBytes);
 			return true;
-		},tag);
+		}
+		else
+		{
+			auto tag = get_non_trivial_tag(a.GetValueType());
+			return std::visit([this,&f,&a,ptr](auto tag) {
+				using T = decltype(tag)::type;
+				auto size = a.GetSize();
+				for(auto i=decltype(size){0u};i<size;++i)
+				{
+					if(Read(f,static_cast<T*>(ptr)[i]) == false)
+						return false;
+				}
+
+				// Also see udm::Array::Resize
+				if constexpr(std::is_same_v<T,Element> || std::is_same_v<T,Array>)
+				{
+					auto *p = static_cast<T*>(ptr);
+					for(auto i=decltype(size){0u};i<size;++i)
+						p[i].fromProperty = PropertyWrapper{a,i};
+				}
+				return true;
+			},tag);
+		}
 	}
 	
 	auto size = a.GetSize() *size_of(a.GetValueType());
-	f->Read(ptr,size);
+	f.Read(ptr,size);
 	return true;
 }
 
-bool udm::Property::Read(const VFilePtr &f,ArrayLz4 &a)
+bool udm::Property::Read(IFile &f,ArrayLz4 &a)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	auto compressedSize = f->Read<size_t>();
+	auto compressedSize = f.Read<size_t>();
 	a.Clear();
-	a.m_valueType = f->Read<decltype(a.GetValueType())>();
-
+	a.m_valueType = f.Read<decltype(a.GetValueType())>();
+	size_t uncompressedSize = 0;
 	if(a.GetValueType() == Type::Struct)
 	{
-		f->Seek(f->Tell() +sizeof(StructDescription::SizeType));
+		f.Seek(f.Tell() +sizeof(StructDescription::SizeType));
 		a.m_structuredDataInfo = std::make_unique<StructDescription>();
 		ReadStructHeader(f,*a.m_structuredDataInfo);
 	}
+	else if(a.GetValueType() == Type::Element)
+		uncompressedSize = f.Read<size_t>();
 
-	a.m_size = f->Read<decltype(a.GetSize())>();
+	a.m_size = f.Read<decltype(a.GetSize())>();
 	a.fromProperty = {*this};
 
 	auto &blob = a.GetCompressedBlob();
-	blob.uncompressedSize = a.GetByteSize();
+	blob.uncompressedSize = (a.GetValueType() != Type::Element) ? a.GetByteSize() : uncompressedSize;
 	blob.compressedData.resize(compressedSize);
-	f->Read(blob.compressedData.data(),compressedSize);
+	f.Read(blob.compressedData.data(),compressedSize);
 	return true;
 }
 
-void udm::Property::Write(VFilePtrReal &f,const Blob &blob)
+void udm::Property::Write(IFile &f,const Blob &blob)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	f->Write<size_t>(blob.data.size());
-	f->Write(blob.data.data(),blob.data.size());
+	f.Write<size_t>(blob.data.size());
+	f.Write(blob.data.data(),blob.data.size());
 }
-void udm::Property::Write(VFilePtrReal &f,const BlobLz4 &blob)
+void udm::Property::Write(IFile &f,const BlobLz4 &blob)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	f->Write<size_t>(blob.compressedData.size());
-	f->Write<size_t>(blob.uncompressedSize);
-	f->Write(blob.compressedData.data(),blob.compressedData.size());
+	f.Write<size_t>(blob.compressedData.size());
+	f.Write<size_t>(blob.uncompressedSize);
+	f.Write(blob.compressedData.data(),blob.compressedData.size());
 }
-void udm::Property::Write(VFilePtrReal &f,const Utf8String &str)
+void udm::Property::Write(IFile &f,const Utf8String &str)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	f->Write<uint32_t>(str.data.size());
-	f->Write(str.data.data(),str.data.size());
+	f.Write<uint32_t>(str.data.size());
+	f.Write(str.data.data(),str.data.size());
 }
-void udm::Property::Write(VFilePtrReal &f,const Element &el)
+void udm::Property::Write(IFile &f,const Element &el)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
 	auto offsetToSize = WriteBlockSize<uint64_t>(f);
 
-	f->Write<uint32_t>(el.children.size());
+	f.Write<uint32_t>(el.children.size());
 	for(auto &pair : el.children)
 		Data::WriteKey(f,pair.first);
 
@@ -284,15 +292,14 @@ void udm::Property::Write(VFilePtrReal &f,const Element &el)
 
 	WriteBlockSize<uint64_t>(f,offsetToSize);
 }
-void udm::Property::Write(VFilePtrReal &f,const Array &a)
+void udm::Property::Write(IFile &f,const Array &a)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	f->Write(a.GetValueType());
-	f->Write(a.GetSize());
+	f.Write(a.GetValueType());
+	f.Write(a.GetSize());
 	if(is_non_trivial_type(a.GetValueType()))
 	{
-		auto offsetToSize = f->Tell();
-		f->Write<uint64_t>(0);
+		auto offsetToSize = WriteBlockSize<uint64_t>(f);
 
 		if(a.GetValueType() == Type::Struct)
 		{
@@ -303,30 +310,31 @@ void udm::Property::Write(VFilePtrReal &f,const Array &a)
 			auto offsetToSize = WriteBlockSize<StructDescription::SizeType>(f);
 			WriteStructHeader(f,*structInfo);
 			WriteBlockSize<StructDescription::SizeType>(f,offsetToSize);
+
+			auto szBytes = a.GetByteSize();
+			f.Write(a.GetValues(),szBytes);
+		}
+		else
+		{
+			auto tag = get_non_trivial_tag(a.GetValueType());
+			std::visit([&](auto tag){
+				using T = decltype(tag)::type;
+				for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
+					Property::Write(f,static_cast<const T*>(a.GetValues())[i]);
+			},tag);
 		}
 
-		auto tag = get_non_trivial_tag(a.GetValueType());
-		std::visit([&](auto tag){
-			using T = decltype(tag)::type;
-			for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
-				Property::Write(f,static_cast<const T*>(a.GetValues())[i]);
-		},tag);
-
-		auto startOffset = offsetToSize +sizeof(uint64_t);
-		auto curOffset = f->Tell();
-		f->Seek(offsetToSize);
-		f->Write<uint64_t>(curOffset -startOffset);
-		f->Seek(curOffset);
+		WriteBlockSize<uint64_t>(f,offsetToSize);
 		return;
 	}
-	f->Write(a.GetValues(),a.GetSize() *size_of(a.GetValueType()));
+	f.Write(a.GetValues(),a.GetSize() *size_of(a.GetValueType()));
 }
-void udm::Property::Write(VFilePtrReal &f,const ArrayLz4 &a)
+void udm::Property::Write(IFile &f,const ArrayLz4 &a)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
 	auto &blob = a.GetCompressedBlob();
-	f->Write<size_t>(blob.compressedData.size());
-	f->Write(a.GetValueType());
+	f.Write<size_t>(blob.compressedData.size());
+	f.Write(a.GetValueType());
 
 	if(a.GetValueType() == Type::Struct)
 	{
@@ -338,51 +346,53 @@ void udm::Property::Write(VFilePtrReal &f,const ArrayLz4 &a)
 		WriteStructHeader(f,*structInfo);
 		WriteBlockSize<StructDescription::SizeType>(f,offsetToSize);
 	}
+	else if(a.GetValueType() == Type::Element)
+		f.Write<size_t>(blob.uncompressedSize);
 
-	f->Write(a.GetSize());
-	f->Write(blob.compressedData.data(),blob.compressedData.size());
+	f.Write(a.GetSize());
+	f.Write(blob.compressedData.data(),blob.compressedData.size());
 }
-void udm::Property::Write(VFilePtrReal &f,const String &str)
+void udm::Property::Write(IFile &f,const String &str)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
 	auto len = umath::min(str.length(),static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
 	if(len < EXTENDED_STRING_IDENTIFIER)
-		f->Write<uint8_t>(len);
+		f.Write<uint8_t>(len);
 	else
 	{
-		f->Write<uint8_t>(EXTENDED_STRING_IDENTIFIER);
-		f->Write<uint32_t>(len);
+		f.Write<uint8_t>(EXTENDED_STRING_IDENTIFIER);
+		f.Write<uint32_t>(len);
 	}
-	f->Write(str.data(),len);
+	f.Write(str.data(),len);
 }
-void udm::Property::Write(VFilePtrReal &f,const Reference &ref)
+void udm::Property::Write(IFile &f,const Reference &ref)
 {
 	Write(f,ref.path);
 }
-void udm::Property::WriteStructHeader(VFilePtrReal &f,const StructDescription &strct)
+void udm::Property::WriteStructHeader(IFile &f,const StructDescription &strct)
 {
 	auto n = strct.GetMemberCount();
 	if(n == 0)
 		throw ImplementationError{"Attempted to write empty struct. This is not allowed!"};
-	f->Write(n);
-	f->Write(strct.types.data(),n *sizeof(Type));
+	f.Write(n);
+	f.Write(strct.types.data(),n *sizeof(Type));
 	for(auto i=decltype(n){0u};i<n;++i)
 		Write(f,strct.names[i]);
 }
-void udm::Property::Write(VFilePtrReal &f,const Struct &strct)
+void udm::Property::Write(IFile &f,const Struct &strct)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
 	auto offsetToSize = WriteBlockSize<StructDescription::SizeType>(f);
 
 	WriteStructHeader(f,strct.description);
-	f->Write(strct.data.data(),strct.data.size());
+	f.Write(strct.data.data(),strct.data.size());
 	
 	WriteBlockSize<StructDescription::SizeType>(f,offsetToSize);
 }
 
-void udm::Property::Write(VFilePtrReal &f) const
+void udm::Property::Write(IFile &f) const
 {
-	f->Write(type);
+	f.Write(type);
 	if(is_non_trivial_type(type))
 	{
 		auto tag = get_non_trivial_tag(type);
@@ -392,7 +402,7 @@ void udm::Property::Write(VFilePtrReal &f) const
 		},tag);
 		return;
 	}
-	f->Write(value,size_of(type));
+	f.Write(value,size_of(type));
 }
 
 udm::LinkedPropertyWrapper udm::Property::operator[](const std::string &key) {return LinkedPropertyWrapper{*this}[key];}
@@ -526,14 +536,15 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 	case Type::ArrayLz4:
 	{
 		auto &a = GetValue<Array>();
-		auto byteSize = a.GetSize() *size_of_base_type(a.GetValueType());
+		auto byteSize = a.GetValueSize() *a.GetSize();
 		if(optOutRequiredSize)
 			*optOutRequiredSize = byteSize;
 		if(bufferSize != byteSize)
 			return BlobResult::InsufficientSize;
-		if(is_non_trivial_type(a.GetValueType()))
+		auto valueType = a.GetValueType();
+		if(is_non_trivial_type(valueType) && valueType != Type::Struct)
 		{
-			auto tag = get_non_trivial_tag(a.GetValueType());
+			auto tag = get_non_trivial_tag(valueType);
 			std::visit([this,outBuffer,&a](auto tag) {
 				using T = decltype(tag)::type;
 				auto n = a.GetSize();
@@ -606,7 +617,7 @@ void *udm::Property::GetValuePtr(Type &outType)
 	return value;
 }
 
-bool udm::Property::Read(Type ptype,const VFilePtr &f)
+bool udm::Property::Read(Type ptype,IFile &f)
 {
 	Clear();
 	type = ptype;
@@ -619,18 +630,18 @@ bool udm::Property::Read(Type ptype,const VFilePtr &f)
 	}
 	auto size = size_of(type);
 	value = new uint8_t[size];
-	f->Read(value,size);
+	f.Read(value,size);
 	return true;
 }
-bool udm::Property::Read(const VFilePtr &f) {return Read(f->Read<Type>(),f);}
+bool udm::Property::Read(IFile &f) {return Read(f.Read<Type>(),f);}
 
-void udm::Property::ToAscii(std::stringstream &ss,const std::string &propName,Type type,const DataValue value,const std::string &prefix)
+void udm::Property::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::string &propName,Type type,const DataValue value,const std::string &prefix)
 {
 	if(type == Type::Element)
 	{
 		ss<<prefix<<'\"'<<propName<<"\"\n";
 		ss<<prefix<<"{\n";
-		static_cast<Element*>(value)->ToAscii(ss,prefix);
+		static_cast<Element*>(value)->ToAscii(flags,ss,prefix);
 		ss<<'\n'<<prefix<<"}";
 		return;
 	}
@@ -644,9 +655,9 @@ void udm::Property::ToAscii(std::stringstream &ss,const std::string &propName,Ty
 	}
 	else
 	{
-		auto vs = [value,&ss,&prefix](auto tag){
+		auto vs = [value,&ss,&prefix,flags](auto tag){
 			using T = decltype(tag)::type;
-			ss<<ToAsciiValue(*static_cast<T*>(value),prefix);
+			ss<<ToAsciiValue(flags,*static_cast<T*>(value),prefix);
 		};
 		if(is_generic_type(type))
 			std::visit(vs,get_generic_tag(type));
@@ -655,13 +666,13 @@ void udm::Property::ToAscii(std::stringstream &ss,const std::string &propName,Ty
 	}
 }
 
-void udm::Property::ToAscii(std::stringstream &ss,const std::string &propName,const std::string &prefix)
+void udm::Property::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::string &propName,const std::string &prefix)
 {
 	if(type == Type::Element)
 	{
 		ss<<prefix<<'\"'<<propName<<"\"\n";
 		ss<<prefix<<"{\n";
-		static_cast<Element*>(value)->ToAscii(ss,prefix);
+		static_cast<Element*>(value)->ToAscii(flags,ss,prefix);
 		ss<<'\n'<<prefix<<"}";
 		return;
 	}
@@ -684,9 +695,9 @@ void udm::Property::ToAscii(std::stringstream &ss,const std::string &propName,co
 	}
 	else
 	{
-		auto vs = [this,&ss,&prefix](auto tag){
+		auto vs = [this,&ss,&prefix,flags](auto tag){
 			using T = decltype(tag)::type;
-			ss<<ToAsciiValue(*static_cast<T*>(value),prefix);
+			ss<<ToAsciiValue(flags,*static_cast<T*>(value),prefix);
 		};
 		if(is_generic_type(type))
 			std::visit(vs,get_generic_tag(type));

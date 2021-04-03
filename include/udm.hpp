@@ -235,6 +235,12 @@ namespace udm
 	};
 	static std::array<Type,9> NON_TRIVIAL_TYPES = {Type::String,Type::Utf8String,Type::Blob,Type::BlobLz4,Type::Element,Type::Array,Type::ArrayLz4,Type::Reference,Type::Struct};
 
+	enum class ArrayType : uint8_t
+	{
+		Raw = 0,
+		Compressed
+	};
+
 	enum class BlobResult : uint8_t
 	{
 		Success = 0,
@@ -502,9 +508,11 @@ namespace udm
 		constexpr bool is_convertible(Type tTo);
 	constexpr bool is_convertible(Type tFrom,Type tTo);
 	
+	enum class AsciiSaveFlags : uint32_t;
 	struct LinkedPropertyWrapper;
 	struct Array;
 	struct StructDescription;
+	struct IFile;
 	struct Property;
 	using PProperty = std::shared_ptr<Property>;
 	using WPProperty = std::weak_ptr<Property>;
@@ -591,82 +599,83 @@ namespace udm
 			std::optional<T> ToValue() const;
 		operator bool() const {return type != Type::Nil;}
 		
-		bool Read(const VFilePtr &f);
-		bool Read(Type type,const VFilePtr &f);
-		void Write(VFilePtrReal &f) const;
+		bool Read(IFile &f);
+		bool Read(Type type,IFile &f);
+		void Write(IFile &f) const;
 
-		void ToAscii(std::stringstream &ss,const std::string &propName,const std::string &prefix="");
+		void ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::string &propName,const std::string &prefix="");
 		
-		static void ToAscii(std::stringstream &ss,const std::string &propName,Type type,const DataValue value,const std::string &prefix="");
-		bool Read(const VFilePtr &f,Blob &outBlob);
-		bool Read(const VFilePtr &f,BlobLz4 &outBlob);
-		bool Read(const VFilePtr &f,Utf8String &outStr);
-		bool Read(const VFilePtr &f,Element &outEl);
-		bool Read(const VFilePtr &f,Array &outArray);
-		bool Read(const VFilePtr &f,ArrayLz4 &outArray);
-		bool Read(const VFilePtr &f,String &outStr);
-		bool Read(const VFilePtr &f,Reference &outRef);
-		bool Read(const VFilePtr &f,Struct &strct);
-		static void Write(VFilePtrReal &f,const Blob &blob);
-		static void Write(VFilePtrReal &f,const BlobLz4 &blob);
-		static void Write(VFilePtrReal &f,const Utf8String &str);
-		static void Write(VFilePtrReal &f,const Element &el);
-		static void Write(VFilePtrReal &f,const Array &a);
-		static void Write(VFilePtrReal &f,const ArrayLz4 &a);
-		static void Write(VFilePtrReal &f,const String &str);
-		static void Write(VFilePtrReal &f,const Reference &ref);
-		static void Write(VFilePtrReal &f,const Struct &strct);
+		static void ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::string &propName,Type type,const DataValue value,const std::string &prefix="");
+		bool Read(IFile &f,Blob &outBlob);
+		bool Read(IFile &f,BlobLz4 &outBlob);
+		bool Read(IFile &f,Utf8String &outStr);
+		bool Read(IFile &f,Element &outEl);
+		bool Read(IFile &f,Array &outArray);
+		bool Read(IFile &f,ArrayLz4 &outArray);
+		bool Read(IFile &f,String &outStr);
+		bool Read(IFile &f,Reference &outRef);
+		bool Read(IFile &f,Struct &strct);
+		static void Write(IFile &f,const Blob &blob);
+		static void Write(IFile &f,const BlobLz4 &blob);
+		static void Write(IFile &f,const Utf8String &str);
+		static void Write(IFile &f,const Element &el);
+		static void Write(IFile &f,const Array &a);
+		static void Write(IFile &f,const ArrayLz4 &a);
+		static void Write(IFile &f,const String &str);
+		static void Write(IFile &f,const Reference &ref);
+		static void Write(IFile &f,const Struct &strct);
 		
-		static std::string ToAsciiValue(const Nil &nil,const std::string &prefix="");
-		static std::string ToAsciiValue(const Blob &blob,const std::string &prefix="");
-		static std::string ToAsciiValue(const BlobLz4 &blob,const std::string &prefix="");
-		static std::string ToAsciiValue(const Utf8String &utf8,const std::string &prefix="");
-		static std::string ToAsciiValue(const Element &el,const std::string &prefix="");
-		static std::string ToAsciiValue(const Array &a,const std::string &prefix="");
-		static std::string ToAsciiValue(const ArrayLz4 &a,const std::string &prefix="");
-		static std::string ToAsciiValue(const String &str,const std::string &prefix="");
-		static std::string ToAsciiValue(const Reference &ref,const std::string &prefix="");
-		static std::string ToAsciiValue(const Struct &strct,const std::string &prefix="");
-		static std::string StructToAsciiValue(const StructDescription &strct,const void *data,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Nil &nil,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Blob &blob,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const BlobLz4 &blob,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Utf8String &utf8,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Element &el,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Array &a,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const ArrayLz4 &a,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const String &str,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Reference &ref,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Struct &strct,const std::string &prefix="");
+		static std::string StructToAsciiValue(AsciiSaveFlags flags,const StructDescription &strct,const void *data,const std::string &prefix="");
+		static void ArrayValuesToAscii(AsciiSaveFlags flags,std::stringstream &ss,const Array &a,const std::string &prefix="");
 		
-		static std::string ToAsciiValue(const Vector2 &v,const std::string &prefix="");
-		static std::string ToAsciiValue(const Vector2i &v,const std::string &prefix="");
-		static std::string ToAsciiValue(const Vector3 &v,const std::string &prefix="");
-		static std::string ToAsciiValue(const Vector3i &v,const std::string &prefix="");
-		static std::string ToAsciiValue(const Vector4 &v,const std::string &prefix="");
-		static std::string ToAsciiValue(const Vector4i &v,const std::string &prefix="");
-		static std::string ToAsciiValue(const Quaternion &q,const std::string &prefix="");
-		static std::string ToAsciiValue(const EulerAngles &a,const std::string &prefix="");
-		static std::string ToAsciiValue(const Srgba &srgb,const std::string &prefix="");
-		static std::string ToAsciiValue(const HdrColor &col,const std::string &prefix="");
-		static std::string ToAsciiValue(const Transform &t,const std::string &prefix="");
-		static std::string ToAsciiValue(const ScaledTransform &t,const std::string &prefix="");
-		static std::string ToAsciiValue(const Mat4 &m,const std::string &prefix="");
-		static std::string ToAsciiValue(const Mat3x4 &m,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Vector2 &v,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Vector2i &v,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Vector3 &v,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Vector3i &v,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Vector4 &v,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Vector4i &v,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Quaternion &q,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const EulerAngles &a,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Srgba &srgb,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const HdrColor &col,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Transform &t,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const ScaledTransform &t,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Mat4 &m,const std::string &prefix="");
+		static std::string ToAsciiValue(AsciiSaveFlags flags,const Mat3x4 &m,const std::string &prefix="");
 
 		static constexpr uint8_t EXTENDED_STRING_IDENTIFIER = std::numeric_limits<uint8_t>::max();
 		static BlobResult GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize);
 		static BlobResult GetBlobData(const BlobLz4 &blob,void *outBuffer,size_t bufferSize);
 		static Blob GetBlobData(const BlobLz4 &blob);
 	private:
-		bool ReadStructHeader(const VFilePtr &f,StructDescription &strct);
-		static void WriteStructHeader(VFilePtrReal &f,const StructDescription &strct);
+		bool ReadStructHeader(IFile &f,StructDescription &strct);
+		static void WriteStructHeader(IFile &f,const StructDescription &strct);
 
 		template<typename T>
-			static uint64_t WriteBlockSize(VFilePtrReal &f)
+			static uint64_t WriteBlockSize(IFile &f)
 		{
-			auto offsetToSize = f->Tell();
-			f->Write<T>(0);
+			auto offsetToSize = f.Tell();
+			f.Write<T>(0);
 			return offsetToSize;
 		}
 		template<typename T>
-			static void WriteBlockSize(VFilePtrReal &f,uint64_t offset)
+			static void WriteBlockSize(IFile &f,uint64_t offset)
 		{
 			auto startOffset = offset +sizeof(T);
-			auto curOffset = f->Tell();
-			f->Seek(offset);
-			f->Write<T>(curOffset -startOffset);
-			f->Seek(curOffset);
+			auto curOffset = f.Tell();
+			f.Seek(offset);
+			f.Write<T>(curOffset -startOffset);
+			f.Seek(curOffset);
 		}
 
 		template<typename T>
@@ -795,9 +804,15 @@ namespace udm
 		//template<typename T>
 		//	operator T() const;
 		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,bool compressed=false);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size={},bool compressed=false);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size={},bool compressed=false);
+		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw);
+		LinkedPropertyWrapper AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw);
+		LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw);
+		template<typename T>
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType=ArrayType::Raw);
+		template<typename T>
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw);
+		template<typename T>
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw);
 		bool IsArrayItem() const;
 		bool IsType(Type type) const;
 		Type GetType() const;
@@ -1061,8 +1076,8 @@ namespace udm
 		LinkedPropertyWrapper operator[](const char *key) {return operator[](std::string{key});}
 
 		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,bool compressed=false);
-		void ToAscii(std::stringstream &ss,const std::optional<std::string> &prefix={}) const;
+		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw);
+		void ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::optional<std::string> &prefix={}) const;
 
 		void Merge(const Element &other);
 
@@ -1233,6 +1248,56 @@ namespace udm
 		Ascii
 	};
 
+	enum class AsciiSaveFlags : uint32_t
+	{
+		None = 0u,
+		IncludeHeader = 1u,
+		DontCompressLz4Arrays = IncludeHeader<<1u
+	};
+
+	struct IFile
+	{
+		template<typename T>
+			T Read()
+		{
+			T v;
+			Read(&v,sizeof(T));
+			return v;
+		}
+		template<typename T>
+			size_t Write(const T &v)
+		{
+			return Write(&v,sizeof(T));
+		}
+		enum class Whence : uint8_t
+		{
+			Set = 0,
+			Cur,
+			End
+		};
+		virtual size_t Read(void *data,size_t size)=0;
+		virtual size_t Write(const void *data,size_t size)=0;
+		virtual size_t Tell()=0;
+		virtual void Seek(size_t offset,Whence whence=Whence::Set)=0;
+		virtual int32_t ReadChar()=0;
+
+		int32_t WriteString(const std::string &str);
+	};
+
+	struct VFilePtr
+		: public IFile
+	{
+		VFilePtr()=default;
+		VFilePtr(const ::VFilePtr &f);
+		virtual size_t Read(void *data,size_t size) override;
+		virtual size_t Write(const void *data,size_t size) override;
+		virtual size_t Tell() override;
+		virtual void Seek(size_t offset,Whence whence=Whence::Set) override;
+		virtual int32_t ReadChar() override;
+	private:
+		::VFilePtr m_file;
+	};
+
 	class Data
 	{
 	public:
@@ -1240,11 +1305,14 @@ namespace udm
 		static constexpr auto KEY_ASSET_VERSION = "assetVersion";
 		static constexpr auto KEY_ASSET_DATA = "assetData";
 		static std::optional<FormatType> GetFormatType(const std::string &fileName,std::string &outErr);
-		static std::optional<FormatType> GetFormatType(const VFilePtr &f,std::string &outErr);
+		static std::optional<FormatType> GetFormatType(std::unique_ptr<IFile> &&f,std::string &outErr);
+		static std::optional<FormatType> GetFormatType(const ::VFilePtr &f,std::string &outErr);
 		static std::shared_ptr<Data> Load(const std::string &fileName);
-		static std::shared_ptr<Data> Load(const VFilePtr &f);
+		static std::shared_ptr<Data> Load(std::unique_ptr<IFile> &&f);
+		static std::shared_ptr<Data> Load(const ::VFilePtr &f);
 		static std::shared_ptr<Data> Open(const std::string &fileName);
-		static std::shared_ptr<Data> Open(const VFilePtr &f);
+		static std::shared_ptr<Data> Open(std::unique_ptr<IFile> &&f);
+		static std::shared_ptr<Data> Open(const ::VFilePtr &f);
 		static std::shared_ptr<Data> Create(const std::string &assetType,Version assetVersion);
 		static std::shared_ptr<Data> Create();
 		static bool DebugTest();
@@ -1253,9 +1321,11 @@ namespace udm
 		void ResolveReferences();
 
 		bool Save(const std::string &fileName) const;
-		bool Save(VFilePtrReal &f) const;
-		bool SaveAscii(const std::string &fileName,bool includeHeader=true) const;
-		bool SaveAscii(VFilePtrReal &f,bool includeHeader=true) const;
+		bool Save(IFile &f) const;
+		bool Save(const ::VFilePtr &f);
+		bool SaveAscii(const std::string &fileName,AsciiSaveFlags flags=AsciiSaveFlags::None) const;
+		bool SaveAscii(IFile &f,AsciiSaveFlags flags=AsciiSaveFlags::None) const;
+		bool SaveAscii(const ::VFilePtr &f,AsciiSaveFlags flags=AsciiSaveFlags::None) const;
 		Element &GetRootElement() {return *static_cast<Element*>(m_rootProperty->value);}
 		const Element &GetRootElement() const {return const_cast<Data*>(this)->GetRootElement();}
 		AssetData GetAssetData() const;
@@ -1274,22 +1344,23 @@ namespace udm
 		void SetAssetType(const std::string &assetType);
 		void SetAssetVersion(Version version);
 
-		void ToAscii(std::stringstream &ss,bool includeHeader=true) const;
+		void ToAscii(std::stringstream &ss,AsciiSaveFlags flags=AsciiSaveFlags::None) const;
 
 		const Header &GetHeader() const {return m_header;}
 
-		static std::string ReadKey(const VFilePtr &f);
-		static void WriteKey(VFilePtrReal &f,const std::string &key);
+		static std::string ReadKey(IFile &f);
+		static void WriteKey(IFile &f,const std::string &key);
 	private:
 		friend AsciiReader;
+		friend ArrayLz4;
 		bool ValidateHeaderProperties();
-		static void SkipProperty(VFilePtr &f,Type type);
+		static void SkipProperty(IFile &f,Type type);
 		PProperty LoadProperty(Type type,const std::string_view &path) const;
-		static PProperty ReadProperty(const VFilePtr &f);
-		static void WriteProperty(VFilePtrReal &f,const Property &o);
+		static PProperty ReadProperty(IFile &f);
+		static void WriteProperty(IFile &f,const Property &o);
 		Data()=default;
 		Header m_header;
-		VFilePtr m_file = nullptr;
+		std::unique_ptr<IFile> m_file = nullptr;
 		PProperty m_rootProperty = nullptr;
 	};
 
@@ -1332,6 +1403,7 @@ namespace udm
 		umath::set_flag(flags,flag,udm[name](false));
 	}
 };
+REGISTER_BASIC_BITWISE_OPERATORS(udm::AsciiSaveFlags)
 
 constexpr size_t udm::size_of(Type t)
 {
@@ -1806,25 +1878,9 @@ template<typename T>
 		return {};
 	if constexpr(util::is_specialization<T,std::vector>::value)
 	{
-		if(!is_array_type(type))
-			return {};
-		auto &a = GetValue<Array>();
-		if(a.IsValueType(array_value_type_to_enum<T>()) == false)
-			return {};
-		auto n = a.GetSize();
 		T v {};
-		v.resize(n);
-		if constexpr(is_non_trivial_type(array_value_type_to_enum<T>()))
-		{
-			for(auto i=decltype(n){0u};i<n;++i)
-				v[i] = static_cast<const T::value_type*>(a.GetValues())[i];
-			return v;
-		}
-		else
-		{
-			memcpy(v.data(),a.GetValues(),v.size() *sizeof(v.front()));
-			return v;
-		}
+		auto res = GetBlobData(v);
+		return (res == BlobResult::Success) ? v : std::optional<T>{};
 	}
 	else if constexpr(util::is_specialization<T,std::unordered_map>::value || util::is_specialization<T,std::map>::value)
 	{
@@ -1877,6 +1933,48 @@ template<typename T>
 	if constexpr(std::is_same_v<T,udm::Array>)
 		return is_array_type(this->type) ? reinterpret_cast<T*>(value) : nullptr;
 	return (this->type == type_to_enum<T>()) ? reinterpret_cast<T*>(value) : nullptr;
+}
+
+template<typename T>
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType)
+{
+	auto prop = AddArray(path,strct,strctItems,arrayType);
+	auto &a = prop.GetValue<Array>();
+	auto sz = a.GetValueSize() *a.GetSize();
+	auto *ptr = a.GetValues();
+	memcpy(ptr,data,sz);
+	return prop;
+}
+
+template<typename T>
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType)
+{
+	auto prop = AddArray(path,strct,values.size(),arrayType);
+	auto &a = prop.GetValue<Array>();
+	auto sz = a.GetValueSize() *a.GetSize();
+	auto szValues = util::size_of_container(values);
+	if(szValues != sz)
+		throw InvalidUsageError{"Size of values does not match expected size of defined struct!"};
+	auto *ptr = a.GetValues();
+	memcpy(ptr,values.data(),szValues);
+	return prop;
+}
+
+template<typename T>
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType)
+{
+	constexpr auto valueType = type_to_enum<T>();
+	auto prop = AddArray(path,values.size(),valueType,arrayType);
+	auto &a = prop.GetValue<Array>();
+	if constexpr(is_non_trivial_type(valueType) && valueType != Type::Struct)
+	{
+		auto n = values.size();
+		for(auto i=decltype(n){0u};i<n;++i)
+			a[i] = values[i];
+	}
+	else
+		memcpy(a.GetValues(),values.data(),util::size_of_container(values));
+	return prop;
 }
 
 template<class T>

@@ -16,14 +16,18 @@ std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileN
 	}
 	return GetFormatType(f,outErr);
 }
-std::optional<udm::FormatType> udm::Data::GetFormatType(const VFilePtr &f,std::string &outErr)
+std::optional<udm::FormatType> udm::Data::GetFormatType(const ::VFilePtr &f,std::string &outErr)
+{
+	return GetFormatType(std::make_unique<VFilePtr>(f),outErr);
+}
+std::optional<udm::FormatType> udm::Data::GetFormatType(std::unique_ptr<IFile> &&f,std::string &outErr)
 {
 	auto offset = f->Tell();
 	try
 	{
 		try
 		{
-			auto udmData = Open(f);
+			auto udmData = Open(std::move(f));
 			return udmData ? FormatType::Binary : FormatType::Ascii;
 		}
 		catch(const Exception &e)
@@ -58,12 +62,12 @@ bool udm::Data::Save(const std::string &fileName) const
 		throw FileError{"Unable to open file!"};
 		return nullptr;
 	}
-	return Save(f);
+	return Save(VFilePtr{f});
 }
 
-void udm::Data::WriteProperty(VFilePtrReal &f,const Property &o) {o.Write(f);}
+void udm::Data::WriteProperty(IFile &f,const Property &o) {o.Write(f);}
 
-udm::PProperty udm::Data::ReadProperty(const VFilePtr &f)
+udm::PProperty udm::Data::ReadProperty(IFile &f)
 {
 	auto prop = Property::Create();
 	if(prop->Read(f) == false)
@@ -96,6 +100,10 @@ bool udm::Data::DebugTest()
 		el["stringTest"] = "Test";
 		el["floatTest"] = 5.f;
 		el["path/test/value"] = Vector3{1,2,3};
+
+		auto udmCompressedElementArray = el.AddArray("compressedElementArray",1,Type::Element,ArrayType::Compressed);
+		auto udmEl = udmCompressedElementArray[0];
+		udmEl["test"] = "555";
 
 		el["NIL"] = udm::Nil{};
 		el["STRING"] = udm::String{"Hello"};
@@ -165,7 +173,7 @@ bool udm::Data::DebugTest()
 
 		//udmData.AddArray("test",1,udm::Type::Float);
 		//udmData["test"][0] = 5.f;
-		auto aCompressed = udmData.AddArray("compressedArray",10,Type::Float,true);
+		auto aCompressed = udmData.AddArray("compressedArray",10,Type::Float,ArrayType::Compressed);
 		for(auto i=0;i<10;++i)
 			udmData["compressedArray"][i] = i;
 
@@ -174,12 +182,24 @@ bool udm::Data::DebugTest()
 			structDef,
 			10
 		);
-		structArray[0] = TestStruct{5.f,Vector3{3,3,3},2,0.34f};
+		for(auto i=0;i<10;++i)
+			structArray[i] = TestStruct{5.f,Vector3{3,3,3},2,0.34f};
 		
 		auto aCompressedStructArray = udmData.AddArray(
 			"compressedStructArray",
 			structDef,
-			10,true
+			10,ArrayType::Compressed
+		);
+		for(auto i=0;i<10;++i)
+			aCompressedStructArray[i] = TestStruct{5.f,Vector3{3,3,3},2,0.34f};
+
+		std::vector<TestStruct> structuredData = {
+			TestStruct{5.f,Vector3{3,3,3},2,0.34f}
+		};
+		auto aCompressedStructArray2 = udmData.AddArray(
+			"compressedStructArray2",
+			structDef,
+			structuredData,ArrayType::Compressed
 		);
 
 		if(*data != *data)
@@ -194,9 +214,9 @@ bool udm::Data::DebugTest()
 			if(fw)
 			{
 				if(binary)
-					data->Save(fw);
+					data->Save(VFilePtr{fw});
 				else
-					data->SaveAscii(fw);
+					data->SaveAscii(VFilePtr{fw});
 				fw = nullptr;
 			}
 			else
@@ -248,7 +268,8 @@ std::shared_ptr<udm::Data> udm::Data::Open(const std::string &fileName)
 	}
 	return Open(f);
 }
-std::shared_ptr<udm::Data> udm::Data::Open(const VFilePtr &f)
+std::shared_ptr<udm::Data> udm::Data::Open(const ::VFilePtr &f) {return Open(std::make_unique<VFilePtr>(f));}
+std::shared_ptr<udm::Data> udm::Data::Open(std::unique_ptr<IFile> &&f)
 {
 	auto udmData = std::shared_ptr<udm::Data>{new udm::Data{}};
 	udmData->m_header = f->Read<Header>();
@@ -267,7 +288,7 @@ std::shared_ptr<udm::Data> udm::Data::Open(const VFilePtr &f)
 		throw InvalidFormatError{"File uses a newer UDM version (" +std::to_string(udmData->m_header.version) +") than is supported by this version of UDM (" +std::to_string(VERSION) +")!"};
 		return nullptr;
 	}
-	udmData->m_file = f;
+	udmData->m_file = std::move(f);
 	return udmData;
 }
 
@@ -296,23 +317,24 @@ bool udm::Data::ValidateHeaderProperties()
 
 namespace udm
 {
-	std::shared_ptr<udm::Data> load_ascii(const VFilePtr &f);
+	std::shared_ptr<udm::Data> load_ascii(std::unique_ptr<IFile> &&f);
 };
-std::shared_ptr<udm::Data> udm::Data::Load(const VFilePtr &f)
+std::shared_ptr<udm::Data> udm::Data::Load(const ::VFilePtr &f) {return Load(std::make_unique<VFilePtr>(f));}
+std::shared_ptr<udm::Data> udm::Data::Load(std::unique_ptr<IFile> &&f)
 {
 	auto offset = f->Tell();
 	std::shared_ptr<udm::Data> udmData = nullptr;
 	try
 	{
-		udmData = Open(f);
+		udmData = Open(std::move(f));
 	}
 	catch(const Exception &e)
 	{
 		// Attempt to load ascii format
 		f->Seek(offset);
-		return load_ascii(f);
+		return load_ascii(std::move(f));
 	}
-	auto o = ReadProperty(f);
+	auto o = ReadProperty(*udmData->m_file);
 	if(o == nullptr)
 	{
 		throw InvalidFormatError{"Root element is invalid!"};
@@ -359,22 +381,22 @@ void udm::Data::ResolveReferences()
 
 udm::PProperty udm::Data::LoadProperty(const std::string_view &path) const
 {
-	auto f = m_file;
-	if(f == nullptr)
+	if(m_file == nullptr)
 	{
 		throw FileError{"Invalid file handle!"};
 		return nullptr;
 	}
-	f->Seek(sizeof(m_header));
-	auto type = f->Read<Type>();
+	auto &f = *m_file;
+	f.Seek(sizeof(m_header));
+	auto type = f.Read<Type>();
 	return LoadProperty(type,std::string{KEY_ASSET_DATA} +"." +std::string{path});
 }
 
-void udm::Data::SkipProperty(VFilePtr &f,Type type)
+void udm::Data::SkipProperty(IFile &f,Type type)
 {
 	if(is_numeric_type(type) || is_generic_type(type))
 	{
-		f->Seek(f->Tell() +size_of(type));
+		f.Seek(f.Tell() +size_of(type));
 		return;
 	}
 	switch(type)
@@ -382,90 +404,92 @@ void udm::Data::SkipProperty(VFilePtr &f,Type type)
 	case Type::String:
 	case Type::Reference:
 	{
-		uint32_t len = f->Read<uint8_t>();
+		uint32_t len = f.Read<uint8_t>();
 		if(len == Property::EXTENDED_STRING_IDENTIFIER)
-			len = f->Read<uint32_t>();
-		f->Seek(f->Tell() +len);
+			len = f.Read<uint32_t>();
+		f.Seek(f.Tell() +len);
 		break;
 	}
 	case Type::Utf8String:
 	{
-		auto size = f->Read<uint32_t>();
-		f->Seek(f->Tell() +size);
+		auto size = f.Read<uint32_t>();
+		f.Seek(f.Tell() +size);
 		break;
 	}
 	case Type::Blob:
 	{
-		auto size = f->Read<size_t>();
-		f->Seek(f->Tell() +size);
+		auto size = f.Read<size_t>();
+		f.Seek(f.Tell() +size);
 		break;
 	}
 	case Type::BlobLz4:
 	{
-		auto compressedSize = f->Read<size_t>();
-		f->Seek(f->Tell() +sizeof(size_t) +compressedSize);
+		auto compressedSize = f.Read<size_t>();
+		f.Seek(f.Tell() +sizeof(size_t) +compressedSize);
 		break;
 	}
 	case Type::Array:
 	{
 		using TSize = decltype(std::declval<Array>().GetSize());
-		auto valueType = f->Read<Type>();
+		auto valueType = f.Read<Type>();
 		if(is_non_trivial_type(valueType))
 		{
-			f->Seek(f->Tell() +sizeof(TSize));
-			auto sizeBytes = f->Read<uint64_t>();
-			f->Seek(f->Tell() +sizeBytes);
+			f.Seek(f.Tell() +sizeof(TSize));
+			auto sizeBytes = f.Read<uint64_t>();
+			f.Seek(f.Tell() +sizeBytes);
 			break;
 		}
-		auto size = f->Read<TSize>();
-		f->Seek(f->Tell() +size *size_of(valueType));
+		auto size = f.Read<TSize>();
+		f.Seek(f.Tell() +size *size_of(valueType));
 		break;
 	}
 	case Type::ArrayLz4:
 	{
-		auto compressedSize = f->Read<size_t>();
-		auto valueType = f->Read<Type>();
+		auto compressedSize = f.Read<size_t>();
+		auto valueType = f.Read<Type>();
 		
 		if(valueType == Type::Struct)
 		{
-			auto offsetToEndOfStructuredDataHeader = f->Read<StructDescription::SizeType>();
-			f->Seek(f->Tell() +offsetToEndOfStructuredDataHeader);
+			auto offsetToEndOfStructuredDataHeader = f.Read<StructDescription::SizeType>();
+			f.Seek(f.Tell() +offsetToEndOfStructuredDataHeader);
 		}
+		else if(valueType == Type::Element)
+			f.Seek(f.Tell() +sizeof(size_t));
 
 		using TSize = decltype(std::declval<Array>().GetSize());
-		f->Seek(f->Tell() +sizeof(TSize) +compressedSize);
+		f.Seek(f.Tell() +sizeof(TSize) +compressedSize);
 		break;
 	}
 	case Type::Element:
 	{
-		auto size = f->Read<uint64_t>();
-		f->Seek(f->Tell() +size);
+		auto size = f.Read<uint64_t>();
+		f.Seek(f.Tell() +size);
 		break;
 	}
 	case Type::Struct:
 	{
-		auto size = f->Read<StructDescription::SizeType>();
-		f->Seek(f->Tell() +size);
+		auto size = f.Read<StructDescription::SizeType>();
+		f.Seek(f.Tell() +size);
 		break;
 	}
 	}
 	static_assert(NON_TRIVIAL_TYPES.size() == 9);
 }
 
-std::string udm::Data::ReadKey(const VFilePtr &f)
+std::string udm::Data::ReadKey(IFile &f)
 {
-	auto len = f->Read<uint8_t>();
+	auto len = f.Read<uint8_t>();
 	std::string str;
 	str.resize(len);
-	f->Read(str.data(),len);
+	f.Read(str.data(),len);
 	return str;
 }
-void udm::Data::WriteKey(VFilePtrReal &f,const std::string &key)
+void udm::Data::WriteKey(IFile &f,const std::string &key)
 {
 	if(key.length() > std::numeric_limits<uint8_t>::max())
 		return WriteKey(f,key.substr(0,std::numeric_limits<uint8_t>::max()));
-	f->Write<uint8_t>(key.length());
-	f->Write(key.data(),key.length());
+	f.Write<uint8_t>(key.length());
+	f.Write(key.data(),key.length());
 }
 
 udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) const
@@ -478,12 +502,12 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) c
 		return nullptr;
 	}
 
-	auto f = m_file;
-	if(f == nullptr)
+	if(m_file == nullptr)
 	{
 		throw FileError{"Invalid file handle!"};
 		return nullptr;
 	}
+	auto &f = *m_file;
 	auto isLast = (end == std::string::npos);
 	
 	if(type != Type::Element)
@@ -497,9 +521,9 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) c
 				return nullptr;
 			}
 			auto i = ustring::to_int(str);
-			auto valueType = f->Read<Type>();
+			auto valueType = f.Read<Type>();
 			using TSize = decltype(std::declval<Array>().GetSize());
-			auto n = f->Read<TSize>();
+			auto n = f.Read<TSize>();
 			if(i >= n || i < 0)
 			{
 				throw PropertyLoadError{"Array index out of bounds!"};
@@ -513,14 +537,14 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) c
 					throw PropertyLoadError{"Non-trailing property '" +std::string{name} +"[" +str +"]' is of type " +std::string{magic_enum::enum_name(valueType)} +", but " +std::string{magic_enum::enum_name(Type::Element)} +" expected!"};
 					return nullptr;
 				}
-				f->Seek(f->Tell() +i *size_of(valueType));
+				f.Seek(f.Tell() +i *size_of(valueType));
 				auto prop = Property::Create();
 				if(prop->Read(valueType,f) == false)
 					return nullptr;
 				return prop;
 			}
 
-			f->Seek(f->Tell() +sizeof(uint64_t));
+			f.Seek(f.Tell() +sizeof(uint64_t));
 			for(auto j=decltype(i){0u};j<i;++j)
 				SkipProperty(f,valueType);
 
@@ -537,9 +561,9 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) c
 		return nullptr;
 	}
 
-	auto elStartOffset = f->Tell();
-	f->Seek(f->Tell() +sizeof(uint64_t));
-	auto numChildren = f->Read<uint32_t>();
+	auto elStartOffset = f.Tell();
+	f.Seek(f.Tell() +sizeof(uint64_t));
+	auto numChildren = f.Read<uint32_t>();
 	uint32_t ichild = std::numeric_limits<uint32_t>::max();
 	for(auto i=decltype(numChildren){0u};i<numChildren;++i)
 	{
@@ -554,11 +578,11 @@ udm::PProperty udm::Data::LoadProperty(Type type,const std::string_view &path) c
 	}
 	// Skip all children until we get the the one we want
 	for(auto i=decltype(ichild){0u};i<ichild;++i)
-		SkipProperty(f,f->Read<Type>());
+		SkipProperty(f,f.Read<Type>());
 
 	if(isLast)
 		return ReadProperty(f); // Read this property in full
-	auto childType = f->Read<Type>();
+	auto childType = f.Read<Type>();
 	return LoadProperty(childType,path.substr(end +1));
 }
 
@@ -583,30 +607,31 @@ udm::Version udm::Data::GetAssetVersion() const {return AssetData{*m_rootPropert
 void udm::Data::SetAssetType(const std::string &assetType) {return AssetData{*m_rootProperty}.SetAssetType(assetType);}
 void udm::Data::SetAssetVersion(Version version) {return AssetData{*m_rootProperty}.SetAssetVersion(version);}
 
-void udm::Data::ToAscii(std::stringstream &ss,bool includeHeader) const
+void udm::Data::ToAscii(std::stringstream &ss,AsciiSaveFlags flags) const
 {
 	assert(m_rootProperty->type == Type::Element);
 	if(m_rootProperty->type == Type::Element)
 	{
-		if(!includeHeader)
+		if(!umath::is_flag_set(flags,AsciiSaveFlags::IncludeHeader))
 		{
 			auto &elRoot = *static_cast<Element*>(m_rootProperty->value);
 			auto udmAssetData = elRoot[Data::KEY_ASSET_DATA];
 			if(udmAssetData && udmAssetData->IsType(Type::Element))
-				udmAssetData->GetValue<Element>().ToAscii(ss);
+				udmAssetData->GetValue<Element>().ToAscii(flags,ss);
 		}
 		else
-			static_cast<Element*>(m_rootProperty->value)->ToAscii(ss);
+			static_cast<Element*>(m_rootProperty->value)->ToAscii(flags,ss);
 	}
-	auto x =sizeof(Reference);
 }
 
-bool udm::Data::Save(VFilePtrReal &f) const
+bool udm::Data::Save(IFile &f) const
 {
-	f->Write<Header>(m_header);
+	f.Write<Header>(m_header);
 	WriteProperty(f,*m_rootProperty);
 	return true;
 }
+
+bool udm::Data::Save(const ::VFilePtr &f) {return Save(VFilePtr{f});}
 
 udm::LinkedPropertyWrapper udm::Data::operator[](const std::string &key) const {return LinkedPropertyWrapper{*m_rootProperty}[KEY_ASSET_DATA][key];}
 udm::Element *udm::Data::operator->() {return &operator*();}
@@ -625,4 +650,29 @@ bool udm::Data::operator==(const Data &other) const
 	UDM_ASSERT_COMPARISON(res);
 	return res;
 }
+
+udm::VFilePtr::VFilePtr(const ::VFilePtr &f)
+	: m_file{f}
+{}
+size_t udm::VFilePtr::Read(void *data,size_t size) {return m_file->Read(data,size);}
+size_t udm::VFilePtr::Write(const void *data,size_t size)
+{
+	auto type = m_file->GetType();
+	if(type != VFILE_LOCAL)
+		return 0;
+	return static_cast<VFilePtrInternalReal*>(m_file.get())->Write(data,size);
+}
+size_t udm::VFilePtr::Tell() {return m_file->Tell();}
+void udm::VFilePtr::Seek(size_t offset,Whence whence)
+{
+	switch(whence)
+	{
+	case Whence::Cur:
+		return m_file->Seek(offset,SEEK_CUR);
+	case Whence::End:
+		return m_file->Seek(offset,SEEK_END);
+	}
+	return m_file->Seek(offset,SEEK_SET);
+}
+int32_t udm::VFilePtr::ReadChar() {return m_file->ReadChar();}
 #pragma optimize("",on)
