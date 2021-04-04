@@ -405,7 +405,7 @@ namespace udm
 		}
 		static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 	}
-	Type ascii_type_to_enum(const std::string &type);
+	Type ascii_type_to_enum(const std::string_view &type);
 	void sanitize_key_name(std::string &key);
 
 	template<class T>struct tag_t{using type=T;};
@@ -1067,6 +1067,7 @@ namespace udm
 
 	struct Element
 	{
+		void AddChild(std::string &&key,const PProperty &o);
 		void AddChild(const std::string &key,const PProperty &o);
 		std::unordered_map<std::string,PProperty> children;
 		PropertyWrapper fromProperty {};
@@ -1280,6 +1281,14 @@ namespace udm
 		virtual size_t Tell()=0;
 		virtual void Seek(size_t offset,Whence whence=Whence::Set)=0;
 		virtual int32_t ReadChar()=0;
+		size_t GetSize()
+		{
+			auto pos = Tell();
+			Seek(0,Whence::End);
+			auto size = Tell();
+			Seek(pos);
+			return size;
+		}
 
 		int32_t WriteString(const std::string &str);
 	};

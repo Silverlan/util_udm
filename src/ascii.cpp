@@ -6,7 +6,6 @@
 #include <sharedutils/base64.hpp>
 #include <sstream>
 
-#pragma optimize("",off)
 namespace udm
 {
 	class AsciiReader
@@ -23,16 +22,16 @@ namespace udm
 			TException BuildException(const std::string &msg)
 			{return TException{msg,m_curLine,(m_curCharPos > 0) ? (m_curCharPos -1) : 0};}
 		char PeekNextChar();
-		char ReadUntil(char c,std::string *optOut=nullptr);
+		char ReadUntil(char c,std::string_view *optOut=nullptr);
 		char ReadNextToken();
 		void MoveCursorForward(uint32_t n);
 		void SeekNextToken(const std::optional<char> &tSeek={});
-		std::string ReadString();
-		std::string ReadString(char initialC);
+		std::string_view ReadString();
+		std::string_view ReadString(char initialC);
 		void ReadValue(Type type,void *outData);
 		void ReadStructValue(const StructDescription &strct,void *outData);
 		void ReadValueList(Type type,const std::function<bool()> &valueHandler,bool enableSubLists=true);
-		void ReadTemplateParameterList(std::vector<Type> &outTypes,std::vector<std::string> &outNames);
+		void ReadTemplateParameterList(std::vector<Type> &outTypes,std::vector<std::string_view> &outNames);
 		template<typename T,typename TBase>
 			void ReadTypedValueList(T &outData);
 		template<typename T>
@@ -47,18 +46,15 @@ namespace udm
 	};
 };
 
-template<typename T>
-	static T to_int(const std::string &str) {return static_cast<T>(util::to_int(str));}
-
 udm::AsciiException::AsciiException(const std::string &msg,uint32_t lineIdx,uint32_t charIdx)
 	: Exception{msg +" in line " +std::to_string(lineIdx +1) +" (column " +std::to_string(charIdx +1) +")"},
 	lineIndex{lineIdx},charIndex{charIdx}
 {}
 
-udm::Type udm::ascii_type_to_enum(const std::string &type)
+udm::Type udm::ascii_type_to_enum(const std::string_view &type)
 {
 	// Note: These have to match enum_type_to_ascii
-	static std::unordered_map<std::string,Type> namedTypeToEnum = {
+	static std::unordered_map<std::string_view,Type> namedTypeToEnum = {
 		{"nil",Type::Nil},
 		{"string",Type::String},
 		{"utf8",Type::Utf8String},
@@ -103,7 +99,7 @@ udm::Type udm::ascii_type_to_enum(const std::string &type)
 
 void udm::sanitize_key_name(std::string &key)
 {
-	ustring::replace(key,".","");
+	ustring::replace(key,"/","");
 }
 
 template<typename T>
@@ -112,7 +108,7 @@ template<typename T>
 	ReadTypedValueList<T,float>(outData);
 }
 
-void udm::AsciiReader::ReadTemplateParameterList(std::vector<Type> &outTypes,std::vector<std::string> &outNames)
+void udm::AsciiReader::ReadTemplateParameterList(std::vector<Type> &outTypes,std::vector<std::string_view> &outNames)
 {
 	auto t = ReadNextToken();
 	if(t != '<')
@@ -147,9 +143,9 @@ void udm::AsciiReader::ReadTemplateParameterList(std::vector<Type> &outTypes,std
 		auto stype = ReadString();
 		auto type = ascii_type_to_enum(stype);
 		if(type == Type::Invalid)
-			throw BuildException<SyntaxError>("Invalid type '" +stype +"' specified in template parameter list!");
+			throw BuildException<SyntaxError>("Invalid type '" +std::string{stype} +"' specified in template parameter list!");
 		if(!is_trivial_type(type))
-			throw BuildException<SyntaxError>("Non-trivial type '" +stype +"' specified in template parameter list, only trivial types are allowed!");
+			throw BuildException<SyntaxError>("Non-trivial type '" +std::string{stype} +"' specified in template parameter list, only trivial types are allowed!");
 		outTypes.push_back(type);
 
 		SeekNextToken();
@@ -299,6 +295,16 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 		},get_generic_tag(type));
 		return;
 	}
+	else if(is_numeric_type(type) && type != Type::Half && type != Type::Boolean)
+	{
+		auto vs = [this,outData](auto tag){
+			using T = decltype(tag)::type;
+			if constexpr(!std::is_same_v<T,Half> && !std::is_same_v<T,Boolean>)
+				*static_cast<T*>(outData) = util::to_number<T>(ReadString());
+		};
+		std::visit(vs,get_numeric_tag(type));
+		return;
+	}
 	switch(type)
 	{
 	case Type::Nil:
@@ -325,36 +331,6 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 		ReadBlobData(str.data);
 		break;
 	}
-	case Type::Int8:
-		*static_cast<Int8*>(outData) = to_int<Int8>(ReadString());
-		break;
-	case Type::UInt8:
-		*static_cast<UInt8*>(outData) = to_int<UInt8>(ReadString());
-		break;
-	case Type::Int16:
-		*static_cast<Int16*>(outData) = to_int<Int16>(ReadString());
-		break;
-	case Type::UInt16:
-		*static_cast<UInt16*>(outData) = to_int<UInt16>(ReadString());
-		break;
-	case Type::Int32:
-		*static_cast<Int32*>(outData) = to_int<Int32>(ReadString());
-		break;
-	case Type::UInt32:
-		*static_cast<UInt32*>(outData) = static_cast<UInt32>(util::to_uint64(ReadString()));
-		break;
-	case Type::Int64:
-		*static_cast<Int64*>(outData) = static_cast<Int64>(atoll(ReadString().c_str()));
-		break;
-	case Type::UInt64:
-		*static_cast<UInt64*>(outData) = static_cast<UInt64>(util::to_uint64(ReadString()));
-		break;
-	case Type::Float:
-		*static_cast<Float*>(outData) = util::to_float(ReadString());
-		break;
-	case Type::Double:
-		*static_cast<Double*>(outData) = static_cast<Double>(stod(ReadString()));
-		break;
 	case Type::Boolean:
 		*static_cast<Boolean*>(outData) = util::to_boolean(ReadString());
 		break;
@@ -411,7 +387,7 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 		auto sValueType = ReadString();
 		valueType = ascii_type_to_enum(sValueType);
 		if(valueType == Type::Invalid)
-			throw BuildException<SyntaxError>("Invalid value type '" +sValueType +"' specified for array!");
+			throw BuildException<SyntaxError>("Invalid value type '" +std::string{sValueType} +"' specified for array!");
 		
 		auto &a = *static_cast<Array*>(outData);
 		a.SetValueType(valueType);
@@ -422,8 +398,11 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 			if(!strct)
 				throw ImplementationError{"Invalid array structure info!"};
 			auto &types = strct->types;
-			auto &names = strct->names;
+			std::vector<std::string_view> names;
 			ReadTemplateParameterList(types,names);
+			strct->names.resize(names.size());
+			for(auto &name : names)
+				strct->names.push_back(std::string{name});
 		}
 		t = ReadNextToken();
 		std::optional<uint32_t> size {};
@@ -447,22 +426,27 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 
 		if(type == Type::ArrayLz4)
 		{
-			if(size.has_value() == false)
-				throw BuildException<SyntaxError>("Missing size for compressed array");
-
-			if(valueType == Type::Element)
+			SeekNextToken();
+			auto isCompressed = uncompressedSize.has_value();
+			if(isCompressed)
 			{
-				if(uncompressedSize.has_value() == false)
-					throw BuildException<SyntaxError>("Missing uncompressed size for compressed array");
-			}
+				if(size.has_value() == false)
+					throw BuildException<SyntaxError>("Missing size for compressed array");
 
-			auto &a = *static_cast<ArrayLz4*>(outData);
-			a.InitializeSize(*size);
-			auto &blob = a.GetCompressedBlob();
-			if(uncompressedSize.has_value())
-				blob.uncompressedSize = *uncompressedSize;
-			ReadBlobData(blob.compressedData);
-			break;
+				if(valueType == Type::Element)
+				{
+					if(uncompressedSize.has_value() == false)
+						throw BuildException<SyntaxError>("Missing uncompressed size for compressed array");
+				}
+
+				auto &a = *static_cast<ArrayLz4*>(outData);
+				a.InitializeSize(*size);
+				auto &blob = a.GetCompressedBlob();
+				if(uncompressedSize.has_value())
+					blob.uncompressedSize = *uncompressedSize;
+				ReadBlobData(blob.compressedData);
+				break;
+			}
 		}
 		
 		if(!size.has_value())
@@ -499,7 +483,7 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 		break;
 	}
 	case Type::Half:
-		*static_cast<Half*>(outData) = util::to_float(ReadString());
+		*static_cast<Half*>(outData) = util::to_number<float>(ReadString());
 		break;
 	case Type::Struct:
 	{
@@ -524,21 +508,24 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 		{
 			// Variable
 			auto type = ReadString();
-			auto eType = ascii_type_to_enum(type.c_str());
+			auto eType = ascii_type_to_enum(type);
 			if(eType == udm::Type::Invalid)
-				throw BuildException<SyntaxError>("Invalid keyvalue type '" +type +"' found");
+				throw BuildException<SyntaxError>("Invalid keyvalue type '" +std::string{type} +"' found");
 			auto prop = Property::Create(eType);
 			if(eType == Type::Struct)
 			{
 				auto &strct = prop->GetValue<Struct>();
 				auto &types = strct->types;
-				auto &names = strct->names;
+				std::vector<std::string_view> names;
 				ReadTemplateParameterList(types,names);
+				strct->names.resize(names.size());
+				for(auto &name : names)
+					strct->names.push_back(std::string{name});
 			}
 			auto key = ReadString(ReadNextToken());
 			SeekNextToken();
 			ReadValue(eType,prop->value);
-			parent.AddChild(key,prop);
+			parent.AddChild(std::string{key},prop);
 			continue;
 		}
 		if(t == '}')
@@ -556,7 +543,7 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 		auto child = Property::Create<Element>();
 		if(ReadBlockKeyValues(child->GetValue<Element>()) == BlockResult::EndOfFile)
 			throw BuildException<SyntaxError>("Unexpected end of file");
-		parent.AddChild(childBlockName,child);
+		parent.AddChild(std::string{childBlockName},child);
 	}
 	// Unreachable
 	return BlockResult::EndOfFile;
@@ -607,11 +594,74 @@ std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(std::unique_ptr<IFile> &&
 	return udmData->ValidateHeaderProperties() ? udmData : nullptr;
 }
 
+struct MemoryData
+	: public udm::IFile
+{
+	MemoryData()=default;
+	std::vector<uint8_t> &GetData() {return m_data;}
+	virtual size_t Read(void *data,size_t size) override
+	{
+		if(m_pos +size > m_data.size())
+			return 0;
+		memcpy(data,m_data.data() +m_pos,size);
+		m_pos += size;
+		return size;
+	}
+	virtual size_t Write(const void *data,size_t size) override
+	{
+		if(m_pos +size > m_data.size())
+			return 0;
+		memcpy(m_data.data() +m_pos,data,size);
+		m_pos += size;
+		return size;
+	}
+	virtual size_t Tell() override
+	{
+		return m_pos;
+	}
+	virtual void Seek(size_t offset,Whence whence) override
+	{
+		switch(whence)
+		{
+		case Whence::Set:
+			m_pos = offset;
+			break;
+		case Whence::End:
+			m_pos = m_data.size() +offset;
+			break;
+		case Whence::Cur:
+			m_pos += offset;
+			break;
+		}
+	}
+	virtual int32_t ReadChar() override
+	{
+		if(m_pos >= m_data.size())
+			return EOF;
+		char c;
+		Read(&c,sizeof(c));
+		return c;
+	}
+	char *GetMemoryDataPtr() {return reinterpret_cast<char*>(m_data.data() +m_pos);}
+private:
+	std::vector<uint8_t> m_data;
+	size_t m_pos = 0;
+};
 namespace udm
 {
 	std::shared_ptr<udm::Data> load_ascii(std::unique_ptr<IFile> &&f)
 	{
-		return udm::AsciiReader::LoadAscii(std::move(f));
+		auto memData = std::make_unique<MemoryData>();
+		auto &data = memData->GetData();
+		data.resize(f->GetSize());
+		f->Read(data.data(),data.size());
+
+		auto size = f->GetSize();
+		while(data[size -1] == '\0')
+			--size;
+		data.resize(size);
+
+		return udm::AsciiReader::LoadAscii(std::move(memData));
 	}
 };
 
@@ -639,20 +689,29 @@ char udm::AsciiReader::PeekNextChar()
 	return c;
 }
 
-char udm::AsciiReader::ReadUntil(char c,std::string *optOut)
+char udm::AsciiReader::ReadUntil(char c,std::string_view *optOut)
 {
 	auto &f = m_file;
+	auto *ptr = static_cast<MemoryData*>(f.get())->GetMemoryDataPtr();
 	auto cur = ReadChar();
 	for(;;)
 	{
 		if(cur == EOF || cur == c)
+		{
+			if(optOut)
+			{
+				auto len = static_cast<size_t>(static_cast<MemoryData*>(f.get())->GetMemoryDataPtr() -ptr);
+				*optOut = std::string_view{ptr,(len > 0) ? (len -1) : 0};
+			}
 			return cur;
-		if(optOut)
-			*optOut += cur;
+		}
 		cur = ReadChar();
 	}
 	if(optOut)
-		*optOut += cur;
+	{
+		auto len = static_cast<size_t>(static_cast<MemoryData*>(f.get())->GetMemoryDataPtr() -ptr);
+		*optOut = std::string_view{ptr,len};
+	}
 	return cur;
 }
 
@@ -715,17 +774,17 @@ char udm::AsciiReader::ReadNextToken()
 	return EOF;
 }
 
-std::string udm::AsciiReader::ReadString(char initialC)
+std::string_view udm::AsciiReader::ReadString(char initialC)
 {
 	auto &f = m_file;
-	std::string str;
 	auto t = initialC;
 	if(t == EOF)
-		return str;
+		return {};
 	if(is_control_character(initialC))
 		throw BuildException<SyntaxError>("Expected string, got control character '" +std::string{t} +"'");
 	if(t == '\"')
 	{
+		std::string_view str;
 		for(;;)
 		{
 			auto c = ReadUntil('\"',&str);
@@ -740,20 +799,23 @@ std::string udm::AsciiReader::ReadString(char initialC)
 	}
 
 	f->Seek(f->Tell() -1);
+	auto *ptr = static_cast<MemoryData*>(f.get())->GetMemoryDataPtr();
+	uint32_t len = 0;
 	--m_curCharPos;
 	for(;;)
 	{
 		t = PeekNextChar();
 		if(t == EOF)
-			return str;
+			return std::string_view{ptr,len};
 		if(is_whitespace_character(t) || is_control_character(t))
-			return str;
-		str += ReadChar();
+			return std::string_view{ptr,len};
+		++len;
+		f->Seek(f->Tell() +1);
 	}
-	return str;
+	return std::string_view{ptr,len};
 }
 
-std::string udm::AsciiReader::ReadString()
+std::string_view udm::AsciiReader::ReadString()
 {
 	return ReadString(m_file->ReadChar());
 }
@@ -942,7 +1004,7 @@ std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const ArrayLz4 &a,c
 	if(valueType == Type::Struct)
 		stype += a.GetStructuredDataInfo()->GetTemplateArgumentList();
 	auto r = "[" +stype +';' +std::to_string(a.GetSize());
-	if(valueType == Type::Element)
+	if(/*valueType == Type::Element && */!umath::is_flag_set(flags,AsciiSaveFlags::DontCompressLz4Arrays))
 		r += ';' +std::to_string(blob.uncompressedSize);
 	r += "]";
 	if(umath::is_flag_set(flags,AsciiSaveFlags::DontCompressLz4Arrays))
@@ -1071,4 +1133,3 @@ std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags,const Mat3x4 &m,con
 	s += "]";
 	return s;
 }
-#pragma optimize("",on)

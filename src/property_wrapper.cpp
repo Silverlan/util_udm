@@ -376,9 +376,9 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 	return wrapper;
 }
 
-void udm::Element::AddChild(const std::string &key,const PProperty &o)
+void udm::Element::AddChild(std::string &&key,const PProperty &o)
 {
-	children[key] = o;
+	children[std::move(key)] = o;
 	if(o->type == Type::Element)
 	{
 		auto *el = static_cast<Element*>(o->value);
@@ -387,6 +387,12 @@ void udm::Element::AddChild(const std::string &key,const PProperty &o)
 	}
 	else if(o->type == Type::Array)
 		static_cast<Array*>(o->value)->fromProperty = *o;
+}
+
+void udm::Element::AddChild(const std::string &key,const PProperty &o)
+{
+	auto cpy = key;
+	AddChild(std::move(cpy),o);
 }
 
 udm::Property *udm::PropertyWrapper::operator*() {return prop;}
