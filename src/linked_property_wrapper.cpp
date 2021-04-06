@@ -43,8 +43,7 @@ std::string udm::LinkedPropertyWrapper::GetPath() const
 		if(it != e.children.end())
 			path = it->first;
 	}
-	if(does_key_require_quotes(path))
-		path = '\"' +path +'\"';
+	ustring::replace(path,"/","\/");
 	if(prev)
 	{
 		auto tmp = prev->GetPath();

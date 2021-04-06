@@ -654,13 +654,11 @@ namespace udm
 		auto memData = std::make_unique<MemoryData>();
 		auto &data = memData->GetData();
 		data.resize(f->GetSize());
-		f->Read(data.data(),data.size());
-
-		auto size = f->GetSize();
-		while(data[size -1] == '\0')
-			--size;
+		auto size = f->Read(data.data(),data.size());
 		data.resize(size);
-
+		// Don't need the file handle anymore at this point
+		auto tmp = std::move(f);
+		tmp = nullptr;
 		return udm::AsciiReader::LoadAscii(std::move(memData));
 	}
 };
