@@ -1276,6 +1276,7 @@ namespace udm
 			Cur,
 			End
 		};
+		virtual ~IFile()=default;
 		virtual size_t Read(void *data,size_t size)=0;
 		virtual size_t Write(const void *data,size_t size)=0;
 		virtual size_t Tell()=0;
@@ -1298,6 +1299,7 @@ namespace udm
 	{
 		VFilePtr()=default;
 		VFilePtr(const ::VFilePtr &f);
+		virtual ~VFilePtr() override=default;
 		virtual size_t Read(void *data,size_t size) override;
 		virtual size_t Write(const void *data,size_t size) override;
 		virtual size_t Tell() override;
