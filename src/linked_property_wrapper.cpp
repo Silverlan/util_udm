@@ -43,7 +43,7 @@ std::string udm::LinkedPropertyWrapper::GetPath() const
 		if(it != e.children.end())
 			path = it->first;
 	}
-	ustring::replace(path,"/","\/");
+	ustring::replace(path,"/","\\/");
 	if(prev)
 	{
 		auto tmp = prev->GetPath();
@@ -63,7 +63,8 @@ udm::PProperty udm::LinkedPropertyWrapper::ClaimOwnership() const
 	if(prev == nullptr || IsArrayItem() || prev->IsType(Type::Element) == false)
 		return nullptr;
 	auto &el = prev->GetValue<Element>();
-	return el.children[propName];
+	auto it = el.children.find(propName);
+	return (it != el.children.end()) ? it->second : nullptr;
 }
 
 udm::Property *udm::LinkedPropertyWrapper::GetProperty(std::vector<uint32_t> *outArrayIndices) const

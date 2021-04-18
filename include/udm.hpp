@@ -1087,6 +1087,8 @@ namespace udm
 		Element &operator=(Element &&other);
 		Element &operator=(const Element &other);
 
+		explicit operator PropertyWrapper&() {return fromProperty;}
+
 		ElementIterator begin();
 		ElementIterator end();
 	private:
@@ -1732,10 +1734,18 @@ template<typename T>
 				static_cast<Array*>(prop->value)->SetValue(arrayIndex,v);
 			return;
 		}
-		if(prop->type != Type::Element)
+		if constexpr(std::is_same_v<TBase,PProperty>)
 		{
-			*prop = v;
-			return;
+			if(linked && !static_cast<LinkedPropertyWrapper*>(this)->propName.empty())
+			{
+				auto &linked = *GetLinked();
+				if(linked.prev && linked.prev->IsType(Type::Element))
+				{
+					auto &el = linked.prev->GetValue<Element>();
+					el.children[linked.propName] = v;
+					return;
+				}
+			}
 		}
 		if constexpr(type_to_enum_s<TBase>() != Type::Invalid)
 		{
