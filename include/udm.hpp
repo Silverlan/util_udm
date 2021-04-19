@@ -1747,6 +1747,11 @@ template<typename T>
 				}
 			}
 		}
+		if(prop->type != Type::Element)
+		{
+			*prop = v;
+			return;
+		}
 		if constexpr(type_to_enum_s<TBase>() != Type::Invalid)
 		{
 			if(prop->value == nullptr)
