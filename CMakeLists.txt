@@ -65,7 +65,7 @@ set(DEFINITIONS)
 
 ##### CONFIGURATION #####
 
-set(LIB_TYPE SHARED)
+set(LIB_TYPE STATIC)
 
 foreach(def IN LISTS DEFINITIONS)
 	add_definitions(-D${def})
