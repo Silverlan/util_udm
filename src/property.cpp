@@ -19,6 +19,8 @@ udm::PProperty udm::Property::Create(Type type)
 	return prop;
 }
 
+udm::Property::Property(const Property &other) {*this = other;}
+
 udm::Property::Property(Property &&other)
 {
 	type = other.type;
@@ -29,6 +31,24 @@ udm::Property::Property(Property &&other)
 }
 
 udm::Property::~Property() {Clear();}
+
+udm::Property &udm::Property::operator=(const Property &other)
+{
+	Clear();
+	type = other.type;
+	Initialize();
+	if(is_trivial_type(type))
+	{
+		memcpy(value,other.value,size_of_base_type(type));
+		return *this;
+	}
+	auto tag = get_non_trivial_tag(type);
+	std::visit([this,&other](auto tag) {
+		using T = decltype(tag)::type;
+		*static_cast<T*>(value) = *static_cast<T*>(other.value);
+	},tag);
+	return *this;
+}
 
 void udm::Property::SetAppropriatePrecision(std::stringstream &ss,Type type)
 {

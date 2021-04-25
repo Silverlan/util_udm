@@ -525,11 +525,11 @@ namespace udm
 		static PProperty Create() {return Create<Nil>();}
 		static PProperty Create(Type type);
 		Property()=default;
-		Property(const Property &other)=delete;
+		Property(const Property &other);
 		Property(Property &&other);
 		~Property();
 		bool IsType(Type ptype) const {return ptype == type;}
-		Property &operator=(const Property &other)=delete;
+		Property &operator=(const Property &other);
 		Property &operator=(Property &&other)=delete;
 		template<typename T>
 			void operator=(T &&v);
