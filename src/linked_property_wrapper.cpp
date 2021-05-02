@@ -90,7 +90,7 @@ void udm::LinkedPropertyWrapper::InitializeProperty(Type type,bool getOnly)
 	auto isArrayElement = (arrayIndex != std::numeric_limits<uint32_t>::max());
 	if(prop || prev == nullptr || (propName.empty() && !isArrayElement))
 		return;
-	prev->InitializeProperty(!isArrayElement ? Type::Element : Type::Array);
+	prev->InitializeProperty(!isArrayElement ? Type::Element : Type::Array,getOnly);
 	if(prev->prop == nullptr || prev->prop->type != Type::Element)
 	{
 		if(prev->prop && prev->prop->type == Type::Array && prev->arrayIndex != std::numeric_limits<uint32_t>::max() && static_cast<Array*>(prev->prop->value)->IsValueType(Type::Element))
