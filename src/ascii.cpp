@@ -282,7 +282,34 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 			using T = decltype(tag)::type;
 			auto &v = *static_cast<T*>(outData);
 			if constexpr(is_float_based_type(type_to_enum_s<T>())) // Always true in this context!
-				ReadFloatValueList(v);
+			{
+				if constexpr(std::is_same_v<T,Transform> || std::is_same_v<T,ScaledTransform>)
+				{
+					std::array<float,sizeof(T) /sizeof(float)> values;
+					uint32_t idx = 0;
+					ReadValueList(udm::Type::Float,[this,&idx,&values]() -> bool {
+						if(idx >= values.size())
+							return false;
+						ReadValue(udm::Type::Float,&values[idx++]);
+						return true;
+					});
+					if(idx == values.size())
+						memcpy(&v,values.data(),util::size_of_container(values));
+					else if(idx == values.size() -1)
+					{
+						// Transform and ScaledTransform values have an alternative valid representation,
+						// where the rotation is represented as euler angles (i.e. 3 values instead of 4).
+						v.SetOrigin(*reinterpret_cast<Vector3*>(values.data()));
+						v.SetRotation(uquat::create(*reinterpret_cast<EulerAngles*>(values.data() +Vector3::length())));
+						if constexpr(std::is_same_v<T,ScaledTransform>)
+							v.SetScale(*reinterpret_cast<Vector3*>(values.data() +Vector3::length() +(sizeof(EulerAngles) /sizeof(float))));
+					}
+					else
+						throw BuildException<SyntaxError>("Expected " +std::to_string(values.size()) +" values for property definition, got " +std::to_string(idx) +" at");
+				}
+				else
+					ReadFloatValueList(v);
+			}
 			// Note: Quaternions are stored in the Ascii format in w-x-y-z order, but their binary data
 			// in glm is stored as x-y-z-w, so we have to re-order the components here.
 			auto fixQuatComponentOrder = [](Quat &v) {
