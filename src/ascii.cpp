@@ -300,7 +300,8 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 						// Transform and ScaledTransform values have an alternative valid representation,
 						// where the rotation is represented as euler angles (i.e. 3 values instead of 4).
 						v.SetOrigin(*reinterpret_cast<Vector3*>(values.data()));
-						v.SetRotation(uquat::create(*reinterpret_cast<EulerAngles*>(values.data() +Vector3::length())));
+						auto rot = uquat::create(*reinterpret_cast<EulerAngles*>(values.data() +Vector3::length()));
+						v.SetRotation(Quat{rot.z,rot.w,rot.x,rot.y});
 						if constexpr(std::is_same_v<T,ScaledTransform>)
 							v.SetScale(*reinterpret_cast<Vector3*>(values.data() +Vector3::length() +(sizeof(EulerAngles) /sizeof(float))));
 					}
