@@ -1179,6 +1179,11 @@ namespace udm
 		uint64_t GetByteSize() const;
 		const StructDescription *GetStructuredDataInfo() const {return const_cast<Array*>(this)->GetStructuredDataInfo();}
 		virtual StructDescription *GetStructuredDataInfo();
+
+		static constexpr bool IsValueTypeSupported(Type type)
+		{
+			return true;
+		}
 	protected:
 		friend Property;
 		friend PropertyWrapper;
@@ -1220,6 +1225,11 @@ namespace udm
 		virtual void SetValueType(Type valueType) override;
 		void ClearUncompressedMemory();
 		using Array::GetStructuredDataInfo;
+
+		static constexpr bool IsValueTypeSupported(Type type)
+		{
+			return is_numeric_type(type) || is_generic_type(type) || type == Type::Struct || type == Type::Element || type == Type::String;
+		}
 	private:
 		friend Property;
 		friend PropertyWrapper;
