@@ -322,6 +322,12 @@ private:
 	DataStream m_ds;
 };
 
+#pragma pack(push,1)
+struct CompressedStringArrayHeader
+{
+	uint32_t numStrings;
+};
+#pragma pack(pop)
 void udm::ArrayLz4::Compress()
 {
 	if(m_state == State::Compressed)
@@ -333,15 +339,42 @@ void udm::ArrayLz4::Compress()
 	if(m_valueType == Type::Element)
 	{
 		auto n = GetSize();
-		auto f = std::make_unique<StreamData>();
-		f->IFile::Write<uint32_t>(n);
+		StreamData f {};
+		f.IFile::Write<uint32_t>(n);
 		for(auto it=begin<Element>();it!=end<Element>();++it)
 		{
 			auto &el = *it;
-			Property::Write(*f,el);
+			Property::Write(f,el);
 		}
-		auto &ds = f->GetDataStream();
+		auto &ds = f.GetDataStream();
 		m_compressedBlob = udm::compress_lz4_blob(ds->GetData(),ds->GetInternalSize());
+		ReleaseValues();
+		return;
+	}
+
+	if(m_valueType == Type::String)
+	{
+		auto *pString = static_cast<String*>(GetValuePtr(0));
+		auto n = GetSize();
+		size_t sizeInBytes = 0;
+		auto *p = pString;
+		for(auto i=decltype(n){0u};i<n;++i)
+		{
+			sizeInBytes += Property::GetStringSizeRequirement(*pString);
+			++p;
+		}
+		sizeInBytes += sizeof(CompressedStringArrayHeader);
+
+		VectorFile memFile {sizeInBytes};
+		memFile.GetValueAndAdvance<CompressedStringArrayHeader>().numStrings = GetSize();
+
+		p = pString;
+		for(auto i=decltype(n){0u};i<n;++i)
+		{
+			Property::Write(memFile,*p);
+			++p;
+		}
+		m_compressedBlob = udm::compress_lz4_blob(memFile.GetData(),memFile.GetDataSize());
 		ReleaseValues();
 		return;
 	}
@@ -365,18 +398,35 @@ void udm::ArrayLz4::Decompress()
 
 	if(m_valueType == Type::Element)
 	{
-		auto f = std::make_unique<StreamData>();
-		auto &ds = f->GetDataStream();
+		StreamData f {};
+		auto &ds = f.GetDataStream();
 		ds->Resize(m_compressedBlob.uncompressedSize);
 		udm::decompress_lz4_blob(m_compressedBlob.compressedData.data(),m_compressedBlob.compressedData.size(),m_compressedBlob.uncompressedSize,ds->GetData());
 		ds->SetOffset(0);
 
-		auto numElements = f->IFile::Read<uint32_t>();
+		auto numElements = f.IFile::Read<uint32_t>();
 		m_values = AllocateData(numElements *sizeof(Element));
 		auto prop = fromProperty;
 		for(auto i=decltype(numElements){0u};i<numElements;++i)
-			prop->Read(*f,GetValue<Element>(i));
+			prop->Read(f,GetValue<Element>(i));
 		m_compressedBlob = {};
+		return;
+	}
+
+	if(m_valueType == Type::String)
+	{
+		VectorFile f {m_compressedBlob.uncompressedSize};
+		udm::decompress_lz4_blob(m_compressedBlob.compressedData.data(),m_compressedBlob.compressedData.size(),m_compressedBlob.uncompressedSize,f.GetData());
+		auto &header = f.GetValueAndAdvance<CompressedStringArrayHeader>();
+		m_values = AllocateData(header.numStrings *sizeof(String));
+		m_compressedBlob = {};
+		
+		auto *pString = static_cast<String*>(GetValuePtr(0));
+		for(auto i=decltype(header.numStrings){0u};i<header.numStrings;++i)
+		{
+			Property::Read(f,*pString);
+			++pString;
+		}
 		return;
 	}
 
@@ -427,8 +477,8 @@ udm::ArrayLz4 &udm::ArrayLz4::operator=(const ArrayLz4 &other)
 }
 void udm::ArrayLz4::SetValueType(Type valueType)
 {
-	if(!is_trivial_type(valueType) && valueType != Type::Struct && valueType != Type::Element)
-		throw InvalidUsageError{"Attempted to create compressed array of type '" +std::string{magic_enum::enum_name(valueType)} +"', which is not a trivial type! Only trivial types are allowed for compressed arrays!"};
+	if(!is_trivial_type(valueType) && valueType != Type::Struct && valueType != Type::Element && valueType != Type::String)
+		throw InvalidUsageError{"Attempted to create compressed array of type '" +std::string{magic_enum::enum_name(valueType)} +"', which is not a supported non-trivial type!"};
 	Array::SetValueType(valueType);
 }
 udm::BlobLz4 &udm::ArrayLz4::GetCompressedBlob()

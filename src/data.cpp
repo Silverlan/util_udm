@@ -177,6 +177,11 @@ bool udm::Data::DebugTest()
 		for(auto i=0;i<10;++i)
 			udmData["compressedArray"][i] = i;
 
+		auto aCompressedString = udmData.AddArray("compressedStringArray",3,Type::String,ArrayType::Compressed);
+		aCompressedString[0] = "Lorem Ipsum";
+		aCompressedString[1] = "";
+		aCompressedString[2] = "B";
+
 		auto structArray = udmData.AddArray(
 			"structArray",
 			structDef,

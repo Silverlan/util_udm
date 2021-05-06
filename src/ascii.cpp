@@ -428,7 +428,7 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 			auto &types = strct->types;
 			std::vector<std::string_view> names;
 			ReadTemplateParameterList(types,names);
-			strct->names.resize(names.size());
+			strct->names.reserve(names.size());
 			for(auto &name : names)
 				strct->names.push_back(std::string{name});
 		}
@@ -546,7 +546,7 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 				auto &types = strct->types;
 				std::vector<std::string_view> names;
 				ReadTemplateParameterList(types,names);
-				strct->names.resize(names.size());
+				strct->names.reserve(names.size());
 				for(auto &name : names)
 					strct->names.push_back(std::string{name});
 			}

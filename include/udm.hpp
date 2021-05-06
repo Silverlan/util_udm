@@ -612,7 +612,7 @@ namespace udm
 		bool Read(IFile &f,Element &outEl);
 		bool Read(IFile &f,Array &outArray);
 		bool Read(IFile &f,ArrayLz4 &outArray);
-		bool Read(IFile &f,String &outStr);
+		static bool Read(IFile &f,String &outStr);
 		bool Read(IFile &f,Reference &outRef);
 		bool Read(IFile &f,Struct &strct);
 		static void Write(IFile &f,const Blob &blob);
@@ -657,6 +657,8 @@ namespace udm
 		static BlobResult GetBlobData(const Blob &blob,void *outBuffer,size_t bufferSize);
 		static BlobResult GetBlobData(const BlobLz4 &blob,void *outBuffer,size_t bufferSize);
 		static Blob GetBlobData(const BlobLz4 &blob);
+		static uint32_t GetStringPrefixSizeRequirement(const String &str);
+		static uint32_t GetStringSizeRequirement(const String &str);
 	private:
 		bool ReadStructHeader(IFile &f,StructDescription &strct);
 		static void WriteStructHeader(IFile &f,const StructDescription &strct);
@@ -1294,6 +1296,51 @@ namespace udm
 		}
 
 		int32_t WriteString(const std::string &str);
+	};
+
+	struct MemoryFile
+		: public udm::IFile
+	{
+		MemoryFile(uint8_t *data,size_t dataSize);
+		void *GetData() {return m_data;}
+		const void *GetData() const {return const_cast<MemoryFile*>(this)->GetData();}
+		size_t GetDataSize() const {return m_dataSize;}
+		virtual size_t Read(void *data,size_t size) override;
+		virtual size_t Write(const void *data,size_t size) override;
+		virtual size_t Tell() override;
+		virtual void Seek(size_t offset,Whence whence=Whence::Set) override;
+		virtual int32_t ReadChar() override;
+		char *GetMemoryDataPtr();
+
+		template<typename T>
+			T &GetValue() {return *reinterpret_cast<T*>(GetMemoryDataPtr());}
+		template<typename T>
+			const T &GetValue() const {return const_cast<MemoryFile*>(this)->GetValue<T>();}
+
+		template<typename T>
+			T &GetValueAndAdvance()
+		{
+			auto &val = GetValue<T>();
+			Seek(sizeof(T),Whence::Cur);
+			return val;
+		}
+		template<typename T>
+			const T &GetValueAndAdvance() const {return const_cast<MemoryFile*>(this)->GetValueAndAdvance<T>();}
+	protected:
+		uint8_t *m_data = nullptr;
+		size_t m_dataSize = 0;
+		size_t m_pos = 0;
+	};
+
+	struct VectorFile
+		: public MemoryFile
+	{
+		VectorFile();
+		VectorFile(size_t size);
+		const std::vector<uint8_t> &GetVector() const;
+		void Resize(size_t size);
+	private:
+		std::vector<uint8_t> m_data;
 	};
 
 	struct VFilePtr

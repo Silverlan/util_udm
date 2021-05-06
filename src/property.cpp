@@ -259,21 +259,22 @@ bool udm::Property::Read(IFile &f,ArrayLz4 &a)
 	auto compressedSize = f.Read<size_t>();
 	a.Clear();
 	a.m_valueType = f.Read<decltype(a.GetValueType())>();
-	size_t uncompressedSize = 0;
-	if(a.GetValueType() == Type::Struct)
+	std::optional<size_t> uncompressedSize {};
+	auto valueType = a.GetValueType();
+	if(valueType == Type::Struct)
 	{
 		f.Seek(f.Tell() +sizeof(StructDescription::SizeType));
 		a.m_structuredDataInfo = std::make_unique<StructDescription>();
 		ReadStructHeader(f,*a.m_structuredDataInfo);
 	}
-	else if(a.GetValueType() == Type::Element)
+	else if(valueType == Type::Element || valueType == Type::String)
 		uncompressedSize = f.Read<size_t>();
 
 	a.m_size = f.Read<decltype(a.GetSize())>();
 	a.fromProperty = {*this};
 
 	auto &blob = a.GetCompressedBlob();
-	blob.uncompressedSize = (a.GetValueType() != Type::Element) ? a.GetByteSize() : uncompressedSize;
+	blob.uncompressedSize = uncompressedSize.has_value() ? *uncompressedSize : a.GetByteSize();
 	blob.compressedData.resize(compressedSize);
 	f.Read(blob.compressedData.data(),compressedSize);
 	return true;
@@ -356,7 +357,8 @@ void udm::Property::Write(IFile &f,const ArrayLz4 &a)
 	f.Write<size_t>(blob.compressedData.size());
 	f.Write(a.GetValueType());
 
-	if(a.GetValueType() == Type::Struct)
+	auto valueType = a.GetValueType();
+	if(valueType == Type::Struct)
 	{
 		auto *structInfo = a.GetStructuredDataInfo();
 		assert(structInfo);
@@ -366,11 +368,22 @@ void udm::Property::Write(IFile &f,const ArrayLz4 &a)
 		WriteStructHeader(f,*structInfo);
 		WriteBlockSize<StructDescription::SizeType>(f,offsetToSize);
 	}
-	else if(a.GetValueType() == Type::Element)
+	else if(valueType == Type::Element || valueType == Type::String)
 		f.Write<size_t>(blob.uncompressedSize);
 
 	f.Write(a.GetSize());
 	f.Write(blob.compressedData.data(),blob.compressedData.size());
+}
+uint32_t udm::Property::GetStringPrefixSizeRequirement(const String &str)
+{
+	auto len = umath::min(str.length(),static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
+	if(len < EXTENDED_STRING_IDENTIFIER)
+		return sizeof(uint8_t);
+	return sizeof(uint32_t);
+}
+uint32_t udm::Property::GetStringSizeRequirement(const String &str)
+{
+	return GetStringPrefixSizeRequirement(str) +str.length();
 }
 void udm::Property::Write(IFile &f,const String &str)
 {
