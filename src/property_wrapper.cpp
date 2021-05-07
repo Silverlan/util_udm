@@ -135,7 +135,7 @@ void udm::PropertyWrapper::Merge(const PropertyWrapper &other)
 			e->Merge(*eOther);
 		return;
 	}
-	if(IsType(Type::Array) && other.IsType(Type::Array))
+	if(is_array_type(GetType()) && is_array_type(other.GetType()))
 	{
 		auto *a = GetValuePtr<Array>();
 		auto *aOther = other.GetValuePtr<Array>();
@@ -210,11 +210,11 @@ udm::Blob udm::PropertyWrapper::GetBlobData(Type &outType) const
 
 uint32_t udm::PropertyWrapper::GetSize() const
 {
-	return (static_cast<bool>(*this) && (*this)->IsType(Type::Array)) ? GetValue<udm::Array>().GetSize() : 0;
+	return (static_cast<bool>(*this) && is_array_type(this->GetType())) ? GetValue<udm::Array>().GetSize() : 0;
 }
 void udm::PropertyWrapper::Resize(uint32_t size)
 {
-	if(!static_cast<bool>(*this) || (*this)->IsType(Type::Array) == false)
+	if(!static_cast<bool>(*this) || is_array_type(GetType()) == false)
 		return;
 	GetValue<udm::Array>().Resize(size);
 }

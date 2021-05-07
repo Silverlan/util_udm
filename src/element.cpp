@@ -28,7 +28,10 @@ udm::LinkedPropertyWrapper udm::Element::Add(const std::string_view &path,Type t
 	auto isLast = (end == std::string::npos);
 	auto it = children.find(strName);
 	if(isLast && it != children.end() && it->second->type != type)
+	{
 		children.erase(it);
+		it = children.end();
+	}
 	if(it == children.end())
 	{
 		if(isLast)

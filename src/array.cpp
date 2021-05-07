@@ -360,7 +360,7 @@ void udm::ArrayLz4::Compress()
 		auto *p = pString;
 		for(auto i=decltype(n){0u};i<n;++i)
 		{
-			sizeInBytes += Property::GetStringSizeRequirement(*pString);
+			sizeInBytes += Property::GetStringSizeRequirement(*p);
 			++p;
 		}
 		sizeInBytes += sizeof(CompressedStringArrayHeader);

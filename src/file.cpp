@@ -9,7 +9,7 @@ udm::MemoryFile::MemoryFile(uint8_t *data,size_t dataSize)
 {}
 size_t udm::MemoryFile::Read(void *data,size_t size)
 {
-	if(m_pos +size >= m_dataSize)
+	if(m_pos >= m_dataSize)
 		return 0;
 	size = umath::min(m_dataSize -m_pos,size);
 	memcpy(data,m_data +m_pos,size);
@@ -18,7 +18,7 @@ size_t udm::MemoryFile::Read(void *data,size_t size)
 }
 size_t udm::MemoryFile::Write(const void *data,size_t size)
 {
-	if(m_pos +size >= m_dataSize)
+	if(m_pos >= m_dataSize)
 		return 0;
 	size = umath::min(m_dataSize -m_pos,size);
 	memcpy(m_data +m_pos,data,size);
