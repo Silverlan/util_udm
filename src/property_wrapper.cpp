@@ -125,14 +125,14 @@ udm::Type udm::PropertyWrapper::GetType() const
 	return prop ? prop->type : Type::Nil;
 }
 
-void udm::PropertyWrapper::Merge(const PropertyWrapper &other)
+void udm::PropertyWrapper::Merge(const PropertyWrapper &other,MergeFlags mergeFlags)
 {
 	if(IsType(Type::Element) && other.IsType(Type::Element))
 	{
 		auto *e = GetValuePtr<Element>();
 		auto *eOther = other.GetValuePtr<Element>();
 		if(e && eOther)
-			e->Merge(*eOther);
+			e->Merge(*eOther,mergeFlags);
 		return;
 	}
 	if(is_array_type(GetType()) && is_array_type(other.GetType()))
@@ -140,7 +140,7 @@ void udm::PropertyWrapper::Merge(const PropertyWrapper &other)
 		auto *a = GetValuePtr<Array>();
 		auto *aOther = other.GetValuePtr<Array>();
 		if(a && aOther)
-			a->Merge(*aOther);
+			a->Merge(*aOther,mergeFlags);
 		return;
 	}
 }

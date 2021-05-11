@@ -251,6 +251,12 @@ namespace udm
 		InvalidProperty
 	};
 
+	enum class MergeFlags : uint32_t
+	{
+		None = 0u,
+		OverwriteExisting = 1u
+	};
+
 	constexpr bool is_numeric_type(Type t)
 	{
 	  switch (t){
@@ -818,7 +824,7 @@ namespace udm
 		bool IsArrayItem() const;
 		bool IsType(Type type) const;
 		Type GetType() const;
-		void Merge(const PropertyWrapper &other);
+		void Merge(const PropertyWrapper &other,MergeFlags mergeFlags=MergeFlags::OverwriteExisting);
 
 		Array *GetOwningArray();
 		const Array *GetOwningArray() const {return const_cast<PropertyWrapper*>(this)->GetOwningArray();}
@@ -1082,7 +1088,7 @@ namespace udm
 		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw);
 		void ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::optional<std::string> &prefix={}) const;
 
-		void Merge(const Element &other);
+		void Merge(const Element &other,MergeFlags mergeFlags=MergeFlags::OverwriteExisting);
 
 		bool operator==(const Element &other) const;
 		bool operator!=(const Element &other) const {return !operator==(other);}
@@ -1142,7 +1148,7 @@ namespace udm
 		bool operator==(const Array &other) const;
 		bool operator!=(const Array &other) const {return !operator==(other);}
 
-		void Merge(const Array &other);
+		void Merge(const Array &other,MergeFlags mergeFlags=MergeFlags::OverwriteExisting);
 
 		virtual Array &operator=(Array &&other);
 		virtual Array &operator=(const Array &other);
@@ -1474,6 +1480,7 @@ namespace udm
 	}
 };
 REGISTER_BASIC_BITWISE_OPERATORS(udm::AsciiSaveFlags)
+REGISTER_BASIC_BITWISE_OPERATORS(udm::MergeFlags)
 
 constexpr size_t udm::size_of(Type t)
 {

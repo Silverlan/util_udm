@@ -71,7 +71,7 @@ udm::Array &udm::Array::operator=(const Array &other)
 	return *this;
 }
 
-void udm::Array::Merge(const Array &other)
+void udm::Array::Merge(const Array &other,MergeFlags mergeFlags)
 {
 	if(m_valueType != other.m_valueType)
 		return;

@@ -98,10 +98,32 @@ void udm::Element::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std:
 	}
 }
 
-void udm::Element::Merge(const Element &other)
+void udm::Element::Merge(const Element &other,MergeFlags mergeFlags)
 {
 	for(auto &pair : other.children)
-		children[pair.first] = pair.second;
+	{
+		auto &prop = *pair.second;
+		if(!prop.IsType(Type::Element) && !is_array_type(prop.type))
+		{
+			children[pair.first] = pair.second;
+			continue;
+		}
+		auto it = children.find(pair.first);
+		if(it == children.end() || (prop.type != it->second->type && (!is_array_type(prop.type) || !is_array_type(it->second->type))))
+		{
+			if(it != children.end() && umath::is_flag_set(mergeFlags,MergeFlags::OverwriteExisting) == false)
+				continue;
+			children[pair.first] = pair.second;
+			continue;
+		}
+		if(prop.IsType(Type::Element))
+		{
+			it->second->GetValue<Element>().Merge(prop.GetValue<Element>(),mergeFlags);
+			continue;
+		}
+		// Array property
+		it->second->GetValue<Array>().Merge(prop.GetValue<Array>(),mergeFlags);
+	}
 }
 
 udm::ElementIterator udm::Element::begin()
