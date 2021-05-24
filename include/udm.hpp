@@ -864,6 +864,16 @@ namespace udm
 					}
 					valOut = static_cast<TEnum>((*this)(reinterpret_cast<const std::underlying_type_t<TEnum>&>(valOut)));
 				}
+				else if constexpr(std::is_same_v<std::remove_reference_t<T>,PProperty>)
+				{
+					if(prop)
+						*valOut = *prop;
+				}
+				else if constexpr(std::is_same_v<std::remove_reference_t<T>,Property>)
+				{
+					if(prop)
+						valOut = *prop;
+				}
 				else
 				{
 					auto *ptr = GetValuePtr<T>();
