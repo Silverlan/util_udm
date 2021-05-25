@@ -122,7 +122,10 @@ bool udm::PropertyWrapper::IsType(Type type) const
 
 udm::Type udm::PropertyWrapper::GetType() const
 {
-	return prop ? prop->type : Type::Nil;
+	if(!prop)
+		return Type::Nil;
+	Type type;
+	return const_cast<PropertyWrapper*>(this)->GetValuePtr(type) ? type : Type::Nil;
 }
 
 void udm::PropertyWrapper::Merge(const PropertyWrapper &other,MergeFlags mergeFlags)
