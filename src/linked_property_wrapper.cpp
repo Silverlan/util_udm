@@ -4,7 +4,7 @@
 
 #include "udm.hpp"
 #include <lz4.h>
-#pragma optimize("",off)
+
 udm::LinkedPropertyWrapper::LinkedPropertyWrapper(const LinkedPropertyWrapper &other)
 	: PropertyWrapper{other},propName{other.propName},prev{other.prev ? std::make_unique<LinkedPropertyWrapper>(*other.prev) : nullptr}
 {
@@ -149,4 +149,3 @@ bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) 
 	return res;
 }
 bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
-#pragma optimize("",on)

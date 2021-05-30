@@ -5,7 +5,7 @@
 #include "udm.hpp"
 #include <sstream>
 
-#pragma optimize("",off)
+
 udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,ArrayType arrayType)
 {
 	auto prop = Add(path,(arrayType == ArrayType::Compressed) ? Type::ArrayLz4 : Type::Array);
@@ -134,4 +134,3 @@ udm::ElementIterator udm::Element::end()
 {
 	return ElementIterator{*this,children.end()};
 }
-#pragma optimize("",on)

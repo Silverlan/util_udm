@@ -4,7 +4,7 @@
 
 #include "udm.hpp"
 #include <lz4.h>
-#pragma optimize("",off)
+
 udm::ElementIteratorPair::ElementIteratorPair(std::unordered_map<std::string,PProperty>::iterator &it)
 	: key{it->first},property{*it->second}
 {}
@@ -59,4 +59,3 @@ typename udm::ElementIterator::pointer udm::ElementIterator::operator->() {retur
 bool udm::ElementIterator::operator==(const ElementIterator &other) const {return m_iterator == other.m_iterator;}
 
 bool udm::ElementIterator::operator!=(const ElementIterator &other) const {return !operator==(other);}
-#pragma optimize("",on)

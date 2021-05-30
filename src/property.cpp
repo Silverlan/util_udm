@@ -6,7 +6,7 @@
 #include <sharedutils/base64.hpp>
 #include <sstream>
 
-#pragma optimize("",off)
+
 udm::PProperty udm::Property::Create(Type type)
 {
 	auto prop = std::shared_ptr<Property>{new Property{}};
@@ -738,4 +738,3 @@ void udm::Property::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std
 			std::visit(vs,get_non_trivial_tag(type));
 	}
 }
-#pragma optimize("",on)

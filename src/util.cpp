@@ -5,7 +5,6 @@
 #include "udm.hpp"
 #include <lz4.h>
 
-#pragma optimize("",off)
 bool udm::does_key_require_quotes(const std::string_view &key)
 {
 	return key.find_first_of(udm::CONTROL_CHARACTERS.c_str()) != std::string::npos || key.find_first_of(udm::WHITESPACE_CHARACTERS.c_str()) != std::string::npos || key.find(PATH_SEPARATOR) != std::string::npos;
@@ -237,4 +236,3 @@ int32_t udm::IFile::WriteString(const std::string &str)
 	}
 	return 0;
 }
-#pragma optimize("",on)

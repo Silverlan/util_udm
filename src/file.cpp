@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "udm.hpp"
-#pragma optimize("",off)
+
 udm::MemoryFile::MemoryFile(uint8_t *data,size_t dataSize)
 	: m_data{data},m_dataSize{dataSize}
 {}
@@ -66,4 +66,3 @@ void udm::VectorFile::Resize(size_t size)
 	MemoryFile::m_data = m_data.data();
 	m_dataSize = size;
 }
-#pragma optimize("",on)

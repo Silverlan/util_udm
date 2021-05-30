@@ -5,7 +5,7 @@
 #include "udm.hpp"
 #include <sharedutils/magic_enum.hpp>
 
-#pragma optimize("",off)
+
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName,std::string &outErr)
 {
 	auto f = FileManager::OpenFile(fileName.c_str(),"rb");
@@ -680,4 +680,3 @@ void udm::VFilePtr::Seek(size_t offset,Whence whence)
 	return m_file->Seek(offset,SEEK_SET);
 }
 int32_t udm::VFilePtr::ReadChar() {return m_file->ReadChar();}
-#pragma optimize("",on)
