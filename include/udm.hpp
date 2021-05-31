@@ -821,6 +821,8 @@ namespace udm
 			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw);
 		template<typename T>
 			LinkedPropertyWrapper AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw);
+		template<typename T>
+			LinkedPropertyWrapper AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType=ArrayType::Raw);
 		bool IsArrayItem() const;
 		bool IsType(Type type) const;
 		Type GetType() const;
@@ -2063,17 +2065,22 @@ template<typename T>
 template<typename T>
 	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType)
 {
+	return AddArray<T>(path,values.size(),values.data(),arrayType);
+}
+
+template<typename T>
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType)
+{
 	constexpr auto valueType = type_to_enum<T>();
-	auto prop = AddArray(path,values.size(),valueType,arrayType);
+	auto prop = AddArray(path,size,valueType,arrayType);
 	auto &a = prop.GetValue<Array>();
 	if constexpr(is_non_trivial_type(valueType) && valueType != Type::Struct)
 	{
-		auto n = values.size();
-		for(auto i=decltype(n){0u};i<n;++i)
-			a[i] = values[i];
+		for(auto i=decltype(size){0u};i<size;++i)
+			a[i] = data[i];
 	}
 	else
-		memcpy(a.GetValues(),values.data(),util::size_of_container(values));
+		memcpy(a.GetValues(),data,sizeof(T) *size);
 	return prop;
 }
 
