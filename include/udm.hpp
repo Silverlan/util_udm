@@ -913,6 +913,10 @@ namespace udm
 		LinkedPropertyWrapper operator[](const char *key) const;
 		bool operator==(const PropertyWrapper &other) const;
 		bool operator!=(const PropertyWrapper &other) const;
+		template<typename T>
+			bool operator==(const T &other) const;
+		template<typename T>
+			bool operator!=(const T &other) const {return !operator==(other);}
 		Property *operator*();
 		const Property *operator*() const {return const_cast<PropertyWrapper*>(this)->operator*();}
 		Property *operator->() {return operator*();}
@@ -952,6 +956,8 @@ namespace udm
 		}
 		bool operator==(const LinkedPropertyWrapper &other) const;
 		bool operator!=(const LinkedPropertyWrapper &other) const;
+		using PropertyWrapper::operator==;
+		using PropertyWrapper::operator!=;
 		template<typename T>
 			void operator=(T &&v);
 		void operator=(PropertyWrapper &&v);
@@ -1459,6 +1465,12 @@ namespace udm
 	}
 
 	template<typename TEnum>
+		constexpr std::string_view flags_to_string(TEnum e)
+	{
+		return magic_enum::flags::enum_name(e);
+	}
+
+	template<typename TEnum>
 		static TEnum string_to_enum(udm::LinkedPropertyWrapper &udmEnum,TEnum def)
 	{
 		std::string str;
@@ -1468,11 +1480,29 @@ namespace udm
 	}
 
 	template<typename TEnum>
+		static TEnum string_to_flags(udm::LinkedPropertyWrapper &udmEnum,TEnum def)
+	{
+		std::string str;
+		udmEnum(str);
+		auto e = magic_enum::flags::enum_cast<TEnum>(str);
+		return e.has_value() ? *e : def;
+	}
+
+	template<typename TEnum>
 		static void to_enum_value(udm::LinkedPropertyWrapper &udmEnum,TEnum &def)
 	{
 		std::string str;
 		udmEnum(str);
 		auto e = magic_enum::enum_cast<TEnum>(str);
+		def = e.has_value() ? *e : def;
+	}
+
+	template<typename TEnum>
+		static void to_flags(udm::LinkedPropertyWrapper &udmEnum,TEnum &def)
+	{
+		std::string str;
+		udmEnum(str);
+		auto e = magic_enum::flags::enum_cast<TEnum>(str);
 		def = e.has_value() ? *e : def;
 	}
 
@@ -2144,6 +2174,22 @@ template<typename T>
 		return defaultValue;
 	auto val = ToValue<T>();
 	return val.has_value() ? std::move(val.value()) : defaultValue;
+}
+
+template<typename T>
+	bool udm::PropertyWrapper::operator==(const T &other) const
+{
+	if constexpr(util::is_c_string<T>())
+		return operator==(std::string{other});
+	else
+	{
+		auto *val = GetValuePtr<T>();
+		if(val)
+			return *val == other;
+		auto valConv = ToValue<T>();
+		return valConv.has_value() ? *valConv == other : false;
+	}
+	return false;
 }
 
 template<typename T>

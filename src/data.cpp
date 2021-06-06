@@ -105,6 +105,10 @@ bool udm::Data::DebugTest()
 		auto udmEl = udmCompressedElementArray[0];
 		udmEl["test"] = "555";
 
+		auto testCmp = (udmEl["test"] == "555");
+		if(!testCmp)
+			throw Exception {"Internal library error: UDM property comparison failure"};
+
 		el["NIL"] = udm::Nil{};
 		el["STRING"] = udm::String{"Hello"};
 		el["UTF8STRING"] = udm::Utf8String{};
