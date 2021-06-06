@@ -1465,7 +1465,7 @@ namespace udm
 	}
 
 	template<typename TEnum>
-		constexpr std::string_view flags_to_string(TEnum e)
+		constexpr std::string flags_to_string(TEnum e)
 	{
 		return magic_enum::flags::enum_name(e);
 	}
