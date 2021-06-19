@@ -595,7 +595,11 @@ bool udm::Data::SaveAscii(IFile &f,AsciiSaveFlags flags) const
 	f.WriteString(ss.str());
 	return true;
 }
-bool udm::Data::SaveAscii(const ::VFilePtr &f,AsciiSaveFlags flags) const {return SaveAscii(VFilePtr{f},flags);}
+bool udm::Data::SaveAscii(const ::VFilePtr &f,AsciiSaveFlags flags) const
+{
+	VFilePtr fp{f};
+	return SaveAscii(fp,flags);
+}
 
 std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(std::unique_ptr<IFile> &&f)
 {

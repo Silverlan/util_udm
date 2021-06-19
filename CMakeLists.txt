@@ -52,7 +52,7 @@ set(PROJ_NAME util_udm)
 
 project(${PROJ_NAME} CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 # set(PRECOMPILED_HEADER "stdafx")
 
 link_external_library(glm)

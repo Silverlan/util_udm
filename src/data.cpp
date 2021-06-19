@@ -60,9 +60,10 @@ bool udm::Data::Save(const std::string &fileName) const
 	if(f == nullptr)
 	{
 		throw FileError{"Unable to open file!"};
-		return nullptr;
+		return false;
 	}
-	return Save(VFilePtr{f});
+	VFilePtr fp{f};
+	return Save(fp);
 }
 
 void udm::Data::WriteProperty(IFile &f,const Property &o) {o.Write(f);}
@@ -223,9 +224,15 @@ bool udm::Data::DebugTest()
 			if(fw)
 			{
 				if(binary)
-					data->Save(VFilePtr{fw});
+				{
+					VFilePtr fp{fw};
+					data->Save(fp);
+				}
 				else
-					data->SaveAscii(VFilePtr{fw});
+				{
+					VFilePtr fp{fw};
+					data->SaveAscii(fp);
+				}
 				fw = nullptr;
 			}
 			else
@@ -607,8 +614,8 @@ udm::Version udm::AssetData::GetAssetVersion() const
 	auto *version = prop ? prop.GetValuePtr<Version>() : nullptr;
 	return version ? *version : Version{0};
 }
-void udm::AssetData::SetAssetType(const std::string &assetType) {(*this)[Data::KEY_ASSET_TYPE] = assetType;}
-void udm::AssetData::SetAssetVersion(Version version) {(*this)[Data::KEY_ASSET_VERSION] = version;}
+void udm::AssetData::SetAssetType(const std::string &assetType) const {(*this)[Data::KEY_ASSET_TYPE] = assetType;}
+void udm::AssetData::SetAssetVersion(Version version) const {(*this)[Data::KEY_ASSET_VERSION] = version;}
 udm::LinkedPropertyWrapper udm::AssetData::GetData() const {return (*this)[Data::KEY_ASSET_DATA];}
 
 std::string udm::Data::GetAssetType() const {return AssetData{*m_rootProperty}.GetAssetType();}
@@ -640,7 +647,11 @@ bool udm::Data::Save(IFile &f) const
 	return true;
 }
 
-bool udm::Data::Save(const ::VFilePtr &f) {return Save(VFilePtr{f});}
+bool udm::Data::Save(const ::VFilePtr &f)
+{
+	VFilePtr fp{f};
+	return Save(fp);
+}
 
 udm::LinkedPropertyWrapper udm::Data::operator[](const std::string &key) const {return LinkedPropertyWrapper{*m_rootProperty}[KEY_ASSET_DATA][key];}
 udm::Element *udm::Data::operator->() {return &operator*();}

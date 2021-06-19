@@ -21,6 +21,7 @@
 #include <sharedutils/util_string.h>
 #include <sharedutils/magic_enum.hpp>
 #include <fsys/filesystem.h>
+#include "udm_types.hpp"
 
 #define UDM_ASSERT_COMPARISON(res) \
 	if constexpr(ENABLE_COMPARISON_EXCEPTION) \
@@ -514,14 +515,6 @@ namespace udm
 		constexpr bool is_convertible(Type tTo);
 	constexpr bool is_convertible(Type tFrom,Type tTo);
 	
-	enum class AsciiSaveFlags : uint32_t;
-	struct LinkedPropertyWrapper;
-	struct Array;
-	struct StructDescription;
-	struct IFile;
-	struct Property;
-	using PProperty = std::shared_ptr<Property>;
-	using WPProperty = std::weak_ptr<Property>;
 	struct Property
 	{
 		template<typename T>
@@ -558,40 +551,7 @@ namespace udm
 		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,Type type,uint64_t *optOutRequiredSize=nullptr) const;
 		Blob GetBlobData(Type &outType) const;
 		template<class T>
-			BlobResult GetBlobData(T &v) const
-		{
-			if(!*this)
-				return BlobResult::InvalidProperty;
-			uint64_t reqBufferSize = 0;
-			auto result = GetBlobData(v.data(),v.size() *sizeof(v[0]),&reqBufferSize);
-			if(result == BlobResult::InsufficientSize)
-			{
-				if(v.size() *sizeof(v[0]) != reqBufferSize)
-				{
-					if((reqBufferSize %sizeof(v[0])) > 0)
-						return BlobResult::ValueTypeMismatch;
-					v.resize(reqBufferSize /sizeof(v[0]));
-					return GetBlobData<T>(v);
-				}
-				return result;
-			}
-			if(result != BlobResult::NotABlobType)
-				return result;
-			if constexpr(is_trivial_type(type_to_enum_s<T::value_type>()))
-			{
-				if(is_array_type(this->type))
-				{
-					auto &a = GetValue<Array>();
-					if(a.GetValueType() == type_to_enum<T::value_type>())
-					{
-						v.resize(a.GetSize());
-						memcpy(v.data(),a.GetValues(),v.size() *sizeof(v[0]));
-						return BlobResult::Success;
-					}
-				}
-			}
-			return BlobResult::NotABlobType;
-		}
+			BlobResult GetBlobData(T &v) const;
 		template<typename T>
 			T &GetValue();
 		template<typename T>
@@ -670,67 +630,14 @@ namespace udm
 		static void WriteStructHeader(IFile &f,const StructDescription &strct);
 
 		template<typename T>
-			static uint64_t WriteBlockSize(IFile &f)
-		{
-			auto offsetToSize = f.Tell();
-			f.Write<T>(0);
-			return offsetToSize;
-		}
+			static uint64_t WriteBlockSize(IFile &f);
 		template<typename T>
-			static void WriteBlockSize(IFile &f,uint64_t offset)
-		{
-			auto startOffset = offset +sizeof(T);
-			auto curOffset = f.Tell();
-			f.Seek(offset);
-			f.Write<T>(curOffset -startOffset);
-			f.Seek(curOffset);
-		}
+			static void WriteBlockSize(IFile &f,uint64_t offset);
 
 		template<typename T>
-			static void NumericTypeToString(T value,std::stringstream &ss)
-		{
-			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-			if constexpr(std::is_same_v<TBase,Half>)
-			{
-				NumericTypeToString<float>(value,ss);
-				return;
-			}
-			if constexpr(!std::is_floating_point_v<T>)
-			{
-				if constexpr(std::is_same_v<T,Int8> || std::is_same_v<T,UInt8>)
-					ss<<+value;
-				else
-					ss<<value;
-				return;
-			}
-			// SetAppropriatePrecision(ss,type_to_enum<T>());
-			ss<<NumericTypeToString(value);
-		}
+			static void NumericTypeToString(T value,std::stringstream &ss);
 		template<typename T>
-			static std::string NumericTypeToString(T value)
-		{
-			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-			if constexpr(std::is_same_v<TBase,Half>)
-				return NumericTypeToString<float>(value);
-			if constexpr(!std::is_floating_point_v<T>)
-			{
-				if constexpr(std::is_same_v<T,Int8> || std::is_same_v<T,UInt8>)
-					return std::to_string(+value);
-				return std::to_string(value);
-			}
-			// TODO: This is not very efficient...
-			// (We need a temporary stringstream because we want to
-			// remove trailing zeroes)
-			std::stringstream tmp;
-			SetAppropriatePrecision(tmp,type_to_enum<T>());
-			if constexpr(std::is_same_v<T,Int8> || std::is_same_v<T,UInt8>)
-				tmp<<+value;
-			else
-				tmp<<value;
-			auto str = tmp.str();
-			RemoveTrailingZeroes(str);
-			return str;
-		}
+			static std::string NumericTypeToString(T value);
 		static void SetAppropriatePrecision(std::stringstream &ss,Type type);
 		static void RemoveTrailingZeroes(std::string &str);
 		void Initialize();
@@ -755,7 +662,6 @@ namespace udm
 	};
 #pragma pack(pop)
 
-	struct LinkedPropertyWrapper;
 	template<typename T>
 		class ArrayIterator
 	{
@@ -783,8 +689,6 @@ namespace udm
 		udm::LinkedPropertyWrapper m_curProperty;
 	};
 
-	struct PropertyWrapper;
-	class ElementIterator;
 	struct ElementIteratorWrapper
 	{
 		ElementIteratorWrapper(LinkedPropertyWrapper &prop);
@@ -794,7 +698,6 @@ namespace udm
 		LinkedPropertyWrapper &m_prop;
 	};
 	
-	struct StructDescription;
 	struct PropertyWrapper
 	{
 		PropertyWrapper()=default;
@@ -802,7 +705,7 @@ namespace udm
 		PropertyWrapper(const PropertyWrapper &other);
 		PropertyWrapper(Array &array,uint32_t idx);
 		template<typename T>
-			void operator=(T &&v);
+			void operator=(T &&v) const;
 		void operator=(const PropertyWrapper &other);
 		void operator=(PropertyWrapper &other);
 		void operator=(PropertyWrapper &&other);
@@ -811,39 +714,34 @@ namespace udm
 		void operator=(Property &other);
 		//template<typename T>
 		//	operator T() const;
-		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw);
+		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element) const;
+		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw) const;
+		LinkedPropertyWrapper AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw) const;
+		LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType=ArrayType::Raw);
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType=ArrayType::Raw) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw);
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw);
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType=ArrayType::Raw);
+			LinkedPropertyWrapper AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType=ArrayType::Raw) const;
 		bool IsArrayItem() const;
 		bool IsType(Type type) const;
 		Type GetType() const;
-		void Merge(const PropertyWrapper &other,MergeFlags mergeFlags=MergeFlags::OverwriteExisting);
+		void Merge(const PropertyWrapper &other,MergeFlags mergeFlags=MergeFlags::OverwriteExisting) const;
 
-		Array *GetOwningArray();
-		const Array *GetOwningArray() const {return const_cast<PropertyWrapper*>(this)->GetOwningArray();}
+		Array *GetOwningArray() const;
 		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,uint64_t *optOutRequiredSize=nullptr) const;
 		BlobResult GetBlobData(void *outBuffer,size_t bufferSize,Type type,uint64_t *optOutRequiredSize=nullptr) const;
 		Blob GetBlobData(Type &outType) const;
 		template<class T>
 			BlobResult GetBlobData(T &v) const;
 		template<typename T>
-			T &GetValue();
+			T &GetValue() const;
 		template<typename T>
-			const T &GetValue() const;
-		template<typename T>
-			T *GetValuePtr();
-		template<typename T>
-			const T *GetValuePtr() const {return const_cast<PropertyWrapper*>(this)->GetValuePtr<T>();}
-		void *GetValuePtr(Type &outType);
+			T *GetValuePtr() const;
+		void *GetValuePtr(Type &outType) const;
 		template<typename T>
 			T ToValue(const T &defaultValue) const;
 		template<typename T>
@@ -888,22 +786,21 @@ namespace udm
 		
 		// For array properties
 		uint32_t GetSize() const;
-		void Resize(uint32_t size);
+		void Resize(uint32_t size) const;
 		template<typename T>
-			ArrayIterator<T> begin();
+			ArrayIterator<T> begin() const;
 		template<typename T>
-			ArrayIterator<T> end();
-		ArrayIterator<LinkedPropertyWrapper> begin();
-		ArrayIterator<LinkedPropertyWrapper> end();
+			ArrayIterator<T> end() const;
+		ArrayIterator<LinkedPropertyWrapper> begin() const;
+		ArrayIterator<LinkedPropertyWrapper> end() const;
 		LinkedPropertyWrapper operator[](uint32_t idx) const;
 		LinkedPropertyWrapper operator[](int32_t idx) const;
 		LinkedPropertyWrapper operator[](size_t idx) const;
 		//
 
 		// For element properties
-		ElementIterator begin_el();
-		ElementIterator end_el();
-		ElementIteratorWrapper ElIt();
+		ElementIterator begin_el() const;
+		ElementIterator end_el() const;
 		uint32_t GetChildCount() const;
 		//
 		
@@ -917,15 +814,14 @@ namespace udm
 			bool operator==(const T &other) const;
 		template<typename T>
 			bool operator!=(const T &other) const {return !operator==(other);}
-		Property *operator*();
-		const Property *operator*() const {return const_cast<PropertyWrapper*>(this)->operator*();}
-		Property *operator->() {return operator*();}
-		const Property *operator->() const {return const_cast<PropertyWrapper*>(this)->operator->();}
+		Property *operator*() const;
+		Property *operator->() const {return operator*();}
 		operator bool() const;
 		Property *prop = nullptr;
 		uint32_t arrayIndex = std::numeric_limits<uint32_t>::max();
 
 		LinkedPropertyWrapper *GetLinked();
+		const LinkedPropertyWrapper *GetLinked() const {return const_cast<PropertyWrapper*>(this)->GetLinked();};
 	protected:
 		bool linked = false;
 	};
@@ -959,11 +855,14 @@ namespace udm
 		using PropertyWrapper::operator==;
 		using PropertyWrapper::operator!=;
 		template<typename T>
-			void operator=(T &&v);
+			void operator=(T &&v) const;
 		void operator=(PropertyWrapper &&v);
 		void operator=(LinkedPropertyWrapper &&v);
+		void operator=(const PropertyWrapper &v);
+		void operator=(const LinkedPropertyWrapper &v);
 		std::string GetPath() const;
 		PProperty ClaimOwnership() const;
+		ElementIteratorWrapper ElIt();
 		std::unique_ptr<LinkedPropertyWrapper> prev = nullptr;
 		std::string propName;
 
@@ -972,7 +871,6 @@ namespace udm
 		Property *GetProperty(std::vector<uint32_t> *optOutArrayIndices=nullptr) const;
 	};
 
-	class Data;
 	struct Reference
 	{
 		Reference()=default;
@@ -1157,7 +1055,6 @@ namespace udm
 		ElementIteratorPair m_pair;
 	};
 
-	struct Array;
 	struct Array
 	{
 		virtual ~Array();
@@ -1228,7 +1125,6 @@ namespace udm
 		Type m_valueType = Type::Nil;
 	};
 
-	class AsciiReader;
 	struct ArrayLz4
 		: public Array
 	{
@@ -1273,8 +1169,8 @@ namespace udm
 	{
 		std::string GetAssetType() const;
 		Version GetAssetVersion() const;
-		void SetAssetType(const std::string &assetType);
-		void SetAssetVersion(Version version);
+		void SetAssetType(const std::string &assetType) const;
+		void SetAssetVersion(Version version) const;
 
 		LinkedPropertyWrapper GetData() const;
 		LinkedPropertyWrapper operator*() const {return GetData();}
@@ -1471,7 +1367,7 @@ namespace udm
 	}
 
 	template<typename TEnum>
-		static TEnum string_to_enum(udm::LinkedPropertyWrapper &udmEnum,TEnum def)
+		static TEnum string_to_enum(udm::LinkedPropertyWrapperArg udmEnum,TEnum def)
 	{
 		std::string str;
 		udmEnum(str);
@@ -1480,7 +1376,7 @@ namespace udm
 	}
 
 	template<typename TEnum>
-		static TEnum string_to_flags(udm::LinkedPropertyWrapper &udmEnum,TEnum def)
+		static TEnum string_to_flags(udm::LinkedPropertyWrapperArg udmEnum,TEnum def)
 	{
 		std::string str;
 		udmEnum(str);
@@ -1489,7 +1385,7 @@ namespace udm
 	}
 
 	template<typename TEnum>
-		static void to_enum_value(udm::LinkedPropertyWrapper &udmEnum,TEnum &def)
+		static void to_enum_value(udm::LinkedPropertyWrapperArg udmEnum,TEnum &def)
 	{
 		std::string str;
 		udmEnum(str);
@@ -1498,7 +1394,7 @@ namespace udm
 	}
 
 	template<typename TEnum>
-		static void to_flags(udm::LinkedPropertyWrapper &udmEnum,TEnum &def)
+		static void to_flags(udm::LinkedPropertyWrapperArg udmEnum,TEnum &def)
 	{
 		std::string str;
 		udmEnum(str);
@@ -1507,14 +1403,14 @@ namespace udm
 	}
 
 	template<typename TEnum>
-		void write_flag(udm::LinkedPropertyWrapper &udm,TEnum flags,TEnum flag,const std::string_view &name)
+		void write_flag(udm::LinkedPropertyWrapperArg udm,TEnum flags,TEnum flag,const std::string_view &name)
 	{
 		if(umath::is_flag_set(flags,flag) == false)
 			return;
 		udm[name] = true;
 	}
 	template<typename TEnum>
-		void read_flag(udm::LinkedPropertyWrapper &udm,TEnum &flags,TEnum flag,const std::string_view &name)
+		void read_flag(LinkedPropertyWrapperArg udm,TEnum &flags,TEnum flag,const std::string_view &name)
 	{
 		if(!udm)
 			return;
@@ -1794,11 +1690,11 @@ template<typename T>
 }
 
 template<typename T>
-	void udm::LinkedPropertyWrapper::operator=(T &&v)
+	void udm::LinkedPropertyWrapper::operator=(T &&v) const
 {
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	if(prop == nullptr)
-		InitializeProperty();
+		const_cast<LinkedPropertyWrapper*>(this)->InitializeProperty();
 	/*if(prev && prev->arrayIndex != std::numeric_limits<uint32_t>::max() && prev->prev && prev->prev->prop && prev->prev->prop->type == Type::Array)
 	{
 		(*static_cast<Array*>(prev->prev->prop->value))[prev->arrayIndex][propName] = v;
@@ -1807,7 +1703,7 @@ template<typename T>
 	PropertyWrapper::operator=(v);
 }
 template<typename T>
-	void udm::PropertyWrapper::operator=(T &&v)
+	void udm::PropertyWrapper::operator=(T &&v) const
 {
 	if(prop == nullptr)
 		throw LogicError{"Cannot assign property value: Property is invalid!"};
@@ -1820,17 +1716,17 @@ template<typename T>
 		{
 			if(arrayIndex == std::numeric_limits<uint32_t>::max())
 				throw LogicError{"Cannot assign propety value to array: No index has been specified!"};
-			if(linked && !static_cast<LinkedPropertyWrapper*>(this)->propName.empty())
+			if(linked && !static_cast<const LinkedPropertyWrapper*>(this)->propName.empty())
 			{
 				auto &a = *static_cast<Array*>(prop->value);
 				if(a.GetValueType() != Type::Element)
 					return;
 				auto &e = a.GetValue<Element>(arrayIndex);
 				if constexpr(type_to_enum_s<TBase>() != Type::Invalid)
-					e.children[static_cast<LinkedPropertyWrapper*>(this)->propName] = Property::Create(v);
+					e.children[static_cast<const LinkedPropertyWrapper*>(this)->propName] = Property::Create(v);
 				else
 				{
-					auto it = e.children.find(static_cast<LinkedPropertyWrapper*>(this)->propName);
+					auto it = e.children.find(static_cast<const LinkedPropertyWrapper*>(this)->propName);
 					if(it == e.children.end() || it->second->IsType(Type::Struct) == false)
 						throw LogicError{"Cannot assign custom type to non-struct property!"};
 					it->second->GetValue<Struct>() = std::move(v);
@@ -1842,7 +1738,7 @@ template<typename T>
 		}
 		if constexpr(std::is_same_v<TBase,PProperty>)
 		{
-			if(linked && !static_cast<LinkedPropertyWrapper*>(this)->propName.empty())
+			if(linked && !static_cast<const LinkedPropertyWrapper*>(this)->propName.empty())
 			{
 				auto &linked = *GetLinked();
 				if(linked.prev && linked.prev->IsType(Type::Element))
@@ -1901,6 +1797,69 @@ template<typename T>
 {
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	return Create(type_to_enum<TBase>());
+}
+
+template<typename T>
+	uint64_t udm::Property::WriteBlockSize(IFile &f)
+{
+	auto offsetToSize = f.Tell();
+	f.Write<T>(0);
+	return offsetToSize;
+}
+template<typename T>
+	void udm::Property::WriteBlockSize(IFile &f,uint64_t offset)
+{
+	auto startOffset = offset +sizeof(T);
+	auto curOffset = f.Tell();
+	f.Seek(offset);
+	f.Write<T>(curOffset -startOffset);
+	f.Seek(curOffset);
+}
+
+template<typename T>
+	void udm::Property::NumericTypeToString(T value,std::stringstream &ss)
+{
+	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+	if constexpr(std::is_same_v<TBase,Half>)
+	{
+		NumericTypeToString<float>(value,ss);
+		return;
+	}
+	if constexpr(!std::is_floating_point_v<T>)
+	{
+		if constexpr(std::is_same_v<T,Int8> || std::is_same_v<T,UInt8>)
+			ss<<+value;
+		else
+			ss<<value;
+		return;
+	}
+	// SetAppropriatePrecision(ss,type_to_enum<T>());
+	ss<<NumericTypeToString(value);
+}
+template<typename T>
+	std::string udm::Property::NumericTypeToString(T value)
+{
+	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+	if constexpr(std::is_same_v<TBase,Half>)
+		return NumericTypeToString<float>(value);
+	if constexpr(!std::is_floating_point_v<T>)
+	{
+		if constexpr(std::is_same_v<T,Int8> || std::is_same_v<T,UInt8>)
+			return std::to_string(+value);
+		return std::to_string(value);
+	}
+	// TODO: This is not very efficient...
+	// (We need a temporary stringstream because we want to
+	// remove trailing zeroes)
+	std::stringstream tmp;
+	SetAppropriatePrecision(tmp,type_to_enum<T>());
+	if constexpr(std::is_same_v<T,Int8> || std::is_same_v<T,UInt8>)
+		tmp<<+value;
+	else
+		tmp<<value;
+	auto str = tmp.str();
+	RemoveTrailingZeroes(str);
+	return str;
 }
 
 template<typename T>
@@ -2068,7 +2027,7 @@ template<typename T>
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType)
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType) const
 {
 	auto prop = AddArray(path,strct,strctItems,arrayType);
 	auto &a = prop.GetValue<Array>();
@@ -2079,7 +2038,7 @@ template<typename T>
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType)
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType) const
 {
 	auto prop = AddArray(path,strct,values.size(),arrayType);
 	auto &a = prop.GetValue<Array>();
@@ -2093,13 +2052,13 @@ template<typename T>
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType)
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType) const
 {
 	return AddArray<T>(path,values.size(),values.data(),arrayType);
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType)
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType) const
 {
 	constexpr auto valueType = type_to_enum<T>();
 	auto prop = AddArray(path,size,valueType,arrayType);
@@ -2112,6 +2071,42 @@ template<typename T>
 	else
 		memcpy(a.GetValues(),data,sizeof(T) *size);
 	return prop;
+}
+
+template<class T>
+	udm::BlobResult udm::Property::GetBlobData(T &v) const
+{
+	if(!*this)
+		return BlobResult::InvalidProperty;
+	uint64_t reqBufferSize = 0;
+	auto result = GetBlobData(v.data(),v.size() *sizeof(v[0]),&reqBufferSize);
+	if(result == BlobResult::InsufficientSize)
+	{
+		if(v.size() *sizeof(v[0]) != reqBufferSize)
+		{
+			if((reqBufferSize %sizeof(v[0])) > 0)
+				return BlobResult::ValueTypeMismatch;
+			v.resize(reqBufferSize /sizeof(v[0]));
+			return GetBlobData<T>(v);
+		}
+		return result;
+	}
+	if(result != BlobResult::NotABlobType)
+		return result;
+	if constexpr(is_trivial_type(type_to_enum_s<T::value_type>()))
+	{
+		if(is_array_type(this->type))
+		{
+			auto &a = GetValue<Array>();
+			if(a.GetValueType() == type_to_enum<T::value_type>())
+			{
+				v.resize(a.GetSize());
+				memcpy(v.data(),a.GetValues(),v.size() *sizeof(v[0]));
+				return BlobResult::Success;
+			}
+		}
+	}
+	return BlobResult::NotABlobType;
 }
 
 template<class T>
@@ -2137,7 +2132,7 @@ template<class T>
 	return (*this)->GetBlobData(v);
 }
 template<typename T>
-	T &udm::PropertyWrapper::GetValue()
+	T &udm::PropertyWrapper::GetValue() const
 {
 	if(IsArrayItem())
 	{
@@ -2150,11 +2145,9 @@ template<typename T>
 	}
 	return (*this)->GetValue<T>();
 }
-template<typename T>
-	const T &udm::PropertyWrapper::GetValue() const {return const_cast<PropertyWrapper*>(this)->GetValue<T>();}
 
 template<typename T>
-	T *udm::PropertyWrapper::GetValuePtr()
+	T *udm::PropertyWrapper::GetValuePtr() const
 {
 	if(IsArrayItem())
 	{
@@ -2193,7 +2186,7 @@ template<typename T>
 }
 
 template<typename T>
-	udm::ArrayIterator<T> udm::PropertyWrapper::begin()
+	udm::ArrayIterator<T> udm::PropertyWrapper::begin() const
 {
 	if(!static_cast<bool>(*this))
 		return ArrayIterator<T>{};
@@ -2202,11 +2195,11 @@ template<typename T>
 		return ArrayIterator<T>{};
 	auto it = a->begin<T>();
 	if(linked)
-		it.GetProperty().prev = std::make_unique<LinkedPropertyWrapper>(*static_cast<LinkedPropertyWrapper*>(this));
+		it.GetProperty().prev = std::make_unique<LinkedPropertyWrapper>(*static_cast<LinkedPropertyWrapper*>(const_cast<PropertyWrapper*>(this)));
 	return it;
 }
 template<typename T>
-	udm::ArrayIterator<T> udm::PropertyWrapper::end()
+	udm::ArrayIterator<T> udm::PropertyWrapper::end() const
 {
 	if(!static_cast<bool>(*this))
 		return ArrayIterator<T>{};

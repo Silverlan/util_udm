@@ -70,7 +70,7 @@ udm::PropertyWrapper::operator bool() const
 	return linkedWrapper.propName.empty() || static_cast<bool>(const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[linkedWrapper.propName]);
 }
 
-void *udm::PropertyWrapper::GetValuePtr(Type &outType)
+void *udm::PropertyWrapper::GetValuePtr(Type &outType) const
 {
 	if(IsArrayItem())
 	{
@@ -128,7 +128,7 @@ udm::Type udm::PropertyWrapper::GetType() const
 	return const_cast<PropertyWrapper*>(this)->GetValuePtr(type) ? type : Type::Nil;
 }
 
-void udm::PropertyWrapper::Merge(const PropertyWrapper &other,MergeFlags mergeFlags)
+void udm::PropertyWrapper::Merge(const PropertyWrapper &other,MergeFlags mergeFlags) const
 {
 	if(IsType(Type::Element) && other.IsType(Type::Element))
 	{
@@ -148,7 +148,7 @@ void udm::PropertyWrapper::Merge(const PropertyWrapper &other,MergeFlags mergeFl
 	}
 }
 
-udm::Array *udm::PropertyWrapper::GetOwningArray()
+udm::Array *udm::PropertyWrapper::GetOwningArray() const
 {
 	if(IsArrayItem() == false)
 		return nullptr;
@@ -205,7 +205,7 @@ udm::Blob udm::PropertyWrapper::GetBlobData(Type &outType) const
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
 			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetBlobData(outType);
 		return a.IsValueType(Type::Blob) ? a.GetValue<Blob>(arrayIndex) :
-			a.IsValueType(Type::BlobLz4) ? Property::GetBlobData(a.GetValue<BlobLz4>(arrayIndex)) :
+			a.IsValueType(Type::BlobLz4) ? Property::GetBlobData(const_cast<const BlobLz4&>(a.GetValue<BlobLz4>(arrayIndex))) :
 			udm::Blob{};
 	}
 	return (*this)->GetBlobData(outType);
@@ -215,21 +215,21 @@ uint32_t udm::PropertyWrapper::GetSize() const
 {
 	return (static_cast<bool>(*this) && is_array_type(this->GetType())) ? GetValue<udm::Array>().GetSize() : 0;
 }
-void udm::PropertyWrapper::Resize(uint32_t size)
+void udm::PropertyWrapper::Resize(uint32_t size) const
 {
 	if(!static_cast<bool>(*this) || is_array_type(GetType()) == false)
 		return;
 	GetValue<udm::Array>().Resize(size);
 }
-udm::ArrayIterator<udm::LinkedPropertyWrapper> udm::PropertyWrapper::begin() {return begin<LinkedPropertyWrapper>();}
-udm::ArrayIterator<udm::LinkedPropertyWrapper> udm::PropertyWrapper::end() {return end<LinkedPropertyWrapper>();}
+udm::ArrayIterator<udm::LinkedPropertyWrapper> udm::PropertyWrapper::begin() const {return begin<LinkedPropertyWrapper>();}
+udm::ArrayIterator<udm::LinkedPropertyWrapper> udm::PropertyWrapper::end() const {return end<LinkedPropertyWrapper>();}
 
 uint32_t udm::PropertyWrapper::GetChildCount() const
 {
 	auto *e = GetValuePtr<Element>();
 	return e ? e->children.size() : 0;
 }
-udm::ElementIterator udm::PropertyWrapper::begin_el()
+udm::ElementIterator udm::PropertyWrapper::begin_el() const
 {
 	if(!static_cast<bool>(*this))
 		return ElementIterator{};
@@ -238,10 +238,10 @@ udm::ElementIterator udm::PropertyWrapper::begin_el()
 		return ElementIterator{};
 	auto it = e->begin();
 	if(linked)
-		(*it).property.prev = std::make_unique<LinkedPropertyWrapper>(*static_cast<LinkedPropertyWrapper*>(this));
+		(*it).property.prev = std::make_unique<LinkedPropertyWrapper>(*static_cast<LinkedPropertyWrapper*>(const_cast<PropertyWrapper*>(this)));
 	return it;
 }
-udm::ElementIterator udm::PropertyWrapper::end_el()
+udm::ElementIterator udm::PropertyWrapper::end_el() const
 {
 	if(!static_cast<bool>(*this))
 		return ElementIterator{};
@@ -250,14 +250,7 @@ udm::ElementIterator udm::PropertyWrapper::end_el()
 		return ElementIterator{};
 	return e->end();
 }
-udm::ElementIteratorWrapper udm::PropertyWrapper::ElIt()
-{
-	if(linked)
-		return ElementIteratorWrapper{*static_cast<LinkedPropertyWrapper*>(this)};
-	return ElementIteratorWrapper{LinkedPropertyWrapper{*this}};
-}
-
-udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size,ArrayType arrayType)
+udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size,ArrayType arrayType) const
 {
 	auto prop = AddArray(path,{},Type::Struct,arrayType);
 	auto *a = prop.GetValuePtr<Array>();
@@ -272,7 +265,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 	return prop;
 }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size,ArrayType arrayType)
+udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size,ArrayType arrayType) const
 {
 	auto prop = AddArray(path,{},Type::Struct,arrayType);
 	auto *a = prop.GetValuePtr<Array>();
@@ -287,7 +280,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 	return prop;
 }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,ArrayType arrayType)
+udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,ArrayType arrayType) const
 {
 	if(arrayIndex != std::numeric_limits<uint32_t>::max())
 	{
@@ -299,7 +292,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 				auto *e = &a.GetValue<Element>(arrayIndex);
 				if(linked)
 				{
-					auto &linkedWrapper = static_cast<LinkedPropertyWrapper&>(*this);
+					auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
 					if(linkedWrapper.propName.empty() == false)
 					{
 						auto child = (*e)[linkedWrapper.propName];
@@ -316,7 +309,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 		if(linked)
 		{
 			// TODO: Is this obsolete?
-			auto &linkedWrapper = static_cast<LinkedPropertyWrapper&>(*this);
+			auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
 			if(linkedWrapper.prev && linkedWrapper.prev->prop && linkedWrapper.prev->prop->type == Type::Array)
 			{
 				auto &a = *static_cast<Array*>(linkedWrapper.prev->prop->value);
@@ -331,7 +324,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 		throw InvalidUsageError{"Attempted to add key-value to indexed property with invalid array reference!"};
 	}
 	if(prop == nullptr && linked)
-		static_cast<udm::LinkedPropertyWrapper&>(*this).InitializeProperty();
+		const_cast<udm::LinkedPropertyWrapper&>(static_cast<const udm::LinkedPropertyWrapper&>(*this)).InitializeProperty();
 	if(prop == nullptr || prop->type != Type::Element)
 		throw InvalidUsageError{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
 	auto wrapper = static_cast<Element*>(prop->value)->AddArray(path,size,type,arrayType);
@@ -339,13 +332,13 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 	return wrapper;
 }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &path,Type type)
+udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &path,Type type) const
 {
 	if(arrayIndex != std::numeric_limits<uint32_t>::max())
 	{
 		if(linked)
 		{
-			auto &linkedWrapper = static_cast<LinkedPropertyWrapper&>(*this);
+			auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
 			if(prop && prop->type == Type::Array)
 			{
 				auto &a = *static_cast<Array*>(prop->value);
@@ -371,7 +364,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 		throw InvalidUsageError{"Attempted to add key-value to indexed property with invalid array reference!"};
 	}
 	if(prop == nullptr && linked)
-		static_cast<udm::LinkedPropertyWrapper&>(*this).InitializeProperty();
+		const_cast<udm::LinkedPropertyWrapper&>(static_cast<const udm::LinkedPropertyWrapper&>(*this)).InitializeProperty();
 	if(prop == nullptr || prop->type != Type::Element)
 		throw InvalidUsageError{"Attempted to add key-value to non-element property of type " +std::string{magic_enum::enum_name(prop->type)} +", which is not allowed!"};
 	auto wrapper = static_cast<Element*>(prop->value)->Add(path,type);
@@ -398,7 +391,7 @@ void udm::Element::AddChild(const std::string &key,const PProperty &o)
 	AddChild(std::move(cpy),o);
 }
 
-udm::Property *udm::PropertyWrapper::operator*() {return prop;}
+udm::Property *udm::PropertyWrapper::operator*() const {return prop;}
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::GetFromPath(const std::string_view &key) const
 {

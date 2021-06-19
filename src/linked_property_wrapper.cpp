@@ -31,6 +31,25 @@ void udm::LinkedPropertyWrapper::operator=(LinkedPropertyWrapper &&v)
 	static_assert(sizeof(LinkedPropertyWrapper) == 56,"Update this function when the struct has changed!");
 }
 
+void udm::LinkedPropertyWrapper::operator=(const PropertyWrapper &v)
+{
+	if(this == &v)
+		return;
+	auto *lp = v.GetLinked();
+	if(lp == nullptr)
+		return operator=(*lp);
+	PropertyWrapper::operator=(v);
+}
+void udm::LinkedPropertyWrapper::operator=(const LinkedPropertyWrapper &v)
+{
+	if(this == &v)
+		return;
+	PropertyWrapper::operator=(v);
+	prev = v.prev ? std::make_unique<LinkedPropertyWrapper>(*v.prev) : nullptr;
+	propName = v.propName;
+	static_assert(sizeof(LinkedPropertyWrapper) == 56,"Update this function when the struct has changed!");
+}
+
 std::string udm::LinkedPropertyWrapper::GetPath() const
 {
 	std::string path = propName;
@@ -149,3 +168,11 @@ bool udm::LinkedPropertyWrapper::operator==(const LinkedPropertyWrapper &other) 
 	return res;
 }
 bool udm::LinkedPropertyWrapper::operator!=(const LinkedPropertyWrapper &other) const {return !operator==(other);}
+
+udm::ElementIteratorWrapper udm::LinkedPropertyWrapper::ElIt()
+{
+	return ElementIteratorWrapper{*this};
+	//if(linked)
+	//	return ElementIteratorWrapper{*static_cast<LinkedPropertyWrapper*>(this)};
+	//return ElementIteratorWrapper{LinkedPropertyWrapper{*this}};
+}
