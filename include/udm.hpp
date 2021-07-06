@@ -14,6 +14,7 @@
 #include <optional>
 #include <variant>
 #include <map>
+#include <sstream>
 #include <unordered_map>
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
@@ -1416,6 +1417,8 @@ namespace udm
 			return;
 		umath::set_flag(flags,flag,udm[name](false));
 	}
+
+	void to_json(LinkedPropertyWrapperArg prop,std::stringstream &ss);
 };
 REGISTER_BASIC_BITWISE_OPERATORS(udm::AsciiSaveFlags)
 REGISTER_BASIC_BITWISE_OPERATORS(udm::MergeFlags)
