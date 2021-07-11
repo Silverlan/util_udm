@@ -1559,6 +1559,8 @@ template<typename TFrom,typename TTo>
 {
 	if constexpr(std::is_same_v<TFrom,std::string_view> && std::is_same_v<TTo,std::string>)
 		return true;
+	else if constexpr(std::is_arithmetic_v<TFrom> && std::is_same_v<TTo,std::string>)
+		return true;
 	return std::is_convertible_v<TFrom,TTo>;
 }
 
@@ -1567,7 +1569,10 @@ template<typename TFrom,typename TTo>
 {
 	if constexpr(std::is_same_v<TFrom,std::string_view> && std::is_same_v<TTo,std::string>)
 		return std::string{from};
-	return static_cast<TTo>(from);
+	else if constexpr((std::is_arithmetic_v<TFrom> || std::is_same_v<TFrom,char> || std::is_same_v<TFrom,unsigned char>) && std::is_same_v<TTo,std::string>)
+		return std::to_string(from);
+	else
+		return static_cast<TTo>(from);
 }
 		
 template<typename TTo>
@@ -1994,7 +1999,7 @@ template<typename T>
 	}
 	auto vs = [&](auto tag) -> std::optional<T> {
 		if constexpr(is_convertible<decltype(tag)::type,T>())
-			return static_cast<T>(const_cast<udm::Property*>(this)->GetValue<decltype(tag)::type>());
+			return convert<decltype(tag)::type,T>(const_cast<udm::Property*>(this)->GetValue<decltype(tag)::type>());
 		return {};
 	};
 	if(is_numeric_type(type))
@@ -2224,7 +2229,7 @@ template<typename T>
 			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->ToValue<T>();
 		auto vs = [&](auto tag) -> std::optional<T> {
 			if constexpr(is_convertible<decltype(tag)::type>(type_to_enum<T>()))
-				return static_cast<T>(const_cast<udm::PropertyWrapper*>(this)->GetValue<decltype(tag)::type>());
+				return convert<decltype(tag)::type,T>(const_cast<udm::PropertyWrapper*>(this)->GetValue<decltype(tag)::type>());
 			return {};
 		};
 		auto valueType = a.GetValueType();
