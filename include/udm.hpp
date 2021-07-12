@@ -1078,12 +1078,32 @@ namespace udm
 		const void *GetValues() const {return const_cast<Array*>(this)->GetValues();}
 		void Resize(uint32_t newSize);
 		void *GetValuePtr(uint32_t idx);
+		template<typename T>
+			T *GetValuePtr(uint32_t idx);
+		template<typename T>
+			const T *GetValuePtr(uint32_t idx) const {return const_cast<Array*>(this)->GetValuePtr<T>(idx);}
 		PropertyWrapper operator[](uint32_t idx);
 		const PropertyWrapper operator[](uint32_t idx) const {return const_cast<Array*>(this)->operator[](idx);}
 		template<typename T>
 			T &GetValue(uint32_t idx);
 		template<typename T>
 			const T &GetValue(uint32_t idx) const {return const_cast<Array*>(this)->GetValue<T>(idx);}
+		template<typename T>
+			void SetValue(uint32_t idx,const T &value);
+		template<typename T>
+			void SetValue(uint32_t idx,T &&value);
+		// The caller is responsible to ensure that the type of value matches the value type of the array!
+		void SetValue(uint32_t idx,const void *value);
+
+		bool IsEmpty() const {return m_size == 0;}
+		template<typename T>
+			T *GetFront() {return !IsEmpty() ? &GetValuePtr<T>(0u) : nullptr;}
+		template<typename T>
+			const T *GetFront() const {return const_cast<Array*>(this)->GetFront<T>();}
+		template<typename T>
+			T *GetBack() {return !IsEmpty() ? &GetValuePtr<T>(m_size -1) : nullptr;}
+		template<typename T>
+			const T *GetBack() const {return const_cast<Array*>(this)->GetBack<T>();}
 
 		template<typename T>
 			ArrayIterator<T> begin()
@@ -1110,8 +1130,6 @@ namespace udm
 		friend Property;
 		friend PropertyWrapper;
 		virtual void Clear();
-		template<typename T>
-			void SetValue(uint32_t idx,T &&v);
 
 		void *GetValuePtr();
 		const void *GetValuePtr() const {return const_cast<Array*>(this)->GetValuePtr();}
@@ -1868,6 +1886,22 @@ template<typename T>
 	auto str = tmp.str();
 	RemoveTrailingZeroes(str);
 	return str;
+}
+
+template<typename T>
+	void udm::Array::SetValue(uint32_t idx,const T &value)
+{
+	if(idx >= m_size)
+		throw OutOfBoundsError{"Array index " +std::to_string(idx) +" out of bounds of array of size " +std::to_string(m_size) +"!"};
+	(*this)[idx] = value;
+}
+
+template<typename T>
+	T *udm::Array::GetValuePtr(uint32_t idx)
+{
+	if(type_to_enum<T>() != m_valueType)
+		return nullptr;
+	return &GetValue<T>(idx);
 }
 
 template<typename T>

@@ -114,6 +114,17 @@ void *udm::Array::GetValuePtr(uint32_t idx)
 	return static_cast<uint8_t*>(GetValues()) +idx *GetValueSize();
 }
 
+void udm::Array::SetValue(uint32_t idx,const void *value)
+{
+	auto vs = [&](auto tag){SetValue<decltype(tag)::type>(idx,*static_cast<const decltype(tag)::type*>(value));};
+	if(is_numeric_type(m_valueType))
+		std::visit(vs,get_numeric_tag(m_valueType));
+	else if(is_generic_type(m_valueType))
+		std::visit(vs,get_generic_tag(m_valueType));
+	else if(is_non_trivial_type(m_valueType))
+		std::visit(vs,get_non_trivial_tag(m_valueType));
+}
+
 void udm::Array::Resize(uint32_t newSize)
 {
 	auto isStructType = (m_valueType == Type::Struct);
