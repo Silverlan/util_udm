@@ -21,6 +21,7 @@ namespace udm
 	struct AsciiException;
 	struct SyntaxError;
 	struct DataError;
+	struct Blob;
 	struct BlobLz4;
 	struct Utf8String;
 	enum class Type : uint8_t;

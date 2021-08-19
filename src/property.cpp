@@ -692,10 +692,8 @@ void udm::Property::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std
 			using T = decltype(tag)::type;
 			ss<<ToAsciiValue(flags,*static_cast<T*>(value),prefix);
 		};
-		if(is_generic_type(type))
-			std::visit(vs,get_generic_tag(type));
-		else if(is_non_trivial_type(type))
-			std::visit(vs,get_non_trivial_tag(type));
+		if(is_gnt_type(type))
+			visit_gnt(type,vs);
 	}
 }
 
@@ -732,9 +730,7 @@ void udm::Property::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std
 			using T = decltype(tag)::type;
 			ss<<ToAsciiValue(flags,*static_cast<T*>(value),prefix);
 		};
-		if(is_generic_type(type))
-			std::visit(vs,get_generic_tag(type));
-		else if(is_non_trivial_type(type))
-			std::visit(vs,get_non_trivial_tag(type));
+		if(is_gnt_type(type))
+			visit_gnt(type,vs);
 	}
 }

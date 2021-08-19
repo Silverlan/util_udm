@@ -1006,10 +1006,8 @@ void udm::Property::ArrayValuesToAscii(AsciiSaveFlags flags,std::stringstream &s
 				++ptr;
 			}
 		};
-		if(is_generic_type(valueType))
-			std::visit(vs,get_generic_tag(valueType));
-		else if(is_non_trivial_type(valueType))
-			std::visit(vs,get_non_trivial_tag(valueType));
+		if(is_gnt_type(valueType))
+			visit_gnt(valueType,vs);
 	}
 	ss<<"]";
 }

@@ -236,3 +236,31 @@ int32_t udm::IFile::WriteString(const std::string &str)
 	}
 	return 0;
 }
+
+//////////////
+
+void udm::detail::test_conversions()
+{
+	auto c = umath::to_integral(udm::Type::Count);
+	for(auto i=decltype(c){0u};i<c;++i)
+	{
+		auto t0 = static_cast<udm::Type>(i);
+		for(auto j=i +1;j<c;++j)
+		{
+			auto t1 = static_cast<udm::Type>(j);
+			udm::visit(t0,[&](auto tag) {
+				using T0 = decltype(tag)::type;
+				udm::visit(t1,[&](auto tag) {
+					using T1 = decltype(tag)::type;
+					if constexpr(!udm::detail::TypeConverter<T0,T1>::is_convertible)
+						std::cout<<magic_enum::enum_name(t0)<<" => "<<magic_enum::enum_name(t1)<<": "<<(udm::detail::TypeConverter<T0,T1>::is_convertible ? "defined" : "undefined")<<std::endl;
+					else
+					{
+						T1 value = udm::detail::TypeConverter<T0,T1>::convert(T0{});
+					}
+				});
+			});
+			
+		}
+	}
+}

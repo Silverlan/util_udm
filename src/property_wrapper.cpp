@@ -441,13 +441,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](uint32_t idx) const
 		return it.GetProperty();
 	};
 	auto valueType = a->GetValueType();
-	if(is_numeric_type(valueType))
-		return std::visit(vs,get_numeric_tag(valueType));
-	else if(is_generic_type(valueType))
-		return std::visit(vs,get_generic_tag(valueType));
-	else if(is_non_trivial_type(valueType))
-		return std::visit(vs,get_non_trivial_tag(valueType));
-	return {};
+	return visit(valueType,vs);
 }
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const char *key) const {return operator[](std::string{key});}
