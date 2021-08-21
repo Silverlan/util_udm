@@ -796,6 +796,7 @@ namespace udm
 		virtual Array &operator=(const Array &other);
 		
 		virtual void SetValueType(Type valueType);
+		virtual ArrayType GetArrayType() const {return ArrayType::Raw;}
 		bool IsValueType(Type pvalueType) const {return pvalueType == m_valueType;}
 		Type GetValueType() const {return m_valueType;}
 		uint32_t GetSize() const {return m_size;}
@@ -888,6 +889,7 @@ namespace udm
 		BlobLz4 &GetCompressedBlob();
 		virtual void *GetValues() override;
 		virtual void SetValueType(Type valueType) override;
+		virtual ArrayType GetArrayType() const {return ArrayType::Compressed;}
 		void ClearUncompressedMemory();
 		using Array::GetStructuredDataInfo;
 
