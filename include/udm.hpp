@@ -1528,7 +1528,7 @@ template<typename T>
 template<typename T>
 	T &udm::Property::GetValue(Type type)
 {
-	assert(data && this->type == type);
+	assert(value && this->type == type);
 	if(this->type != type && !(this->type == Type::ArrayLz4 && type == Type::Array))
 		throw LogicError{"Type mismatch, requested type is " +std::string{magic_enum::enum_name(type)} +", but actual type is " +std::string{magic_enum::enum_name(this->type)} +"!"};
 	return *GetValuePtr<T>();
