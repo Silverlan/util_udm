@@ -45,7 +45,7 @@ namespace udm
 	bool is_control_character(char c);
 	bool does_key_require_quotes(const std::string_view &key);
 
-	static constexpr auto ENABLE_COMPARISON_EXCEPTION = true;
+	static constexpr auto ENABLE_COMPARISON_EXCEPTION = false;
 
 	struct AsciiException
 		: public Exception
@@ -1255,6 +1255,10 @@ template<typename T>
 				auto &e = a.GetValue<Element>(arrayIndex);
 				if constexpr(type_to_enum_s<TBase>() != Type::Invalid)
 					e.children[static_cast<const LinkedPropertyWrapper*>(this)->propName] = Property::Create(v);
+				else if constexpr(std::is_same_v<TBase,PProperty>)
+					e.children[static_cast<const LinkedPropertyWrapper*>(this)->propName] = v;
+				else if constexpr(std::is_same_v<TBase,Property>)
+					e.children[static_cast<const LinkedPropertyWrapper*>(this)->propName] = std::make_shared<Property>(v);
 				else
 				{
 					auto it = e.children.find(static_cast<const LinkedPropertyWrapper*>(this)->propName);
