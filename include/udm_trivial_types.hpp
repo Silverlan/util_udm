@@ -111,7 +111,11 @@ namespace udm
 		Last = Count -1,
 		Invalid = std::numeric_limits<uint8_t>::max()
 	};
-	static std::array<Type,9> NON_TRIVIAL_TYPES = {Type::String,Type::Utf8String,Type::Blob,Type::BlobLz4,Type::Element,Type::Array,Type::ArrayLz4,Type::Reference,Type::Struct};
+	static constexpr std::array<Type,15> GENERIC_TYPES = {
+		Type::Vector2,Type::Vector3,Type::Vector4,Type::Vector2i,Type::Vector3i,Type::Vector4i,Type::Quaternion,
+		Type::EulerAngles,Type::Srgba,Type::HdrColor,Type::Transform,Type::ScaledTransform,Type::Mat4,Type::Mat3x4,Type::Nil
+	};
+	static constexpr std::array<Type,9> NON_TRIVIAL_TYPES = {Type::String,Type::Utf8String,Type::Blob,Type::BlobLz4,Type::Element,Type::Array,Type::ArrayLz4,Type::Reference,Type::Struct};
 
 	template<typename T>
 		concept is_vector_type = std::is_same_v<T,Vector2> || std::is_same_v<T,Vector2i> || std::is_same_v<T,Vector3> || std::is_same_v<T,Vector3i> || std::is_same_v<T,Vector4> || std::is_same_v<T,Vector4i>;
