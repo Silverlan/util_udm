@@ -7,6 +7,8 @@
 
 #include <cinttypes>
 #include <string>
+#include <variant>
+#include <map>
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
 #include "udm_exception.hpp"
@@ -120,7 +122,20 @@ namespace udm
 	template<typename T>
 		concept is_vector_type = std::is_same_v<T,Vector2> || std::is_same_v<T,Vector2i> || std::is_same_v<T,Vector3> || std::is_same_v<T,Vector3i> || std::is_same_v<T,Vector4> || std::is_same_v<T,Vector4i>;
 	template<typename T>
+		concept is_matrix_type = std::is_same_v<T,Mat4> || std::is_same_v<T,Mat3x4>;
+	template<typename T>
 		concept is_arithmetic = std::is_arithmetic_v<T> || std::is_same_v<T,Half>;
+
+	template<typename T>
+		using underlying_numeric_type = 
+			std::conditional_t<std::is_same_v<T,Half>,uint16_t,
+			std::conditional_t<is_arithmetic<T>,T,
+			std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T,Quaternion>,float,
+			std::conditional_t<std::is_same_v<T,Srgba>,uint8_t,
+			std::conditional_t<std::is_same_v<T,HdrColor>,uint16_t,
+			std::conditional_t<std::is_same_v<T,EulerAngles>,float,
+			void
+		>>>>>>;
 
 	template<typename T>
 		constexpr Type type_to_enum();
@@ -173,6 +188,37 @@ namespace udm
 			return true;
 	  }
 	  return false;
+	}
+
+	static constexpr uint8_t get_numeric_component_count(udm::Type type)
+	{
+		if(udm::is_numeric_type(type))
+			return 1;
+		switch(type)
+		{
+		case udm::Type::Vector2:
+		case udm::Type::Vector2i:
+			return 2;
+		case udm::Type::Vector3:
+		case udm::Type::Vector3i:
+		case udm::Type::EulerAngles:
+		case udm::Type::HdrColor:
+			return 3;
+		case udm::Type::Vector4:
+		case udm::Type::Vector4i:
+		case udm::Type::Quaternion:
+		case udm::Type::Srgba:
+			return 4;
+		case udm::Type::Transform:
+			return 7;
+		case udm::Type::ScaledTransform:
+			return 10;
+		case udm::Type::Mat3x4:
+			return 12;
+		case udm::Type::Mat4:
+			return 16;
+		}
+		return 0;
 	}
 
 	constexpr bool is_non_trivial_type(Type t)
@@ -380,7 +426,7 @@ template<typename T>
 		return Type::Element;
 	else if constexpr(std::is_same_v<T,Nil> || std::is_same_v<T,void>)
 		return Type::Nil;
-	else if constexpr(util::is_string<T>() || std::is_same_v<T,std::string_view>)
+	else if constexpr(util::is_string<T>::value || std::is_same_v<T,std::string_view>)
 		return Type::String;
 	else if constexpr(std::is_same_v<T,Utf8String>)
 		return Type::Utf8String;

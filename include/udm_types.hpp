@@ -5,6 +5,9 @@
 #ifndef __UDM_TYPES_HPP__
 #define __UDM_TYPES_HPP__
 
+#include <cinttypes>
+#include <memory>
+
 namespace udm
 {
 	struct Half;
