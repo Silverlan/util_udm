@@ -245,27 +245,27 @@ bool udm::Data::DebugTest()
 			std::vector<String> values;
 			aChanging(values);
 			if(values != std::vector<String>{String{"1,2,3"},String{"4,5,6"},String{"7,8,9"},String{"10,11,12"},String{"13,14,15"}})
-				throw Exception {"trivialChangingArray mismatch (1)"};
+				throw Exception {"nonTrivialChangingArray mismatch (1)"};
 
 			aChanging.Resize(8);
 			aChanging(values);
 			if(values != std::vector<String>{String{"1,2,3"},String{"4,5,6"},String{"7,8,9"},String{"10,11,12"},String{"13,14,15"},String{""},String{""},String{""}})
-				throw Exception {"trivialChangingArray mismatch (2)"};
+				throw Exception {"nonTrivialChangingArray mismatch (2)"};
 
 			aChanging.GetValue<udm::Array>().RemoveValue(1);
 			aChanging(values);
 			if(values != std::vector<String>{String{"1,2,3"},String{"7,8,9"},String{"10,11,12"},String{"13,14,15"},String{""},String{""},String{""}})
-				throw Exception {"trivialChangingArray mismatch (3)"};
+				throw Exception {"nonTrivialChangingArray mismatch (3)"};
 
 			aChanging.GetValue<udm::Array>().InsertValue(3,String{"5,5,5"});
 			aChanging(values);
 			if(values != std::vector<String>{String{"1,2,3"},String{"7,8,9"},String{"10,11,12"},String{"5,5,5"},String{"13,14,15"},String{""},String{""},String{""}})
-				throw Exception {"trivialChangingArray mismatch (4)"};
+				throw Exception {"nonTrivialChangingArray mismatch (4)"};
 
 			aChanging.Resize(4);
 			aChanging(values);
 			if(values != std::vector<String>{String{"1,2,3"},String{"7,8,9"},String{"10,11,12"},String{"5,5,5"}})
-				throw Exception {"trivialChangingArray mismatch (5)"};
+				throw Exception {"nonTrivialChangingArray mismatch (5)"};
 		}
 
 		if(*data != *data)
