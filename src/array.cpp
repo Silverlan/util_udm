@@ -6,7 +6,7 @@
 #include <lz4.h>
 #include <sharedutils/datastream.h>
 #include <sharedutils/scope_guard.h>
-
+#pragma optimize("",off)
 udm::Array::~Array() {Clear();}
 
 bool udm::Array::operator==(const Array &other) const
@@ -116,20 +116,51 @@ void *udm::Array::GetValuePtr(uint32_t idx)
 
 void udm::Array::SetValue(uint32_t idx,const void *value)
 {
-	auto vs = [&](auto tag){SetValue<decltype(tag)::type>(idx,*static_cast<const decltype(tag)::type*>(value));};
+	auto vs = [&](auto tag){SetValue(idx,*static_cast<const decltype(tag)::type*>(value));};
 	visit(m_valueType,vs);
 }
 
-void udm::Array::Resize(uint32_t newSize)
+void udm::Array::InsertValue(uint32_t idx,void *value)
+{
+	auto vs = [&](auto tag){InsertValue(idx,*static_cast<const decltype(tag)::type*>(value));};
+	visit(m_valueType,vs);
+}
+
+void udm::Array::RemoveValue(uint32_t idx)
+{
+	auto size = GetSize();
+	if(idx >= size)
+		return;
+	Range r0 {0 /* src */,0 /* dst */,idx};
+	Range r1 {idx +1 /* src */,idx /* dst */,size -1 -idx};
+	Resize(size -1,r0,r1,false);
+}
+
+template<typename T>
+	static void copy_non_trivial_data(const void *curValues,void *dataPtr,uint32_t sizeOfElement,uint32_t idxStartSrc,uint32_t idxStartDst,uint32_t count) {
+	for(uint32_t i=0;i<count;++i)
+		static_cast<T*>(dataPtr)[idxStartDst +i] = std::move(const_cast<T*>(static_cast<const T*>(curValues))[idxStartSrc +i]);
+};
+
+void udm::Array::Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializeNewValues)
 {
 	auto isStructType = (m_valueType == Type::Struct);
 	if(newSize == m_size && (!isStructType || m_values))
 		return;
 	auto headerSize = GetHeaderSize();
+	auto cpyData = [&r0,&r1](const void *curValues,void *dataPtr,uint32_t sizeOfElement,void(*fCpy)(const void*,void*,uint32_t,uint32_t,uint32_t,uint32_t)) {
+		if(std::get<0>(r1) == std::get<0>(r0) +std::get<2>(r0) && std::get<1>(r1) == std::get<1>(r0) +std::get<2>(r0)) // Check if no gap between both ranges (i.e. startSrc1 = startSrc0 +count0)
+			fCpy(curValues,dataPtr,sizeOfElement,std::get<0>(r0),std::get<1>(r0),std::get<2>(r0) +std::get<2>(r1)); // We can copy both ranges at once
+		else
+		{
+			fCpy(curValues,dataPtr,sizeOfElement,std::get<0>(r0),std::get<1>(r0),std::get<2>(r0));
+			fCpy(curValues,dataPtr,sizeOfElement,std::get<0>(r1),std::get<1>(r1),std::get<2>(r1));
+		}
+	};
 	if(is_non_trivial_type(m_valueType))
 	{
 		auto tag = get_non_trivial_tag(m_valueType);
-		return std::visit([this,newSize,isStructType,headerSize](auto tag) {
+		return std::visit([this,newSize,isStructType,headerSize,defaultInitializeNewValues,&r0,&r1,&cpyData](auto tag) mutable {
 			using T = decltype(tag)::type;
 			auto *newValues = AllocateData(newSize *sizeof(T));
 			//for(auto i=decltype(newSize){0u};i<newSize;++i)
@@ -147,10 +178,18 @@ void udm::Array::Resize(uint32_t newSize)
 			if(curValues)
 			{
 				auto numCpy = umath::min(newSize,m_size);
-				for(auto i=decltype(numCpy){0u};i<numCpy;++i)
-					dataPtr[i] = std::move(const_cast<T*>(static_cast<T*>(curValues))[i]);
-				for(auto i=m_size;i<newSize;++i)
-					dataPtr[i] = T{}; // Default initialize
+				cpyData(curValues,dataPtr,0,copy_non_trivial_data<T>);
+				if constexpr(is_non_trivial_type(type_to_enum<T>()))
+					defaultInitializeNewValues = false; // Non-trivial data has already been default-initialized by AllocateData
+				if(defaultInitializeNewValues)
+				{
+					for(uint32_t i=0;i<std::get<1>(r0);++i)
+						dataPtr[i] = T{}; // Default initialize all new prefix items
+					for(auto i=std::get<1>(r0) +std::get<2>(r0);i<std::get<1>(r1);++i)
+						dataPtr[i] = T{}; // Default initialize all items within ranges
+					for(auto i=std::get<1>(r1) +std::get<2>(r1);i<newSize;++i)
+						dataPtr[i] = T{}; // Default initialize all new postfix items
+				}
 			}
 			Clear();
 			m_values = newValues;
@@ -175,14 +214,28 @@ void udm::Array::Resize(uint32_t newSize)
 		auto *dataPtr = newValues;
 		if(isStructType)
 			dataPtr += sizeof(StructDescription**);
-		auto cpySizeBytes = umath::min(m_size *size_of(m_valueType),sizeBytes);
-		memcpy(dataPtr,curValues,cpySizeBytes);
-		if(sizeBytes > cpySizeBytes)
-			memset(dataPtr +cpySizeBytes,0,sizeBytes -cpySizeBytes);
+		auto sizeOfElement = size_of(m_valueType);
+		cpyData(curValues,dataPtr,sizeOfElement,[](const void *curValues,void *dataPtr,uint32_t sizeOfElement,uint32_t idxStartSrc,uint32_t idxStartDst,uint32_t count) {
+			memcpy(static_cast<uint8_t*>(dataPtr) +idxStartDst *sizeOfElement,static_cast<const uint8_t*>(curValues) +idxStartSrc *sizeOfElement,count *sizeOfElement);
+		});
+		if(defaultInitializeNewValues)
+		{
+			memset(dataPtr,0,std::get<1>(r0) *sizeOfElement); // Default initialize all new prefix items
+			memset(dataPtr +(std::get<1>(r0) +std::get<2>(r0)) *sizeOfElement,0,(std::get<1>(r1) -(std::get<1>(r0) +std::get<2>(r0))) *sizeOfElement); // Default initialize all items within ranges
+			memset(dataPtr +(std::get<1>(r1) +std::get<2>(r1)) *sizeOfElement,0,(newSize -(std::get<1>(r1) +std::get<2>(r1))) *sizeOfElement); // Default initialize all new postfix items
+		}
 		Clear();
 	}
 	m_values = newValues;
 	m_size = newSize;
+}
+
+void udm::Array::Resize(uint32_t newSize)
+{
+	auto size = umath::min(GetSize(),newSize);
+	Range r0 {0,0,size};
+	Range r1 {size,size,0};
+	Resize(newSize,r0,r1,true);
 }
 
 udm::PropertyWrapper udm::Array::operator[](uint32_t idx)
@@ -507,3 +560,4 @@ void udm::ArrayLz4::Clear()
 	}
 	Array::Clear();
 }
+#pragma optimize("",on)

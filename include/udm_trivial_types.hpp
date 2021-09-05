@@ -113,6 +113,14 @@ namespace udm
 		Last = Count -1,
 		Invalid = std::numeric_limits<uint8_t>::max()
 	};
+	static constexpr std::array<Type,12> NUMERIC_TYPES = {
+		Type::Int8,Type::UInt8,
+		Type::Int16,Type::UInt16,
+		Type::Int32,Type::UInt32,
+		Type::Int64,Type::UInt64,
+		Type::Float,Type::Double,
+		Type::Boolean,Type::Half
+	};
 	static constexpr std::array<Type,15> GENERIC_TYPES = {
 		Type::Vector2,Type::Vector3,Type::Vector4,Type::Vector2i,Type::Vector3i,Type::Vector4i,Type::Quaternion,
 		Type::EulerAngles,Type::Srgba,Type::HdrColor,Type::Transform,Type::ScaledTransform,Type::Mat4,Type::Mat3x4,Type::Nil

@@ -816,11 +816,13 @@ namespace udm
 		template<typename T>
 			const T &GetValue(uint32_t idx) const {return const_cast<Array*>(this)->GetValue<T>(idx);}
 		template<typename T>
-			void SetValue(uint32_t idx,const T &value);
-		template<typename T>
 			void SetValue(uint32_t idx,T &&value);
+		template<typename T>
+			void InsertValue(uint32_t idx,T &&value);
+		void RemoveValue(uint32_t idx);
 		// The caller is responsible to ensure that the type of value matches the value type of the array!
 		void SetValue(uint32_t idx,const void *value);
+		void InsertValue(uint32_t idx,void *value);
 
 		bool IsEmpty() const {return m_size == 0;}
 		template<typename T>
@@ -857,6 +859,8 @@ namespace udm
 		friend Property;
 		friend PropertyWrapper;
 		virtual void Clear();
+		using Range = std::tuple<uint32_t,uint32_t,uint32_t>;
+		void Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializeNewValues);
 
 		void *GetValuePtr();
 		const void *GetValuePtr() const {return const_cast<Array*>(this)->GetValuePtr();}
@@ -1398,14 +1402,6 @@ template<typename T>
 }
 
 template<typename T>
-	void udm::Array::SetValue(uint32_t idx,const T &value)
-{
-	if(idx >= m_size)
-		throw OutOfBoundsError{"Array index " +std::to_string(idx) +" out of bounds of array of size " +std::to_string(m_size) +"!"};
-	(*this)[idx] = value;
-}
-
-template<typename T>
 	T *udm::Array::GetValuePtr(uint32_t idx)
 {
 	if(type_to_enum<T>() != m_valueType)
@@ -1430,6 +1426,21 @@ template<typename T>
 }
 
 template<typename T>
+	void udm::Array::InsertValue(uint32_t idx,T &&value)
+{
+	auto size = GetSize();
+	if(idx > size)
+		return;
+	Range r0 {0 /* src */,0 /* dst */,idx};
+	Range r1 {idx /* src */,idx +1 /* dst */,size -idx};
+	Resize(size +1,r0,r1,false);
+	if constexpr(std::is_rvalue_reference_v<T>)
+		(*this)[idx] = std::move(value);
+	else
+		(*this)[idx] = value;
+}
+
+template<typename T>
 	void udm::Array::SetValue(uint32_t idx,T &&v)
 {
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -1441,7 +1452,10 @@ template<typename T>
 			auto sz = GetStructuredDataInfo()->GetDataSizeRequirement();
 			if(sizeof(T) != sz)
 				throw LogicError{"Attempted to assign data of size " +std::to_string(sizeof(T)) +" to struct of size " +std::to_string(sz) +"!"};
-			static_cast<TBase*>(GetValues())[idx] = std::move(v);
+			if constexpr(std::is_rvalue_reference_v<T>)
+				static_cast<TBase*>(GetValues())[idx] = std::move(v);
+			else
+				static_cast<TBase*>(GetValues())[idx] = v;
 		}
 		else
 			throw LogicError{"Attempted to assign fundamental type '" +std::string{typeid(T).name()} +"' to struct, this is not allowed!"};

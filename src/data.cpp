@@ -5,7 +5,7 @@
 #include "udm.hpp"
 #include <sharedutils/magic_enum.hpp>
 
-
+#pragma optimize("",off)
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName,std::string &outErr)
 {
 	auto f = FileManager::OpenFile(fileName.c_str(),"rb");
@@ -211,6 +211,62 @@ bool udm::Data::DebugTest()
 			structDef,
 			structuredData,ArrayType::Compressed
 		);
+
+		{
+			auto aChanging = udmData.AddArray<Vector3>("trivialChangingArray",std::vector<Vector3>{Vector3{1,2,3},Vector3{4,5,6},Vector3{7,8,9},Vector3{10,11,12},Vector3{13,14,15}});
+			std::vector<Vector3> values;
+			aChanging(values);
+			if(values != std::vector<Vector3>{Vector3{1,2,3},Vector3{4,5,6},Vector3{7,8,9},Vector3{10,11,12},Vector3{13,14,15}})
+				throw Exception {"trivialChangingArray mismatch (1)"};
+
+			aChanging.Resize(8);
+			aChanging(values);
+			if(values != std::vector<Vector3>{Vector3{1,2,3},Vector3{4,5,6},Vector3{7,8,9},Vector3{10,11,12},Vector3{13,14,15},Vector3{},Vector3{},Vector3{}})
+				throw Exception {"trivialChangingArray mismatch (2)"};
+
+			aChanging.GetValue<udm::Array>().RemoveValue(1);
+			aChanging(values);
+			if(values != std::vector<Vector3>{Vector3{1,2,3},Vector3{7,8,9},Vector3{10,11,12},Vector3{13,14,15},Vector3{},Vector3{},Vector3{}})
+				throw Exception {"trivialChangingArray mismatch (3)"};
+
+			aChanging.GetValue<udm::Array>().InsertValue(3,Vector3{5,5,5});
+			aChanging(values);
+			if(values != std::vector<Vector3>{Vector3{1,2,3},Vector3{7,8,9},Vector3{10,11,12},Vector3{5,5,5},Vector3{13,14,15},Vector3{},Vector3{},Vector3{}})
+				throw Exception {"trivialChangingArray mismatch (4)"};
+
+			aChanging.Resize(4);
+			aChanging(values);
+			if(values != std::vector<Vector3>{Vector3{1,2,3},Vector3{7,8,9},Vector3{10,11,12},Vector3{5,5,5}})
+				throw Exception {"trivialChangingArray mismatch (5)"};
+		}
+
+		{
+			auto aChanging = udmData.AddArray<String>("nonTrivialChangingArray",std::vector<String>{String{"1,2,3"},String{"4,5,6"},String{"7,8,9"},String{"10,11,12"},String{"13,14,15"}});
+			std::vector<String> values;
+			aChanging(values);
+			if(values != std::vector<String>{String{"1,2,3"},String{"4,5,6"},String{"7,8,9"},String{"10,11,12"},String{"13,14,15"}})
+				throw Exception {"trivialChangingArray mismatch (1)"};
+
+			aChanging.Resize(8);
+			aChanging(values);
+			if(values != std::vector<String>{String{"1,2,3"},String{"4,5,6"},String{"7,8,9"},String{"10,11,12"},String{"13,14,15"},String{""},String{""},String{""}})
+				throw Exception {"trivialChangingArray mismatch (2)"};
+
+			aChanging.GetValue<udm::Array>().RemoveValue(1);
+			aChanging(values);
+			if(values != std::vector<String>{String{"1,2,3"},String{"7,8,9"},String{"10,11,12"},String{"13,14,15"},String{""},String{""},String{""}})
+				throw Exception {"trivialChangingArray mismatch (3)"};
+
+			aChanging.GetValue<udm::Array>().InsertValue(3,String{"5,5,5"});
+			aChanging(values);
+			if(values != std::vector<String>{String{"1,2,3"},String{"7,8,9"},String{"10,11,12"},String{"5,5,5"},String{"13,14,15"},String{""},String{""},String{""}})
+				throw Exception {"trivialChangingArray mismatch (4)"};
+
+			aChanging.Resize(4);
+			aChanging(values);
+			if(values != std::vector<String>{String{"1,2,3"},String{"7,8,9"},String{"10,11,12"},String{"5,5,5"}})
+				throw Exception {"trivialChangingArray mismatch (5)"};
+		}
 
 		if(*data != *data)
 			throw Exception {"Internal library error: UDM data does not match itself?"};
@@ -695,3 +751,4 @@ void udm::VFilePtr::Seek(size_t offset,Whence whence)
 	return m_file->Seek(offset,SEEK_SET);
 }
 int32_t udm::VFilePtr::ReadChar() {return m_file->ReadChar();}
+#pragma optimize("",on)
