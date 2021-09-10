@@ -4,6 +4,7 @@
 
 #include "udm.hpp"
 #include <sharedutils/magic_enum.hpp>
+#include <sharedutils/util_string.h>
 
 #pragma optimize("",off)
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName,std::string &outErr)

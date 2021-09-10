@@ -4,6 +4,7 @@
 
 #include "udm.hpp"
 #include <sharedutils/base64.hpp>
+#include <sharedutils/util_string.h>
 #include <sstream>
 
 namespace udm

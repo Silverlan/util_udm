@@ -19,7 +19,6 @@
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
 #include <sharedutils/util.h>
-#include <sharedutils/util_string.h>
 #include <sharedutils/magic_enum.hpp>
 #include <fsys/filesystem.h>
 #include "udm_types.hpp"
@@ -39,7 +38,7 @@
 namespace udm
 {
 	static std::string CONTROL_CHARACTERS = "{}[]<>$,:;";
-	static std::string WHITESPACE_CHARACTERS = ustring::WHITESPACE;
+	static std::string WHITESPACE_CHARACTERS = " \t\f\v\n\r";
 	static constexpr auto PATH_SEPARATOR = '/';
 	bool is_whitespace_character(char c);
 	bool is_control_character(char c);
@@ -495,7 +494,10 @@ namespace udm
 					auto *ptr = GetValuePtr<std::string>();
 					if(ptr)
 					{
-						valOut = ustring::string_to_enum<TEnum>(*ptr,valOut);
+						auto e = magic_enum::enum_cast<TEnum>(*ptr);
+						if(!e.has_value())
+							return false;
+						valOut = *e;
 						return true;
 					}
 					bool isDefined;
