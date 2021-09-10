@@ -353,8 +353,11 @@ namespace udm
 		static uint32_t GetStringPrefixSizeRequirement(const String &str);
 		static uint32_t GetStringSizeRequirement(const String &str);
 	private:
+		friend PropertyWrapper;
 		bool ReadStructHeader(IFile &f,StructDescription &strct);
 		static void WriteStructHeader(IFile &f,const StructDescription &strct);
+		template<bool ENABLE_EXCEPTIONS,typename T>
+			bool Assign(T &&v);
 
 		template<typename T>
 			static uint64_t WriteBlockSize(IFile &f);
@@ -470,16 +473,22 @@ namespace udm
 			T *GetValuePtr() const;
 		void *GetValuePtr(Type &outType) const;
 		template<typename T>
-			T ToValue(const T &defaultValue) const;
+			T ToValue(const T &defaultValue,bool *optOutIsDefined=nullptr) const;
 		template<typename T>
 			std::optional<T> ToValue() const;
 		template<typename T>
 			T operator()(const T &defaultValue) const {return ToValue<T>(defaultValue);}
 		template<typename T>
-			void operator()(T &valOut) const
+			T operator()(const T &defaultValue,bool &outIsDefined) const {return ToValue<T>(defaultValue,&outIsDefined);}
+		template<typename T>
+			bool operator()(T &valOut) const
 			{
 				if constexpr(util::is_specialization<T,std::vector>::value || util::is_specialization<T,std::map>::value || util::is_specialization<T,std::unordered_map>::value)
-					valOut = std::move((*this)(const_cast<const T&>(valOut)));
+				{
+					bool isDefined;
+					valOut = std::move((*this)(const_cast<const T&>(valOut),isDefined));
+					return isDefined;
+				}
 				else if constexpr(std::is_enum_v<std::remove_reference_t<T>>)
 				{
 					using TEnum = std::remove_reference_t<T>;
@@ -487,27 +496,37 @@ namespace udm
 					if(ptr)
 					{
 						valOut = ustring::string_to_enum<TEnum>(*ptr,valOut);
-						return;
+						return true;
 					}
-					valOut = static_cast<TEnum>((*this)(reinterpret_cast<const std::underlying_type_t<TEnum>&>(valOut)));
+					bool isDefined;
+					valOut = static_cast<TEnum>((*this)(reinterpret_cast<const std::underlying_type_t<TEnum>&>(valOut),isDefined));
+					return isDefined;
 				}
 				else if constexpr(std::is_same_v<std::remove_reference_t<T>,PProperty>)
 				{
-					if(prop)
-						*valOut = *prop;
+					if(!prop)
+						return false;
+					valOut->Assign<false>(*prop);
+					return true;
 				}
 				else if constexpr(std::is_same_v<std::remove_reference_t<T>,Property>)
 				{
-					if(prop)
-						valOut = *prop;
+					if(!prop)
+						return false;
+					valOut.Assign<false>(*prop);
+					return true;
 				}
 				else
 				{
 					auto *ptr = GetValuePtr<T>();
 					if(ptr)
+					{
 						valOut = *ptr;
-					else
-						valOut = (*this)(const_cast<const T&>(valOut));
+						return true;
+					}
+					bool isDefined;
+					valOut = (*this)(const_cast<const T&>(valOut),isDefined);
+					return isDefined;
 				}
 			}
 		
@@ -1173,15 +1192,20 @@ namespace udm
 REGISTER_BASIC_BITWISE_OPERATORS(udm::AsciiSaveFlags)
 REGISTER_BASIC_BITWISE_OPERATORS(udm::MergeFlags)
 
-template<typename T>
-	void udm::Property::operator=(T &&v)
+template<bool ENABLE_EXCEPTIONS,typename T>
+	bool udm::Property::Assign(T &&v)
 {
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	if constexpr(util::is_specialization<TBase,std::vector>::value)
 	{
 		using TValueType = TBase::value_type;
 		if(!is_array_type(type))
-			throw InvalidUsageError{"Attempted to assign vector to non-array property (of type " +std::string{magic_enum::enum_name(type)} +"), this is not allowed!"};
+		{
+			if constexpr(ENABLE_EXCEPTIONS)
+				throw InvalidUsageError{"Attempted to assign vector to non-array property (of type " +std::string{magic_enum::enum_name(type)} +"), this is not allowed!"};
+			else
+				return false;
+		}
 		auto valueType = type_to_enum<TValueType>();
 		auto size = v.size();
 		auto &a = *static_cast<Array*>(value);
@@ -1190,7 +1214,12 @@ template<typename T>
 		a.Resize(size);
 
 		if(size_of_base_type(valueType) != sizeof(TBase::value_type))
-			throw InvalidUsageError{"Type size mismatch!"};
+		{
+			if constexpr(ENABLE_EXCEPTIONS)
+				throw InvalidUsageError{"Type size mismatch!"};
+			else
+				return false;
+		}
 		auto vs = [this,&a,&v](auto tag) {
 			using TTag = decltype(tag)::type;
 			memcpy(a.GetValues(),v.data(),v.size() *sizeof(v[0]));
@@ -1203,25 +1232,48 @@ template<typename T>
 			for(auto i=decltype(size){0u};i<size;++i)
 				a[i] = v[i];
 		}
-		return;
+		else
+			return false;
+		return true;
 	}
 	else if constexpr(util::is_specialization<TBase,std::unordered_map>::value || util::is_specialization<TBase,std::map>::value)
 	{
 		if(type != Type::Element)
-			throw InvalidUsageError{"Attempted to assign map to non-element property (of type " +std::string{magic_enum::enum_name(type)} +"), this is not allowed!"};
+		{
+			if constexpr(ENABLE_EXCEPTIONS)
+				throw InvalidUsageError{"Attempted to assign map to non-element property (of type " +std::string{magic_enum::enum_name(type)} +"), this is not allowed!"};
+			else
+				return false;
+		}
 		for(auto &pair : v)
 			(*this)[pair.first] = pair.second;
-		return;
+		return true;
 	}
 	auto vType = type_to_enum_s<TBase>();
 	if(vType == Type::Invalid)
-		throw LogicError{"Attempted to assign value of type '" +std::string{typeid(T).name()} +"', which is not a recognized type!"};
+	{
+		if constexpr(ENABLE_EXCEPTIONS)
+			throw LogicError{"Attempted to assign value of type '" +std::string{typeid(T).name()} +"', which is not a recognized type!"};
+		else
+			return false;
+	}
 	auto vs = [this,&v](auto tag) {
 		using TTag = decltype(tag)::type;
 		if constexpr(is_convertible<TBase,TTag>())
+		{
 			*static_cast<TTag*>(value) = convert<TBase,TTag>(v);
+			return true;
+		}
+		else
+			return false;
 	};
-	visit(vType,vs);
+	return visit(vType,vs);
+}
+
+template<typename T>
+	void udm::Property::operator=(T &&v)
+{
+	Assign<true,T>(v);
 }
 
 template<typename T>
@@ -1698,12 +1750,24 @@ template<typename T>
 	return prop ? (*this)->GetValuePtr<T>() : nullptr;
 }
 template<typename T>
-	T udm::PropertyWrapper::ToValue(const T &defaultValue) const
+	T udm::PropertyWrapper::ToValue(const T &defaultValue,bool *optOutIsDefined) const
 {
 	if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+	{
+		if(optOutIsDefined)
+			*optOutIsDefined = false;
 		return defaultValue;
+	}
 	auto val = ToValue<T>();
-	return val.has_value() ? std::move(val.value()) : defaultValue;
+	if(val.has_value())
+	{
+		if(optOutIsDefined)
+			*optOutIsDefined = true;
+		return std::move(val.value());
+	}
+	if(optOutIsDefined)
+		*optOutIsDefined = false;
+	return defaultValue;
 }
 
 template<typename T>
