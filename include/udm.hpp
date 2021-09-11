@@ -847,11 +847,11 @@ namespace udm
 
 		bool IsEmpty() const {return m_size == 0;}
 		template<typename T>
-			T *GetFront() {return !IsEmpty() ? &GetValuePtr<T>(0u) : nullptr;}
+			T *GetFront() {return !IsEmpty() ? GetValuePtr<T>(0u) : nullptr;}
 		template<typename T>
 			const T *GetFront() const {return const_cast<Array*>(this)->GetFront<T>();}
 		template<typename T>
-			T *GetBack() {return !IsEmpty() ? &GetValuePtr<T>(m_size -1) : nullptr;}
+			T *GetBack() {return !IsEmpty() ? GetValuePtr<T>(m_size -1) : nullptr;}
 		template<typename T>
 			const T *GetBack() const {return const_cast<Array*>(this)->GetBack<T>();}
 
