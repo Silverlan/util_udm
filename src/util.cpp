@@ -245,7 +245,7 @@ void udm::detail::test_conversions()
 	for(auto i=decltype(c){0u};i<c;++i)
 	{
 		auto t0 = static_cast<udm::Type>(i);
-		for(auto j=i +1;j<c;++j)
+		for(auto j=decltype(c){0u};j<c;++j)
 		{
 			auto t1 = static_cast<udm::Type>(j);
 			udm::visit(t0,[&](auto tag) {

@@ -281,6 +281,46 @@ namespace udm
 				}
 			}
 		};
+
+		template<typename T0,typename T1> requires(
+			(
+				std::is_arithmetic_v<T0> || umath::is_vector_type<T0> || umath::is_matrix_type<T0> || std::is_same_v<T0,Quat> || std::is_same_v<T0,EulerAngles> ||
+				std::is_same_v<T0,Srgba> || std::is_same_v<T0,HdrColor> || std::is_same_v<T0,Transform> || std::is_same_v<T0,ScaledTransform> || std::is_same_v<T0,Reference> ||
+				std::is_same_v<T0,Half> || std::is_same_v<T0,Nil>
+			) && 
+			std::is_same_v<T1,String>
+		)
+		struct TypeConverter<T0,T1>
+		{
+			static constexpr auto is_convertible = true;
+			static T1 convert(const T0 &v0)
+			{
+				if constexpr(std::is_arithmetic_v<T0>)
+					return std::to_string(v0);
+				else if constexpr(umath::is_vector_type<T0>)
+					return uvec::to_string<T0>(v0,' ');
+				else if constexpr(umath::is_matrix_type<T0>)
+					return umat::to_string<T0>(v0,' ');
+				else if constexpr(std::is_same_v<T0,Quat>)
+					return uquat::to_string(v0,' ');
+				else if constexpr(std::is_same_v<T0,EulerAngles>)
+					return std::to_string(v0.p) +' ' +std::to_string(v0.y) +' ' +std::to_string(v0.r);
+				else if constexpr(std::is_same_v<T0,Srgba>)
+					return std::to_string(v0[0]) +' ' +std::to_string(v0[1]) +' ' +std::to_string(v0[2]) +' ' +std::to_string(v0[3]);
+				else if constexpr(std::is_same_v<T0,HdrColor>)
+					return std::to_string(v0[0]) +' ' +std::to_string(v0[1]) +' ' +std::to_string(v0[2]);
+				else if constexpr(std::is_same_v<T0,Transform>)
+					return '[' +uvec::to_string<Vector3>(v0.GetOrigin(),' ') +"][" +uquat::to_string(v0.GetRotation(),' ') +']';
+				else if constexpr(std::is_same_v<T0,ScaledTransform>)
+					return '[' +uvec::to_string<Vector3>(v0.GetOrigin(),' ') +"][" +uquat::to_string(v0.GetRotation(),' ') +"][" +uvec::to_string<Vector3>(v0.GetScale(),' ') +']';
+				else if constexpr(std::is_same_v<T0,Reference>)
+					return v0.path;
+				else if constexpr(std::is_same_v<T0,Half>)
+					return std::to_string(v0.value);
+				else if constexpr(std::is_same_v<T0,Nil>)
+					return "nil";
+			}
+		};
 	};
 	template<typename TFrom,typename TTo>
 		constexpr bool is_convertible()
