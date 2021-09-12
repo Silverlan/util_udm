@@ -6,7 +6,7 @@
 #include <lz4.h>
 #include <sharedutils/datastream.h>
 #include <sharedutils/scope_guard.h>
-#pragma optimize("",off)
+
 udm::Array::~Array() {Clear();}
 
 bool udm::Array::operator==(const Array &other) const
@@ -560,4 +560,3 @@ void udm::ArrayLz4::Clear()
 	}
 	Array::Clear();
 }
-#pragma optimize("",on)
