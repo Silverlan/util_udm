@@ -281,6 +281,16 @@ namespace udm
 				}
 			}
 		};
+		
+		template<typename T0,typename T1> requires(std::is_same_v<T0,T1> && (std::is_same_v<T0,Srgba> || std::is_same_v<T0,HdrColor>))
+		struct TypeConverter<T0,T1>
+		{
+			static constexpr auto is_convertible = true;
+			static T1 convert(const T0 &v0)
+			{
+				return v0;
+			}
+		};
 
 		template<typename T0,typename T1> requires(
 			(
