@@ -49,6 +49,13 @@ using UdmData = BaseUdmData*;
 using UdmProperty = BaseProperty*;
 using UdmType = std::underlying_type_t<udm::Type>;
 using UdmArrayType = std::underlying_type_t<udm::ArrayType>;
+struct BaseUdmElementIterator
+{
+	UdmProperty prop;
+	udm::ElementIteratorWrapper wrapper;
+	udm::ElementIterator it;
+};
+using UdmElementIterator = BaseUdmElementIterator*;
 template<typename T>
 	using UdmUnderlyingType = std::conditional_t<std::is_same_v<T,udm::Transform> || std::is_same_v<T,udm::ScaledTransform>,float,udm::underlying_numeric_type<T>>;
 static char *to_cstring(BaseUdmData &data,const std::string &str)
@@ -275,6 +282,29 @@ extern "C" {
 	{
 		return static_cast<bool>(get_property(prop,path));
 	}
+	DLLUDM UdmType udm_get_property_type(UdmProperty prop,const char *path)
+	{
+		auto p = get_property(prop,path);
+		return umath::to_integral(p.GetType());
+	}
+	DLLUDM UdmElementIterator udm_create_property_child_name_iterator(UdmProperty prop,const char *path)
+	{
+		auto elIt = prop->prop.ElIt();
+		auto it = elIt.begin();
+		auto *i = new BaseUdmElementIterator{prop,elIt,it};
+		prop->data.AddDeleter([i]() {delete i;});
+		return i;
+	}
+	DLLUDM void udm_destroy_property_child_name_iterator(UdmElementIterator it) {delete it;}
+	DLLUDM const char *udm_fetch_property_child_name(UdmElementIterator iterator)
+	{
+		if(iterator->it == iterator->wrapper.end())
+			return nullptr;
+		auto &pair = *iterator->it;
+		auto *cstr = to_cstring(iterator->prop->data,std::string{pair.key});
+		++iterator->it;
+		return cstr;
+	}
 	
 	DLLUDM UdmProperty udm_get_root_property(UdmData parent)
 	{
@@ -460,6 +490,11 @@ void udm::detail::test_c_wrapper()
 	auto *udm_get_array_size = lib->FindSymbolAddress<uint32_t(*)(UdmProperty,const char*)>("udm_get_array_size");
 	auto *udm_set_array_size = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,uint32_t)>("udm_set_array_size");
 	auto *udm_get_struct_member_types = lib->FindSymbolAddress<UdmType*(*)(UdmProperty,const char*,uint32_t*)>("udm_get_struct_member_types");
+	
+	auto *udm_get_property_type = lib->FindSymbolAddress<UdmType(*)(UdmProperty,const char*)>("udm_get_property_type");
+	auto *udm_create_property_child_name_iterator = lib->FindSymbolAddress<UdmElementIterator(*)(UdmProperty,const char*)>("udm_create_property_child_name_iterator");
+	auto *udm_destroy_property_child_name_iterator = lib->FindSymbolAddress<void(*)(UdmElementIterator)>("udm_destroy_property_child_name_iterator");
+	auto *udm_fetch_property_child_name = lib->FindSymbolAddress<const char*(*)(UdmElementIterator)>("udm_fetch_property_child_name");
 
 	// Example
 
