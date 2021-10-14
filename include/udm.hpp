@@ -5,6 +5,7 @@
 #ifndef __UDM_HPP__
 #define __UDM_HPP__
 
+#include "udm_definitions.hpp"
 #include <array>
 #include <cinttypes>
 #include <vector>
@@ -40,13 +41,13 @@ namespace udm
 	static std::string CONTROL_CHARACTERS = "{}[]<>$,:;";
 	static std::string WHITESPACE_CHARACTERS = " \t\f\v\n\r";
 	static constexpr auto PATH_SEPARATOR = '/';
-	bool is_whitespace_character(char c);
-	bool is_control_character(char c);
-	bool does_key_require_quotes(const std::string_view &key);
+	DLLUDM bool is_whitespace_character(char c);
+	DLLUDM bool is_control_character(char c);
+	DLLUDM bool does_key_require_quotes(const std::string_view &key);
 
 	static constexpr auto ENABLE_COMPARISON_EXCEPTION = false;
 
-	struct AsciiException
+	struct DLLUDM AsciiException
 		: public Exception
 	{
 		AsciiException(const std::string &msg,uint32_t lineIdx,uint32_t charIdx);
@@ -54,10 +55,10 @@ namespace udm
 		uint32_t charIndex = 0;
 	};
 
-	struct SyntaxError : public AsciiException {using AsciiException::AsciiException;};
-	struct DataError : public AsciiException {using AsciiException::AsciiException;};
+	struct DLLUDM SyntaxError : public AsciiException {using AsciiException::AsciiException;};
+	struct DLLUDM DataError : public AsciiException {using AsciiException::AsciiException;};
 
-	struct Blob
+	struct DLLUDM Blob
 	{
 		Blob()=default;
 		Blob(const Blob&)=default;
@@ -79,7 +80,7 @@ namespace udm
 		bool operator!=(const Blob &other) const {return !operator==(other);}
 	};
 
-	struct BlobLz4
+	struct DLLUDM BlobLz4
 	{
 		BlobLz4()=default;
 		BlobLz4(const BlobLz4&)=default;
@@ -102,7 +103,7 @@ namespace udm
 		bool operator!=(const BlobLz4 &other) const {return !operator==(other);}
 	};
 
-	struct Utf8String
+	struct DLLUDM Utf8String
 	{
 		Utf8String()=default;
 		Utf8String(std::vector<uint8_t> &&data)
@@ -227,21 +228,21 @@ namespace udm
 		}
 		static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 	}
-	Type ascii_type_to_enum(const std::string_view &type);
-	void sanitize_key_name(std::string &key);
+	DLLUDM Type ascii_type_to_enum(const std::string_view &type);
+	DLLUDM void sanitize_key_name(std::string &key);
 
-	Blob decompress_lz4_blob(const BlobLz4 &data);
-	Blob decompress_lz4_blob(const void *compressedData,uint64_t compressedSize,uint64_t uncompressedSize);
-	void decompress_lz4_blob(const void *compressedData,uint64_t compressedSize,uint64_t uncompressedSize,void *outData);
-	BlobLz4 compress_lz4_blob(const Blob &data);
-	BlobLz4 compress_lz4_blob(const void *data,uint64_t size);
+	DLLUDM Blob decompress_lz4_blob(const BlobLz4 &data);
+	DLLUDM Blob decompress_lz4_blob(const void *compressedData,uint64_t compressedSize,uint64_t uncompressedSize);
+	DLLUDM void decompress_lz4_blob(const void *compressedData,uint64_t compressedSize,uint64_t uncompressedSize,void *outData);
+	DLLUDM BlobLz4 compress_lz4_blob(const Blob &data);
+	DLLUDM BlobLz4 compress_lz4_blob(const void *data,uint64_t size);
 	template<class T>
 		BlobLz4 compress_lz4_blob(const T &v)
 	{
 		return compress_lz4_blob(v.data(),v.size() *sizeof(v[0]));
 	}
 	
-	struct Property
+	struct DLLUDM Property
 	{
 		template<typename T>
 			static PProperty Create(T &&value);
@@ -383,7 +384,7 @@ namespace udm
 	static constexpr Version VERSION = 2;
 	static constexpr auto *HEADER_IDENTIFIER = "UDMB";
 #pragma pack(push,1)
-	struct Header
+	struct DLLUDM Header
 	{
 		Header()=default;
 		std::array<char,4> identifier = {HEADER_IDENTIFIER[0],HEADER_IDENTIFIER[1],HEADER_IDENTIFIER[2],HEADER_IDENTIFIER[3]};
@@ -418,7 +419,7 @@ namespace udm
 		udm::LinkedPropertyWrapper m_curProperty;
 	};
 
-	struct ElementIteratorWrapper
+	struct DLLUDM ElementIteratorWrapper
 	{
 		ElementIteratorWrapper(LinkedPropertyWrapper &prop);
 		ElementIterator begin();
@@ -427,7 +428,7 @@ namespace udm
 		LinkedPropertyWrapper &m_prop;
 	};
 	
-	struct PropertyWrapper
+	struct DLLUDM PropertyWrapper
 	{
 		PropertyWrapper()=default;
 		PropertyWrapper(Property &o);
@@ -574,7 +575,7 @@ namespace udm
 		bool linked = false;
 	};
 
-	struct LinkedPropertyWrapper
+	struct DLLUDM LinkedPropertyWrapper
 		: public PropertyWrapper
 	{
 		LinkedPropertyWrapper()
@@ -619,7 +620,7 @@ namespace udm
 		Property *GetProperty(std::vector<uint32_t> *optOutArrayIndices=nullptr) const;
 	};
 
-	struct Reference
+	struct DLLUDM Reference
 	{
 		Reference()=default;
 		Reference(const std::string &path)
@@ -649,7 +650,7 @@ namespace udm
 		void InitializeProperty(const LinkedPropertyWrapper &root);
 	};
 
-	struct StructDescription
+	struct DLLUDM StructDescription
 	{
 		using SizeType = uint16_t;
 		using MemberCountType = uint8_t;
@@ -705,7 +706,7 @@ namespace udm
 		}
 	};
 
-	struct Struct
+	struct DLLUDM Struct
 	{
 		static constexpr auto MAX_SIZE = std::numeric_limits<StructDescription::SizeType>::max();
 		static constexpr auto MAX_MEMBER_COUNT = std::numeric_limits<StructDescription::MemberCountType>::max();
@@ -737,7 +738,7 @@ namespace udm
 		std::vector<uint8_t> data;
 	};
 
-	struct Element
+	struct DLLUDM Element
 	{
 		void AddChild(std::string &&key,const PProperty &o);
 		void AddChild(const std::string &key,const PProperty &o);
@@ -769,7 +770,7 @@ namespace udm
 			void SetValue(Element &child,T &&v);
 	};
 
-	struct ElementIteratorPair
+	struct DLLUDM ElementIteratorPair
 	{
 		ElementIteratorPair(std::unordered_map<std::string,PProperty>::iterator &it);
 		ElementIteratorPair();
@@ -779,7 +780,7 @@ namespace udm
 		LinkedPropertyWrapper property;
 	};
 
-	class ElementIterator
+	class DLLUDM ElementIterator
 	{
 	public:
 		using iterator_category = std::forward_iterator_tag;
@@ -803,7 +804,7 @@ namespace udm
 		ElementIteratorPair m_pair;
 	};
 
-	struct Array
+	struct DLLUDM Array
 	{
 		virtual ~Array();
 		PropertyWrapper fromProperty {};
@@ -896,7 +897,7 @@ namespace udm
 		Type m_valueType = Type::Nil;
 	};
 
-	struct ArrayLz4
+	struct DLLUDM ArrayLz4
 		: public Array
 	{
 		enum class State : uint8_t
@@ -936,7 +937,7 @@ namespace udm
 		BlobLz4 m_compressedBlob {};
 	};
 
-	struct AssetData
+	struct DLLUDM AssetData
 		: public LinkedPropertyWrapper
 	{
 		std::string GetAssetType() const;
@@ -962,7 +963,7 @@ namespace udm
 		DontCompressLz4Arrays = IncludeHeader<<1u
 	};
 
-	struct IFile
+	struct DLLUDM IFile
 	{
 		template<typename T>
 			T Read()
@@ -1000,7 +1001,7 @@ namespace udm
 		int32_t WriteString(const std::string &str);
 	};
 
-	struct MemoryFile
+	struct DLLUDM MemoryFile
 		: public udm::IFile
 	{
 		MemoryFile(uint8_t *data,size_t dataSize);
@@ -1034,7 +1035,7 @@ namespace udm
 		size_t m_pos = 0;
 	};
 
-	struct VectorFile
+	struct DLLUDM VectorFile
 		: public MemoryFile
 	{
 		VectorFile();
@@ -1045,7 +1046,7 @@ namespace udm
 		std::vector<uint8_t> m_data;
 	};
 
-	struct VFilePtr
+	struct DLLUDM VFilePtr
 		: public IFile
 	{
 		VFilePtr()=default;
@@ -1060,7 +1061,7 @@ namespace udm
 		::VFilePtr m_file;
 	};
 
-	class Data
+	class DLLUDM Data
 	{
 	public:
 		static constexpr auto KEY_ASSET_TYPE = "assetType";
@@ -1190,6 +1191,11 @@ namespace udm
 	}
 
 	void to_json(LinkedPropertyWrapperArg prop,std::stringstream &ss);
+
+	namespace detail
+	{
+		DLLUDM void test_c_wrapper();
+	};
 };
 REGISTER_BASIC_BITWISE_OPERATORS(udm::AsciiSaveFlags)
 REGISTER_BASIC_BITWISE_OPERATORS(udm::MergeFlags)

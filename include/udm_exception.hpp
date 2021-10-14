@@ -5,12 +5,13 @@
 #ifndef __UDM_EXCEPTION_HPP__
 #define __UDM_EXCEPTION_HPP__
 
+#include "udm_definitions.hpp"
 #include <exception>
 #include <string>
 
 namespace udm
 {
-	struct Exception
+	struct DLLUDM Exception
 		: public std::exception
 	{
 		Exception(const std::string &msg)
@@ -20,15 +21,15 @@ namespace udm
 		std::string m_msg;
 	};
 
-	struct InvalidUsageError : public Exception {using Exception::Exception;};
-	struct CompressionError : public Exception {using Exception::Exception;};
-	struct FileError : public Exception {using Exception::Exception;};
-	struct InvalidFormatError : public Exception {using Exception::Exception;};
-	struct PropertyLoadError : public Exception {using Exception::Exception;};
-	struct OutOfBoundsError : public Exception {using Exception::Exception;};
-	struct ImplementationError : public Exception {using Exception::Exception;};
-	struct LogicError : public Exception {using Exception::Exception;};
-	struct ComparisonError : public Exception {using Exception::Exception;};
+	struct DLLUDM InvalidUsageError : public Exception {using Exception::Exception;};
+	struct DLLUDM CompressionError : public Exception {using Exception::Exception;};
+	struct DLLUDM FileError : public Exception {using Exception::Exception;};
+	struct DLLUDM InvalidFormatError : public Exception {using Exception::Exception;};
+	struct DLLUDM PropertyLoadError : public Exception {using Exception::Exception;};
+	struct DLLUDM OutOfBoundsError : public Exception {using Exception::Exception;};
+	struct DLLUDM ImplementationError : public Exception {using Exception::Exception;};
+	struct DLLUDM LogicError : public Exception {using Exception::Exception;};
+	struct DLLUDM ComparisonError : public Exception {using Exception::Exception;};
 };
 
 #endif

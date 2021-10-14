@@ -5,6 +5,7 @@
 #ifndef __UDM_TRIVIAL_TYPES_HPP__
 #define __UDM_TRIVIAL_TYPES_HPP__
 
+#include "udm_definitions.hpp"
 #include <cinttypes>
 #include <string>
 #include <variant>
@@ -28,7 +29,7 @@ namespace udm
 	using Enum = int32_t;
 
 #pragma pack(push,1)
-	struct Half
+	struct DLLUDM Half
 	{
 		Half()=default;
 		Half(uint16_t value)

@@ -686,8 +686,7 @@ void udm::Data::ToAscii(std::stringstream &ss,AsciiSaveFlags flags) const
 	{
 		if(!umath::is_flag_set(flags,AsciiSaveFlags::IncludeHeader))
 		{
-			auto &elRoot = *static_cast<Element*>(m_rootProperty->value);
-			auto udmAssetData = elRoot[Data::KEY_ASSET_DATA];
+			auto udmAssetData = GetAssetData().GetData();
 			if(udmAssetData && udmAssetData->IsType(Type::Element))
 				udmAssetData->GetValue<Element>().ToAscii(flags,ss);
 		}

@@ -106,7 +106,7 @@ bool udm::PropertyWrapper::IsType(Type type) const
 		return false;
 	if(IsArrayItem())
 	{
-		if(prop->type != Type::Array)
+		if(!is_array_type(prop->type))
 			return false;
 		auto &a = prop->GetValue<Array>();
 		if(!linked || static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
@@ -256,11 +256,11 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 	auto *a = prop.GetValuePtr<Array>();
 	if(a)
 	{
-		if(size.has_value())
-			a->Resize(*size);
 		auto *ptr = a->GetStructuredDataInfo();
 		if(ptr)
 			*ptr = std::move(strct);
+		if(size.has_value())
+			a->Resize(*size);
 	}
 	return prop;
 }
@@ -271,11 +271,11 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 	auto *a = prop.GetValuePtr<Array>();
 	if(a)
 	{
-		if(size.has_value())
-			a->Resize(*size);
 		auto *ptr = a->GetStructuredDataInfo();
 		if(ptr)
 			*ptr = strct;
+		if(size.has_value())
+			a->Resize(*size);
 	}
 	return prop;
 }
@@ -310,7 +310,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 		{
 			// TODO: Is this obsolete?
 			auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
-			if(linkedWrapper.prev && linkedWrapper.prev->prop && linkedWrapper.prev->prop->type == Type::Array)
+			if(linkedWrapper.prev && linkedWrapper.prev->prop && is_array_type(linkedWrapper.prev->prop->type))
 			{
 				auto &a = *static_cast<Array*>(linkedWrapper.prev->prop->value);
 				if(a.GetValueType() == Type::Element)
@@ -339,7 +339,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 		if(linked)
 		{
 			auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
-			if(prop && prop->type == Type::Array)
+			if(prop && is_array_type(prop->type))
 			{
 				auto &a = *static_cast<Array*>(prop->value);
 				if(a.GetValueType() == Type::Element)
@@ -381,7 +381,7 @@ void udm::Element::AddChild(std::string &&key,const PProperty &o)
 		el->parentProperty = fromProperty;
 		el->fromProperty = *o;
 	}
-	else if(o->type == Type::Array)
+	else if(is_array_type(o->type))
 		static_cast<Array*>(o->value)->fromProperty = *o;
 }
 

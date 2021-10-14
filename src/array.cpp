@@ -157,23 +157,15 @@ void udm::Array::Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializ
 			fCpy(curValues,dataPtr,sizeOfElement,std::get<0>(r1),std::get<1>(r1),std::get<2>(r1));
 		}
 	};
-	if(is_non_trivial_type(m_valueType))
+	if(is_non_trivial_type(m_valueType) && m_valueType != udm::Type::Struct)
 	{
 		auto tag = get_non_trivial_tag(m_valueType);
-		return std::visit([this,newSize,isStructType,headerSize,defaultInitializeNewValues,&r0,&r1,&cpyData](auto tag) mutable {
+		return std::visit([this,newSize,headerSize,defaultInitializeNewValues,&r0,&r1,&cpyData](auto tag) mutable {
 			using T = decltype(tag)::type;
 			auto *newValues = AllocateData(newSize *sizeof(T));
 			//for(auto i=decltype(newSize){0u};i<newSize;++i)
 			//	new (&newValues[i]) T{};
 			auto *dataPtr = reinterpret_cast<T*>(newValues);
-			if(isStructType)
-			{
-				auto *strct = GetStructuredDataInfo();
-				if(strct)
-					**reinterpret_cast<StructDescription**>(dataPtr) = std::move(*strct);
-				dataPtr = reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(dataPtr) +sizeof(StructDescription**));
-			}
-
 			auto *curValues = GetValues();
 			if(curValues)
 			{
@@ -206,15 +198,29 @@ void udm::Array::Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializ
 		return;
 	}
 
-	auto sizeBytes = newSize *size_of(m_valueType);
+	size_t sizeOfValue = 0;
+	if(newSize > 0)
+	{
+		if(isStructType)
+			sizeOfValue = GetStructuredDataInfo()->GetDataSizeRequirement();
+		else
+			sizeOfValue = size_of(m_valueType);
+	}
+	auto sizeBytes = newSize *sizeOfValue;
 	auto *newValues = AllocateData(sizeBytes);
+	if(isStructType)
+	{
+		auto *strct = GetStructuredDataInfo();
+		if(strct)
+			**reinterpret_cast<StructDescription**>(newValues) = std::move(*strct);
+	}
 	auto *curValues = GetValues();
 	if(curValues)
 	{
 		auto *dataPtr = newValues;
 		if(isStructType)
 			dataPtr += sizeof(StructDescription**);
-		auto sizeOfElement = size_of(m_valueType);
+		auto sizeOfElement = sizeOfValue;
 		cpyData(curValues,dataPtr,sizeOfElement,[](const void *curValues,void *dataPtr,uint32_t sizeOfElement,uint32_t idxStartSrc,uint32_t idxStartDst,uint32_t count) {
 			memcpy(static_cast<uint8_t*>(dataPtr) +idxStartDst *sizeOfElement,static_cast<const uint8_t*>(curValues) +idxStartSrc *sizeOfElement,count *sizeOfElement);
 		});

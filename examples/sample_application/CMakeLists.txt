@@ -48,32 +48,24 @@ endfunction(link_external_library)
 
 ##### CONFIGURATION #####
 
-set(PROJ_NAME util_udm)
+set(PROJ_NAME udm_sample_application)
 
 project(${PROJ_NAME} CXX)
 
 set(CMAKE_CXX_STANDARD 20)
-# set(PRECOMPILED_HEADER "stdafx")
 
-option(UTIL_UDM_STATIC "Build as static library?" ON)
-
-link_external_library(glm)
 link_external_library(sharedutils)
 link_external_library(mathutil)
 link_external_library(vfilesystem)
-link_external_library(lz4)
+link_external_library(util_udm)
 
-set(DEFINITIONS)
+add_include_dir(glm)
+
+set(DEFINITIONS
+	GLM_FORCE_DEPTH_ZERO_TO_ONE
+)
 
 ##### CONFIGURATION #####
-
-if(${UTIL_UDM_STATIC})
-	set(LIB_TYPE STATIC)
-else()
-	set(LIB_TYPE SHARED)
-	add_definitions(-DUDM_SHARED)
-	add_definitions(-DUDM_EXPORT)
-endif()
 
 foreach(def IN LISTS DEFINITIONS)
 	add_definitions(-D${def})
@@ -95,10 +87,7 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_LIST_DIR}/include/*.h"
     "${CMAKE_CURRENT_LIST_DIR}/include/*.hpp"
 )
-if(WIN32)
-	add_compile_options(/bigobj)
-endif()
-add_library(${PROJ_NAME} ${LIB_TYPE} ${SRC_FILES})
+add_executable(${PROJ_NAME} ${SRC_FILES})
 if(WIN32)
 	target_compile_options(${PROJ_NAME} PRIVATE /wd4251)
 	target_compile_options(${PROJ_NAME} PRIVATE /wd4996)
@@ -117,10 +106,4 @@ foreach(INCLUDE_PATH IN LISTS INCLUDE_DIRS)
 endforeach(INCLUDE_PATH)
 
 set(TARGET_PROPERTIES LINKER_LANGUAGE CXX)
-if(DEFINED PRECOMPILED_HEADER)
-	include(PrecompiledHeader.cmake)
-	add_precompiled_header(${PROJ_NAME} "src/${PRECOMPILED_HEADER}.h" c++17 FORCEINCLUDE)
-endif()
 set_target_properties(${PROJ_NAME} PROPERTIES ${TARGET_PROPERTIES})
-
-add_subdirectory(examples)
