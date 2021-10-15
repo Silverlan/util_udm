@@ -444,18 +444,18 @@ namespace udm
 		void operator=(Property &other);
 		//template<typename T>
 		//	operator T() const;
-		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element) const;
-		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw) const;
-		LinkedPropertyWrapper AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw) const;
-		LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw) const;
+		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element,bool pathToElements=false) const;
+		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw,bool pathToElements=false) const;
+		LinkedPropertyWrapper AddArray(const std::string_view &path,StructDescription &&strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw,bool pathToElements=false) const;
+		LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,std::optional<uint32_t> size={},ArrayType arrayType=ArrayType::Raw,bool pathToElements=false) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType=ArrayType::Raw) const;
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType=ArrayType::Raw,bool pathToElements=false) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw) const;
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw,bool pathToElements=false) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw) const;
+			LinkedPropertyWrapper AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType=ArrayType::Raw,bool pathToElements=false) const;
 		template<typename T>
-			LinkedPropertyWrapper AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType=ArrayType::Raw) const;
+			LinkedPropertyWrapper AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType=ArrayType::Raw,bool pathToElements=false) const;
 		bool IsArrayItem() const;
 		bool IsType(Type type) const;
 		Type GetType() const;
@@ -749,8 +749,8 @@ namespace udm
 		LinkedPropertyWrapper operator[](const std::string &key) {return fromProperty[key];}
 		LinkedPropertyWrapper operator[](const char *key) {return operator[](std::string{key});}
 
-		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element);
-		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw);
+		LinkedPropertyWrapper Add(const std::string_view &path,Type type=Type::Element,bool pathToElements=false);
+		LinkedPropertyWrapper AddArray(const std::string_view &path,std::optional<uint32_t> size={},Type type=Type::Element,ArrayType arrayType=ArrayType::Raw,bool pathToElements=false);
 		void ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::optional<std::string> &prefix={}) const;
 
 		void Merge(const Element &other,MergeFlags mergeFlags=MergeFlags::OverwriteExisting);
@@ -1624,9 +1624,9 @@ template<typename T>
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType) const
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType,bool pathToElements) const
 {
-	auto prop = AddArray(path,strct,strctItems,arrayType);
+	auto prop = AddArray(path,strct,strctItems,arrayType,pathToElements);
 	auto &a = prop.GetValue<Array>();
 	auto sz = a.GetValueSize() *a.GetSize();
 	auto *ptr = a.GetValues();
@@ -1635,9 +1635,9 @@ template<typename T>
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType) const
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType,bool pathToElements) const
 {
-	auto prop = AddArray(path,strct,values.size(),arrayType);
+	auto prop = AddArray(path,strct,values.size(),arrayType,pathToElements);
 	auto &a = prop.GetValue<Array>();
 	auto sz = a.GetValueSize() *a.GetSize();
 	auto szValues = util::size_of_container(values);
@@ -1649,16 +1649,16 @@ template<typename T>
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType) const
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const std::vector<T> &values,ArrayType arrayType,bool pathToElements) const
 {
-	return AddArray<T>(path,values.size(),values.data(),arrayType);
+	return AddArray<T>(path,values.size(),values.data(),arrayType,pathToElements);
 }
 
 template<typename T>
-	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType) const
+	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,uint32_t size,const T *data,ArrayType arrayType,bool pathToElements) const
 {
 	constexpr auto valueType = type_to_enum<T>();
-	auto prop = AddArray(path,size,valueType,arrayType);
+	auto prop = AddArray(path,size,valueType,arrayType,pathToElements);
 	auto &a = prop.GetValue<Array>();
 	if constexpr(is_non_trivial_type(valueType) && valueType != Type::Struct)
 	{

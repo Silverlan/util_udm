@@ -85,7 +85,7 @@ template<typename T>
 template<typename T>
 	static void udm_write_property_t(UdmProperty udmData,const char *path,T value)
 	{
-		auto prop = (strlen(path) > 0) ? udmData->prop.Add(path,udm::type_to_enum<T>()) : udmData->prop;
+		auto prop = (strlen(path) > 0) ? udmData->prop.Add(path,udm::type_to_enum<T>(),true) : udmData->prop;
 		if(!prop)
 			return;
 		prop = value;
@@ -101,7 +101,7 @@ template<typename T>
 				constexpr auto n = udm::get_numeric_component_count(udm::type_to_enum<TProperty>());
 				if(n != numValues)
 					return false;
-				auto prop = (strlen(path) > 0) ? udmData->prop.Add(path,udm::type_to_enum<TProperty>()) : udmData->prop;
+				auto prop = (strlen(path) > 0) ? udmData->prop.Add(path,udm::type_to_enum<TProperty>(),true) : udmData->prop;
 				if(!prop)
 					return false;
 				prop = *reinterpret_cast<TProperty*>(values);
@@ -128,7 +128,7 @@ template<typename T>
 			udmData->data.AddDeleter([r]() {delete[] r;});
 			return r;
 		}
-		return udm::visit(static_cast<udm::Type>(type),[&udmData,&childProp,type,&outNumValues](auto tag) -> T* {
+		return udm::visit(childProp->type,[&udmData,&childProp,type,&outNumValues](auto tag) -> T* {
 			using TTag = decltype(tag)::type;
 			using TUnderlying = UdmUnderlyingType<TTag>;
 			if constexpr(std::is_same_v<TUnderlying,T>)
@@ -340,7 +340,19 @@ extern "C" {
 	}
 	DLLUDM void udm_destroy_string(const char *str) {delete[] str;}
 
-	DLLUDM char *udm_read_property_string(UdmProperty prop,const char *path,const char *defaultValue)
+	DLLUDM char *udm_get_property_name(UdmProperty prop) {return to_cstring(prop->data,prop->prop.propName);}
+	DLLUDM int32_t udm_get_property_array_index(UdmProperty prop) {return (prop->prop.arrayIndex != std::numeric_limits<decltype(prop->prop.arrayIndex)>::max()) ? prop->prop.arrayIndex : -1;}
+	DLLUDM char *udm_get_property_path(UdmProperty prop) {return to_cstring(prop->data,prop->prop.GetPath());}
+	DLLUDM UdmProperty udm_get_from_property(UdmProperty prop)
+	{
+		if(!prop->prop.prev)
+			return nullptr;
+		auto *child = new BaseProperty{prop->data,*prop->prop.prev};
+		prop->data.AddDeleter([child]() {delete child;});
+		return child;
+	}
+
+	DLLUDM char *udm_read_property_s(UdmProperty prop,const char *path,const char *defaultValue)
 	{
 		auto childProp = get_property(prop,path);
 		if(!childProp)
@@ -350,12 +362,45 @@ extern "C" {
 			return to_cstring(prop->data,defaultValue);
 		return to_cstring(prop->data,*str);
 	}
-	DLLUDM bool udm_write_property_string(UdmProperty prop,const char *path,const char *value)
+	DLLUDM bool udm_write_property_s(UdmProperty prop,const char *path,const char *value)
 	{
-		auto childProp = (strlen(path) > 0) ? prop->prop.Add(path,udm::Type::String) : prop->prop;
+		auto childProp = (strlen(path) > 0) ? prop->prop.Add(path,udm::Type::String,true) : prop->prop;
 		if(!childProp)
 			return false;
 		childProp = value;
+		return true;
+	}
+	DLLUDM const char **udm_read_property_vs(UdmProperty prop,const char *path,uint32_t *outNumValues)
+	{
+		auto childProp = get_property(prop,path);
+		if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp.GetType()))
+			return nullptr;
+		auto &a = childProp.GetValue<udm::Array>();
+		if(!a.IsValueType(udm::Type::String))
+			return nullptr;
+		auto n = a.GetSize();
+		*outNumValues = n;
+		auto *r = new const char*[n];
+		for(auto i=decltype(n){0u};i<n;++i)
+			r[i] = to_cstring(prop->data,a.GetValue<std::string>(i));
+		prop->data.AddDeleter([r,n]() {
+			for(auto i=decltype(n){0u};i<n;++i)
+				delete[] r[i];
+			delete[] r;
+		});
+		return r;
+	}
+	DLLUDM bool udm_write_property_vs(UdmProperty prop,const char *path,const char **values,uint32_t numValues)
+	{
+		auto childProp = (strlen(path) > 0) ? prop->prop.AddArray(path,numValues,udm::Type::String,udm::ArrayType::Raw,true) : prop->prop;
+		if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp.GetType()))
+			return false;
+		auto &a = childProp.GetValue<udm::Array>();
+		if(!a.IsValueType(udm::Type::String))
+			return false;
+		a.Resize(numValues);
+		for(auto i=decltype(numValues){0u};i<numValues;++i)
+			a.SetValue(i,values[i]);
 		return true;
 	}
 	DEFINE_FUNDAMENTAL_TYPE_FUNCTIONS(b,bool)
@@ -371,7 +416,7 @@ extern "C" {
 	DEFINE_FUNDAMENTAL_TYPE_FUNCTIONS(ui64,uint64_t)
 	DLLUDM bool udm_add_property_struct(UdmProperty udmData,const char *path,uint32_t numMembers,UdmType *types,const char **names)
 	{
-		auto childProp = (strlen(path) > 0) ? udmData->prop.Add(path,udm::Type::Struct) : udmData->prop;
+		auto childProp = (strlen(path) > 0) ? udmData->prop.Add(path,udm::Type::Struct,true) : udmData->prop;
 		auto *strct = childProp->GetValuePtr<udm::Struct>();
 		if(!strct)
 			return false;
@@ -380,14 +425,14 @@ extern "C" {
 	}
 	DLLUDM bool udm_add_property_array(UdmProperty udmData,const char *path,UdmType type,UdmArrayType arrayType,uint32_t size)
 	{
-		auto childProp = udmData->prop.AddArray(path,size,static_cast<udm::Type>(type),static_cast<udm::ArrayType>(arrayType));
+		auto childProp = udmData->prop.AddArray(path,size,static_cast<udm::Type>(type),static_cast<udm::ArrayType>(arrayType),true);
 		if(!childProp || !udm::is_array_type(childProp->type))
 			return false;
 		return true;
 	}
 	DLLUDM bool udm_add_property_struct_array(UdmProperty udmData,const char *path,uint32_t numMembers,UdmType *types,const char **names,UdmArrayType arrayType,uint32_t size)
 	{
-		auto childProp = udmData->prop.AddArray(path,to_struct_description(numMembers,types,names),size,static_cast<udm::ArrayType>(arrayType));
+		auto childProp = udmData->prop.AddArray(path,to_struct_description(numMembers,types,names),size,static_cast<udm::ArrayType>(arrayType),true);
 		if(!childProp || !udm::is_array_type(childProp->type))
 			return false;
 		return true;
@@ -468,9 +513,16 @@ void udm::detail::test_c_wrapper()
 	auto *udm_destroy_property = lib->FindSymbolAddress<void(*)(UdmProperty)>("udm_destroy_property");
 	auto *udm_property_to_json = lib->FindSymbolAddress<char*(*)(UdmProperty)>("udm_property_to_json");
 	auto *udm_destroy_string = lib->FindSymbolAddress<void(*)(const char*)>("udm_destroy_string");
-	auto *udm_read_property_string = lib->FindSymbolAddress<char*(*)(UdmProperty,const char*,const char*)>("udm_read_property_string");
-	auto *udm_write_property_string = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,const char*)>("udm_write_property_string");
+	auto *udm_read_property_s = lib->FindSymbolAddress<char*(*)(UdmProperty,const char*,const char*)>("udm_read_property_s");
+	auto *udm_write_property_s = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,const char*)>("udm_write_property_s");
+	auto *udm_read_property_vs = lib->FindSymbolAddress<char*(*)(UdmProperty,const char*,uint32_t*)>("udm_read_property_vs");
+	auto *udm_write_property_vs = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,const char**,uint32_t)>("udm_write_property_vs");
 	auto *udm_free_memory = lib->FindSymbolAddress<void(*)(UdmData)>("udm_free_memory");
+	
+	auto *udm_get_property_name = lib->FindSymbolAddress<char*(*)(UdmProperty)>("udm_get_property_name");
+	auto *udm_get_property_array_index = lib->FindSymbolAddress<int32_t(*)(UdmProperty)>("udm_get_property_array_index");
+	auto *udm_get_property_path = lib->FindSymbolAddress<char*(*)(UdmProperty)>("udm_get_property_path");
+	auto *udm_get_from_property = lib->FindSymbolAddress<UdmProperty(*)(UdmProperty)>("udm_get_from_property");
 
 	LOOKUP_FUNDAMENTAL_ADDRESSES(b,bool);
 	LOOKUP_FUNDAMENTAL_ADDRESSES(f,float);
@@ -508,7 +560,7 @@ void udm::detail::test_c_wrapper()
 		udm_add_property_array(root,"hitboxes",umath::to_integral(udm::Type::Element),umath::to_integral(udm::ArrayType::Raw),2 /* arraySize */);
 
 		auto hb0 = udm_get_property(root,"hitboxes[0]");
-		udm_write_property_string(hb0,"hitGroup","LeftLeg"); // Write string: hitboxes[0]/hitGroup = "LeftLeg"
+		udm_write_property_s(hb0,"hitGroup","LeftLeg"); // Write string: hitboxes[0]/hitGroup = "LeftLeg"
 		std::array<float,3> min = {-10.f,-3.f,-5.f};
 		std::array<float,3> max = {3.f,12.f,55.f};
 		// Write vector properties
@@ -519,7 +571,7 @@ void udm::detail::test_c_wrapper()
 
 		auto hitboxes = udm_get_property(root,"hitboxes");
 		auto hb1 = udm_get_property_i(hitboxes,1 /* arrayIndex */); // Alternative array indexing method
-		udm_write_property_string(hb1,"hitGroup","RightLeg"); // Write string: hitboxes[1]/hitGroup = "RightLeg"
+		udm_write_property_s(hb1,"hitGroup","RightLeg"); // Write string: hitboxes[1]/hitGroup = "RightLeg"
 
 		udm_write_property_i(hb1,"bone",12);
 
@@ -583,8 +635,12 @@ void udm::detail::test_c_wrapper()
 
 		auto hitboxes = udm_get_property(root,"hitboxes");
 		auto hb1 = udm_get_property_i(hitboxes,1 /* arrayIndex */); // Alternative to above method
-		auto *hitGroup = udm_read_property_string(hb1,"hitGroup","");
+		auto *hitGroup = udm_read_property_s(hb1,"hitGroup","");
 		std::cout<<"HitGroup of hitbox 1: "<<hitGroup<<std::endl;
+
+		auto propBoundsMin = udm_get_property(root,"hitboxes[0]/bounds/min");
+		uint32_t numItems = 0;
+		auto *boundsMin = udm_read_property_vf(propBoundsMin,"",umath::to_integral(udm::Type::Float),&numItems);
 
 		std::array<uint8_t,3> types = {umath::to_integral(udm::Type::Vector3),umath::to_integral(udm::Type::Vector3),umath::to_integral(udm::Type::Vector2)};
 		std::array<const char*,3> names = {"pos","n","uv"};

@@ -5,10 +5,9 @@
 #include "udm.hpp"
 #include <sstream>
 
-
-udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,ArrayType arrayType)
+udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,std::optional<uint32_t> size,Type type,ArrayType arrayType,bool pathToElements)
 {
-	auto prop = Add(path,(arrayType == ArrayType::Compressed) ? Type::ArrayLz4 : Type::Array);
+	auto prop = Add(path,(arrayType == ArrayType::Compressed) ? Type::ArrayLz4 : Type::Array,pathToElements);
 	if(!prop)
 		return prop;
 	auto &a = *static_cast<Array*>(prop->value);
@@ -18,9 +17,9 @@ udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path,s
 	return prop;
 }
 
-udm::LinkedPropertyWrapper udm::Element::Add(const std::string_view &path,Type type)
+udm::LinkedPropertyWrapper udm::Element::Add(const std::string_view &path,Type type,bool pathToElements)
 {
-	auto end = std::string::npos; // path.find('.');
+	auto end = pathToElements ? path.find(PATH_SEPARATOR) : std::string::npos;
 	auto name = path.substr(0,end);
 	if(name.empty())
 		return fromProperty;
