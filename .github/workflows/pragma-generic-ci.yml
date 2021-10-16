@@ -1,11 +1,11 @@
 name: Build
 
-on: [push]
-#on:
-#  push:
-#    branches: [ master ]
-#  pull_request:
-#    branches: [ master ]
+#on: [push]
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
     
     
 env:
@@ -41,7 +41,7 @@ jobs:
           git submodule update --init --recursive
           
       - name: Download common external libs
-        uses: Silverlan/common_actions/get_common_external_libs@actions
+        uses: Silverlan/common_actions/get_common_external_libs@main
         
       - name: Download submodule - lz4
         uses: Silverlan/common_actions/get_submodule@main
@@ -88,6 +88,17 @@ jobs:
       - name: Download submodules
         run: |
           git submodule update --init --recursive
+          
+      - name: Download common external libs
+        uses: Silverlan/common_actions/get_common_external_libs@main
+        
+      - name: Download submodule - lz4
+        uses: Silverlan/common_actions/get_submodule@main
+        with:
+          dir: 'third_party_libs'
+          repo: 'https://github.com/lz4/lz4.git'
+          repo_name: 'lz4'
+          repo_branch: 'release'
           
       - name: CMake Build
         uses: Silverlan/common_actions/build_cmake@main
