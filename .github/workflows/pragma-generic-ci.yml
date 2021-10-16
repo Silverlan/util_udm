@@ -9,7 +9,7 @@ on: [push]
     
     
 env:
-  shared_cmake_definitions: -DDEPENDENCY_GLM_INCLUDE=./third_party_libs/glm -DDEPENDENCY_MATHUTIL_INCLUDE=./external_libs/mathutil/include -DDEPENDENCY_SHAREDUTILS_INCLUDE=./external_libs/sharedutils/include -DDEPENDENCY_VFILESYSTEM_INCLUDE=./external_libs/vfilesystem/include -DMATHUTIL_ENABLE_MESH_FUNCTIONS=OFF -DSHAREDUTILS_STATIC=ON -DMATHUTIL_STATIC=ON -DVFILESYSTEM_STATIC=ON
+  shared_cmake_definitions: -DDEPENDENCY_LZ4_INCLUDE=./third_party_libs/lz4/lib -DDEPENDENCY_GLM_INCLUDE=./third_party_libs/glm -DDEPENDENCY_MATHUTIL_INCLUDE=./external_libs/mathutil/include -DDEPENDENCY_SHAREDUTILS_INCLUDE=./external_libs/sharedutils/include -DDEPENDENCY_VFILESYSTEM_INCLUDE=./external_libs/vfilesystem/include -DMATHUTIL_ENABLE_MESH_FUNCTIONS=OFF -DSHAREDUTILS_STATIC=ON -DMATHUTIL_STATIC=ON -DVFILESYSTEM_STATIC=ON
 
 jobs:
   # WINDOWS x64 MSVC
@@ -42,6 +42,14 @@ jobs:
           
       - name: Download common external libs
         uses: Silverlan/common_actions/get_common_external_libs@actions
+        
+      - name: Download submodule - lz4
+        uses: Silverlan/common_actions/get_submodule@main
+        with:
+          dir: 'third_party_libs'
+          repo: 'https://github.com/lz4/lz4.git'
+          repo_name: 'lz4'
+          repo_branch: 'release'
           
       - name: CMake Build
         uses: Silverlan/common_actions/build_cmake@main
