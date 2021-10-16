@@ -9,7 +9,7 @@ on:
     
     
 env:
-  shared_cmake_definitions: -DDEPENDENCY_LZ4_INCLUDE=./third_party_libs/lz4/lib -DDEPENDENCY_GLM_INCLUDE=./third_party_libs/glm -DDEPENDENCY_MATHUTIL_INCLUDE=./external_libs/mathutil/include -DDEPENDENCY_SHAREDUTILS_INCLUDE=./external_libs/sharedutils/include -DDEPENDENCY_VFILESYSTEM_INCLUDE=./external_libs/vfilesystem/include -DMATHUTIL_ENABLE_MESH_FUNCTIONS=OFF -DSHAREDUTILS_STATIC=ON -DMATHUTIL_STATIC=ON -DVFILESYSTEM_STATIC=ON
+  shared_cmake_definitions: -DDEPENDENCY_LZ4_INCLUDE=../third_party_libs/lz4/lib -DDEPENDENCY_GLM_INCLUDE=../third_party_libs/glm -DDEPENDENCY_MATHUTIL_INCLUDE=../external_libs/mathutil/include -DDEPENDENCY_SHAREDUTILS_INCLUDE=../external_libs/sharedutils/include -DDEPENDENCY_VFILESYSTEM_INCLUDE=../external_libs/vfilesystem/include -DMATHUTIL_ENABLE_MESH_FUNCTIONS=OFF -DSHAREDUTILS_STATIC=ON -DMATHUTIL_STATIC=ON -DVFILESYSTEM_STATIC=ON
 
 jobs:
   # WINDOWS x64 MSVC
