@@ -7,6 +7,7 @@ on: [push]
 #  pull_request:
 #    branches: [ master ]
     
+    
 env:
   shared_cmake_definitions: -DDEPENDENCY_GLM_INCLUDE=./third_party_libs/glm -DDEPENDENCY_MATHUTIL_INCLUDE=./external_libs/mathutil/include -DDEPENDENCY_SHAREDUTILS_INCLUDE=./external_libs/sharedutils/include -DDEPENDENCY_VFILESYSTEM_INCLUDE=./external_libs/vfilesystem/include -DMATHUTIL_ENABLE_MESH_FUNCTIONS=OFF -DSHAREDUTILS_STATIC=ON -DMATHUTIL_STATIC=ON -DVFILESYSTEM_STATIC=ON
 
