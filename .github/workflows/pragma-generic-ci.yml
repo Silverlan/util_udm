@@ -1,0 +1,88 @@
+name: Build
+
+on: [push]
+#on:
+#  push:
+#    branches: [ master ]
+#  pull_request:
+#    branches: [ master ]
+    
+env:
+  shared_cmake_definitions: -DDEPENDENCY_GLM_INCLUDE=./third_party_libs/glm -DDEPENDENCY_MATHUTIL_INCLUDE=./external_libs/mathutil/include -DDEPENDENCY_SHAREDUTILS_INCLUDE=./external_libs/sharedutils/include -DDEPENDENCY_VFILESYSTEM_INCLUDE=./external_libs/vfilesystem/include -DMATHUTIL_ENABLE_MESH_FUNCTIONS=OFF -DSHAREDUTILS_STATIC=ON -DMATHUTIL_STATIC=ON -DVFILESYSTEM_STATIC=ON
+
+jobs:
+  # WINDOWS x64 MSVC
+  build-windows:
+    name: Build-Windows-x64
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "Windows x64 MSVC",
+            os: windows-latest,
+            artifact: "Windows-MSVC.tar.xz",
+            build_type: "RelWithDebInfo",
+            environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat",
+            cc: "cl",
+            cxx: "cl",
+            archiver: "7z a",
+            generators: "Visual Studio 16 2019"
+          }
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Download submodules
+        run: |
+          git submodule update --init --recursive
+          
+      - name: Download common external libs
+        uses: Silverlan/common_actions/get_common_external_libs@actions
+          
+      - name: CMake Build
+        uses: Silverlan/common_actions/build_cmake@main
+        with:
+          build_type: ${{ matrix.config.build_type }}
+          build_generator: ${{ matrix.config.generators }}
+          cmake_definitions: ${{ env.shared_cmake_definitions }} -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+          
+  # UBUNTU x64 GCC
+  build-ubuntu:
+    name: Build-Ubuntu-x64
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "Ubuntu GCC-11",
+            os: ubuntu-latest,
+            artifact: "ubuntu_gcc.7z",
+            build_type: "RelWithDebInfo",
+            cc: "gcc-11",
+            cxx: "g++-11",
+            archiver: "7z a",
+            generators: "Unix Makefiles"
+          }
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Install GCC-11
+        run: |
+          sudo apt update
+          sudo apt install gcc-11 g++-11
+          
+      - name: Download submodules
+        run: |
+          git submodule update --init --recursive
+          
+      - name: CMake Build
+        uses: Silverlan/common_actions/build_cmake@main
+        with:
+          build_type: ${{ matrix.config.build_type }}
+          build_generator: ${{ matrix.config.generators }}
+          cmake_definitions: ${{ env.shared_cmake_definitions }} -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
