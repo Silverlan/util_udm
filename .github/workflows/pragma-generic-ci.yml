@@ -78,4 +78,10 @@ jobs:
           
       - name: Upload binaries
         uses: Silverlan/common_actions/upload_build_binaries@actions
-          
+        
+      - uses: actions/upload-artifact@v2.2.4
+        with:
+          name: udm-standalone
+          retention-days: 30
+          path: |
+            ${{ matrix.config.build_type }}/util_udm${{ env.GA_SHARED_BINARY_LIBRARY_EXT }}
