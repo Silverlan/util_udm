@@ -55,7 +55,7 @@ jobs:
         uses: Silverlan/common_actions/get_common_external_libs@actions
         
       - name: Download submodule - lz4
-        uses: Silverlan/common_actions/get_submodule@main
+        uses: Silverlan/common_actions/get_submodule@actions
         with:
           dir: 'third_party_libs'
           repo: 'https://github.com/lz4/lz4.git'
