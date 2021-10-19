@@ -4,7 +4,7 @@
 
 #include "udm.hpp"
 
-
+#pragma optimize("",off)
 udm::PropertyWrapper::PropertyWrapper(Property &o)
 	: prop{&o}
 {}
@@ -63,18 +63,22 @@ udm::PropertyWrapper::operator bool() const
 			tmpProp = static_cast<const LinkedPropertyWrapper&>(*this).GetProperty();
 		return tmpProp && tmpProp->type != Type::Nil;
 	}
-	auto *a = GetOwningArray();
-	if(a == nullptr || !linked)
+	if(!linked)
+		return false;
+	auto *a = prop->GetValuePtr<Array>();
+	if(a == nullptr)
 		return false;
 	auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
-	return linkedWrapper.propName.empty() || static_cast<bool>(const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[linkedWrapper.propName]);
+	if(linkedWrapper.propName.empty())
+		return arrayIndex < a->GetSize();
+	return true;
 }
 
 void *udm::PropertyWrapper::GetValuePtr(Type &outType) const
 {
-	if(IsArrayItem())
+	if(arrayIndex != std::numeric_limits<decltype(arrayIndex)>::max())
 	{
-		auto &a = *GetOwningArray();
+		auto &a = prop->GetValue<Array>();
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
 			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr(outType);
 		outType = a.GetValueType();
@@ -82,14 +86,16 @@ void *udm::PropertyWrapper::GetValuePtr(Type &outType) const
 	}
 	return (*this)->GetValuePtr(outType);
 }
-
-bool udm::PropertyWrapper::IsArrayItem() const
+bool udm::PropertyWrapper::IsArrayItem() const {return IsArrayItem(false);}
+bool udm::PropertyWrapper::IsArrayItem(bool includeIfElementOfArrayItem) const
 {
 	/*return arrayIndex != std::numeric_limits<uint32_t>::max() && linked && 
 		static_cast<const LinkedPropertyWrapper&>(*this).prev &&
 		static_cast<const LinkedPropertyWrapper&>(*this).prev->prop &&
 		static_cast<const LinkedPropertyWrapper&>(*this).prev->prop->IsType(Type::Array);*/
 	if(arrayIndex == std::numeric_limits<uint32_t>::max())
+		return false;
+	if(!includeIfElementOfArrayItem && linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
 		return false;
 	if(prop)
 		return is_array_type(prop->type);
@@ -475,12 +481,13 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 		if(linked && static_cast<const LinkedPropertyWrapper&>(*this).propName.empty() == false)
 		{
 			el = &static_cast<Array*>(prop->value)->GetValue<Element>(arrayIndex);
-			auto prop = getElementProperty(*this,*el,static_cast<const LinkedPropertyWrapper&>(*this).propName);
-			prop.InitializeProperty(); // TODO: Don't initialize if this is used as a getter
-			el = prop.GetValuePtr<Element>();
+			auto it = el->children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
+			if(it == el->children.end())
+				return {};
+			el = it->second->GetValuePtr<Element>();
 			if(el == nullptr)
 				return {};
-			return getElementProperty(prop,*el,key);
+			return getElementProperty(*this,*el,key);
 		}
 		else
 		{
@@ -517,3 +524,4 @@ bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
 bool udm::PropertyWrapper::operator!=(const PropertyWrapper &other) const {return !operator==(other);}
 
 udm::LinkedPropertyWrapper *udm::PropertyWrapper::GetLinked() {return linked ? static_cast<LinkedPropertyWrapper*>(this) : nullptr;}
+#pragma optimize("",on)
