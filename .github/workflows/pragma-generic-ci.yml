@@ -62,9 +62,12 @@ jobs:
           repo_name: 'lz4'
           repo_branch: 'release'
           
-      - name: Build
-        id: build
-        uses: Silverlan/util_image/github_actions/build@actions
+      - name: CMake Build
+        uses: Silverlan/common_actions/build_cmake@actions
+        with:
+          build_target: util_udm
+          build_type: ${{ matrix.config.build_type }}
+          build_generator: ${{ matrix.config.generators }}
           
       - name: Upload binaries
         uses: Silverlan/common_actions/upload_build_binaries@actions
