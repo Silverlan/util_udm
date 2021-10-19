@@ -55,12 +55,9 @@ jobs:
         uses: Silverlan/common_actions/define_cmake_var@actions
         with:
           cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF'
-
-      - name: Download common external libs
-        uses: Silverlan/common_actions/get_common_external_libs@actions
-        
+          
       - name: Download submodule - lz4
-        uses: Silverlan/common_actions/get_submodule@actions
+        uses: Silverlan/common_actions/build_submodule@actions
         with:
           dir: 'third_party_libs'
           repo: 'https://github.com/lz4/lz4.git'
@@ -68,6 +65,10 @@ jobs:
           repo_branch: 'release'
           cmake_var: 'DEPENDENCY_LZ4_INCLUDE'
           include_dir: 'lib'
+          cmake_script_location: 'third_party_libs/lz4-cmake'
+
+      - name: Download common external libs
+        uses: Silverlan/common_actions/get_common_external_libs@actions
           
       - name: CMake Build
         uses: Silverlan/common_actions/build_cmake@actions
