@@ -4,7 +4,6 @@
 
 #include "udm.hpp"
 
-#pragma optimize("",off)
 udm::PropertyWrapper::PropertyWrapper(Property &o)
 	: prop{&o}
 {}
@@ -524,4 +523,3 @@ bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
 bool udm::PropertyWrapper::operator!=(const PropertyWrapper &other) const {return !operator==(other);}
 
 udm::LinkedPropertyWrapper *udm::PropertyWrapper::GetLinked() {return linked ? static_cast<LinkedPropertyWrapper*>(this) : nullptr;}
-#pragma optimize("",on)
