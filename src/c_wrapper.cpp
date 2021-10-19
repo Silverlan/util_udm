@@ -20,6 +20,7 @@ struct BaseUdmData
 	{
 		for(auto &deleter : deleters)
 			deleter();
+		deleters.clear();
 	}
 	void AddDeleter(const std::function<void()> &deleter)
 	{
@@ -51,6 +52,7 @@ using UdmType = std::underlying_type_t<udm::Type>;
 using UdmArrayType = std::underlying_type_t<udm::ArrayType>;
 struct BaseUdmElementIterator
 {
+	std::unique_ptr<udm::LinkedPropertyWrapper> baseProp;
 	UdmProperty prop;
 	udm::ElementIteratorWrapper wrapper;
 	udm::ElementIterator it;
@@ -62,12 +64,12 @@ static char *to_cstring(BaseUdmData &data,const std::string &str)
 {
 	auto *cstr = new char[str.length() +1];
 	strcpy(cstr,str.data());
-	data.AddDeleter([cstr]() {delete[] cstr;;});
+	data.AddDeleter([cstr]() {delete[] cstr;});
 	return cstr;
 }
 static udm::LinkedPropertyWrapper get_property(UdmProperty udmData,const char *path)
 {
-	if(strlen(path) == 0)
+	if(!path || strlen(path) == 0)
 		return udmData->prop;
 	return udmData->prop.GetFromPath(path);
 }
@@ -118,7 +120,7 @@ template<typename T>
 			return nullptr;
 		if(!childProp.IsArrayItem() && udm::is_array_type(childProp->type))
 		{
-			auto &a = childProp->GetValue<udm::Array>();
+			auto &a = childProp.GetValue<udm::Array>();
 			if(!a.IsValueType(static_cast<udm::Type>(type)))
 				return nullptr;
 			auto n = a.GetSize();
@@ -287,11 +289,22 @@ extern "C" {
 		auto p = get_property(prop,path);
 		return umath::to_integral(p.GetType());
 	}
+	DLLUDM uint32_t udm_get_property_child_count(UdmProperty udmData,const char *path)
+	{
+		auto childProp = get_property(udmData,path);
+		if(!childProp)
+			return 0;
+		return childProp.GetChildCount();
+	}
 	DLLUDM UdmElementIterator udm_create_property_child_name_iterator(UdmProperty prop,const char *path)
 	{
-		auto elIt = prop->prop.ElIt();
+		auto childProp = get_property(prop,path);
+		if(!childProp)
+			return nullptr;
+		auto baseProp = std::make_unique<udm::LinkedPropertyWrapper>(childProp);
+		auto elIt = baseProp->ElIt();
 		auto it = elIt.begin();
-		auto *i = new BaseUdmElementIterator{prop,elIt,it};
+		auto *i = new BaseUdmElementIterator{std::move(baseProp),prop,elIt,it};
 		prop->data.AddDeleter([i]() {delete i;});
 		return i;
 	}
@@ -383,11 +396,7 @@ extern "C" {
 		auto *r = new const char*[n];
 		for(auto i=decltype(n){0u};i<n;++i)
 			r[i] = to_cstring(prop->data,a.GetValue<std::string>(i));
-		prop->data.AddDeleter([r,n]() {
-			for(auto i=decltype(n){0u};i<n;++i)
-				delete[] r[i];
-			delete[] r;
-		});
+		prop->data.AddDeleter([r,n]() {delete[] r;});
 		return r;
 	}
 	DLLUDM bool udm_write_property_vs(UdmProperty prop,const char *path,const char **values,uint32_t numValues)
@@ -403,6 +412,140 @@ extern "C" {
 			a.SetValue(i,values[i]);
 		return true;
 	}
+	DLLUDM bool udm_read_property_v(UdmProperty udmData,const char *path,void *outData,uint32_t itemSizeInBytes,uint32_t arrayOffset,uint32_t numItems)
+	{
+		auto childProp = get_property(udmData,path);
+		if(!childProp || !udm::is_array_type(childProp.GetType()))
+			return false;
+		auto &a = childProp.GetValue<udm::Array>();
+		if(arrayOffset +numItems > a.GetSize())
+			return false;
+		if(itemSizeInBytes != a.GetValueSize())
+			return false;
+		auto *p = a.GetValuePtr(arrayOffset);
+		memcpy(outData,p,numItems *itemSizeInBytes);
+		return true;
+	}
+	DLLUDM bool udm_write_property_v(UdmProperty udmData,const char *path,void *inData,uint32_t itemSizeInBytes,uint32_t arrayOffset,uint32_t numItems)
+	{
+		auto childProp = get_property(udmData,path);
+		if(!childProp || !udm::is_array_type(childProp.GetType()))
+			return false;
+		auto &a = childProp.GetValue<udm::Array>();
+		if(arrayOffset +numItems > a.GetSize())
+			return false;
+		if(itemSizeInBytes != a.GetValueSize())
+			return false;
+		auto *p = a.GetValuePtr(arrayOffset);
+		memcpy(p,inData,numItems *itemSizeInBytes);
+		return true;
+	}
+	DLLUDM bool udm_read_property(UdmProperty udmData,char *path,UdmType type,void *buffer,uint32_t bufferSize)
+	{
+		auto childProp = get_property(udmData,path);
+		if(udm::is_array_type(childProp.GetType()))
+		{
+			auto &a = childProp.GetValue<udm::Array>();
+			if(bufferSize < a.GetSize())
+				return false;
+			memcpy(buffer,a.GetValuePtr(0),bufferSize);
+			return true;
+		}
+		if(!udm::is_trivial_type(static_cast<udm::Type>(type)))
+			return false;
+		return udm::visit_ng(static_cast<udm::Type>(type),[&childProp,buffer,bufferSize](auto tag) {
+			using T = decltype(tag)::type;
+			if(bufferSize != sizeof(T))
+				return false;
+			auto v = childProp.ToValue<T>();
+			if(!v.has_value())
+				return false;
+			memcpy(buffer,&*v,bufferSize);
+			return true;
+		});
+	}
+	DLLUDM bool udm_write_property(UdmProperty udmData,char *path,UdmType type,void *buffer,uint32_t bufferSize)
+	{
+		auto childProp = get_property(udmData,path);
+		if(udm::is_array_type(childProp.GetType()))
+		{
+			auto &a = childProp.GetValue<udm::Array>();
+			if(bufferSize < a.GetSize())
+				return false;
+			memcpy(a.GetValuePtr(0),buffer,bufferSize);
+			return true;
+		}
+		if(static_cast<udm::Type>(type) == udm::Type::String)
+		{
+			auto *str = static_cast<char*>(buffer);
+			if(strlen(str) +1 != bufferSize || str[bufferSize -1] != '\0')
+				return false;
+			childProp = str;
+			return true;
+		}
+		if(!udm::is_trivial_type(static_cast<udm::Type>(type)))
+			return false;
+		return udm::visit_ng(static_cast<udm::Type>(type),[&childProp,buffer,bufferSize](auto tag) {
+			using T = decltype(tag)::type;
+			if(bufferSize != sizeof(T))
+				return false;
+			childProp = *static_cast<T*>(buffer);
+			return true;
+		});
+	}
+	DLLUDM bool udm_read_array_property(UdmProperty udmData,char *path,UdmType type,void *buffer,uint32_t bufferSize,uint32_t arrayOffset,uint32_t arraySize)
+	{
+		auto childProp = get_property(udmData,path);
+		if(!udm::is_array_type(childProp.GetType()))
+			return false;
+		auto &a = childProp.GetValue<udm::Array>();
+		if((arrayOffset +arraySize) > a.GetSize() || (!udm::is_trivial_type(static_cast<udm::Type>(type)) && static_cast<udm::Type>(type) != udm::Type::Struct))
+			return false;
+		auto szPerValue = a.GetValueSize();
+		if(szPerValue *arraySize != bufferSize)
+			return false;
+		memcpy(buffer,a.GetValuePtr(arrayOffset),arraySize *szPerValue);
+		return true;
+	}
+	DLLUDM bool udm_write_array_property(
+		UdmProperty udmData,char *path,UdmType type,void *buffer,uint32_t bufferSize,uint32_t arrayOffset,uint32_t arraySize,UdmArrayType arrayType,uint32_t numMembers,UdmType *types,const char **names
+	)
+	{
+		if(numMembers > 0)
+		{
+			if(static_cast<udm::Type>(type) != udm::Type::Struct)
+				return false;
+			udm::StructDescription strctDesc {};
+			strctDesc.types.reserve(numMembers);
+			strctDesc.names.reserve(numMembers);
+			for(auto i=decltype(numMembers){0u};i<numMembers;++i)
+			{
+				strctDesc.types[i] = static_cast<udm::Type>(types[i]);
+				strctDesc.names[i] = names[i];
+			}
+			if(strctDesc.GetDataSizeRequirement() *arraySize != bufferSize)
+				return false;
+			udmData->prop.AddArray(path,strctDesc,buffer,numMembers,static_cast<udm::ArrayType>(arrayType));
+			return true;
+		}
+		if(!udm::is_trivial_type(static_cast<udm::Type>(type)))
+			return false;
+		return udm::visit(static_cast<udm::Type>(type),[udmData,path,arraySize,type,buffer,arrayType,bufferSize](auto tag) {
+			using T = decltype(tag)::type;
+			if(sizeof(T) *arraySize != bufferSize)
+				return false;
+			udmData->prop.AddArray<T>(path,arraySize,static_cast<T*>(buffer),static_cast<udm::ArrayType>(arrayType));
+			return true;
+		});
+	}
+	DLLUDM size_t udm_size_of_type(UdmType type) {return udm::size_of(static_cast<udm::Type>(type));}
+	DLLUDM size_t udm_size_of_struct(uint32_t numMembers,UdmType *types)
+	{
+		size_t sz = 0;
+		for(auto i=decltype(numMembers){0u};i<numMembers;++i)
+			sz += udm::size_of(static_cast<udm::Type>(types[i]));
+		return sz;
+	}
 	DEFINE_FUNDAMENTAL_TYPE_FUNCTIONS(b,bool)
 	DEFINE_FUNDAMENTAL_TYPE_FUNCTIONS(f,float)
 	DEFINE_FUNDAMENTAL_TYPE_FUNCTIONS(d,double)
@@ -417,7 +560,7 @@ extern "C" {
 	DLLUDM bool udm_add_property_struct(UdmProperty udmData,const char *path,uint32_t numMembers,UdmType *types,const char **names)
 	{
 		auto childProp = (strlen(path) > 0) ? udmData->prop.Add(path,udm::Type::Struct,true) : udmData->prop;
-		auto *strct = childProp->GetValuePtr<udm::Struct>();
+		auto *strct = childProp.GetValuePtr<udm::Struct>();
 		if(!strct)
 			return false;
 		strct->SetDescription(to_struct_description(numMembers,types,names));
@@ -438,19 +581,26 @@ extern "C" {
 		return true;
 	}
 
+	DLLUDM UdmType udm_get_array_value_type(UdmProperty udmData,const char *path)
+	{
+		auto childProp = get_property(udmData,path);
+		if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp->type))
+			return umath::to_integral(udm::Type::Invalid);
+		return umath::to_integral(childProp.GetValue<udm::Array>().GetValueType());
+	}
 	DLLUDM uint32_t udm_get_array_size(UdmProperty udmData,const char *path)
 	{
 		auto childProp = get_property(udmData,path);
 		if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp->type))
 			return 0;
-		return childProp->GetValue<udm::Array>().GetSize();
+		return childProp.GetValue<udm::Array>().GetSize();
 	}
 	DLLUDM bool udm_set_array_size(UdmProperty udmData,const char *path,uint32_t newSize)
 	{
 		auto childProp = get_property(udmData,path);
 		if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp->type))
 			return false;
-		childProp->GetValue<udm::Array>().Resize(newSize);
+		childProp.GetValue<udm::Array>().Resize(newSize);
 		return true;
 	}
 	DLLUDM UdmType *udm_get_struct_member_types(UdmProperty udmData,const char *path,uint32_t *outNumMembers)
@@ -459,7 +609,7 @@ extern "C" {
 		auto childProp = get_property(udmData,path);
 		if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp->type))
 			return nullptr;
-		auto &a = childProp->GetValue<udm::Array>();
+		auto &a = childProp.GetValue<udm::Array>();
 		auto *strct = a.GetStructuredDataInfo();
 		if(!strct)
 			return nullptr;
@@ -469,6 +619,24 @@ extern "C" {
 			r[i] = umath::to_integral(strct->types[i]);
 		*outNumMembers = n;
 		udmData->data.AddDeleter([r]() {delete[] r;});
+		return r;
+	}
+	DLLUDM char **udm_get_struct_member_names(UdmProperty udmData,const char *path,uint32_t *outNumMembers)
+	{
+		*outNumMembers = 0;
+		auto childProp = get_property(udmData,path);
+		if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp->type))
+			return nullptr;
+		auto &a = childProp.GetValue<udm::Array>();
+		auto *strct = a.GetStructuredDataInfo();
+		if(!strct)
+			return nullptr;
+		auto n = strct->GetMemberCount();
+		auto *r = new char*[n];
+		for(auto i=decltype(n){0u};i<n;++i)
+			r[i] = to_cstring(udmData->data,strct->names[i]);
+		*outNumMembers = n;
+		udmData->data.AddDeleter([r,n]() {delete[] r;});
 		return r;
 	}
 	
@@ -517,6 +685,11 @@ void udm::detail::test_c_wrapper()
 	auto *udm_write_property_s = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,const char*)>("udm_write_property_s");
 	auto *udm_read_property_vs = lib->FindSymbolAddress<char*(*)(UdmProperty,const char*,uint32_t*)>("udm_read_property_vs");
 	auto *udm_write_property_vs = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,const char**,uint32_t)>("udm_write_property_vs");
+	auto *udm_read_property_v = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,void*,uint32_t,uint32_t,uint32_t)>("udm_read_property_v");
+	auto *udm_write_property_v = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,void*,uint32_t,uint32_t,uint32_t)>("udm_write_property_v");
+	auto *udm_size_of_type = lib->FindSymbolAddress<size_t(*)(UdmType)>("udm_size_of_type");
+	auto *udm_size_of_struct = lib->FindSymbolAddress<size_t(*)(uint32_t,UdmType*)>("udm_size_of_struct");
+
 	auto *udm_free_memory = lib->FindSymbolAddress<void(*)(UdmData)>("udm_free_memory");
 	
 	auto *udm_get_property_name = lib->FindSymbolAddress<char*(*)(UdmProperty)>("udm_get_property_name");
@@ -539,11 +712,13 @@ void udm::detail::test_c_wrapper()
 	auto *udm_add_property_array = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,UdmType,UdmArrayType,uint32_t)>("udm_add_property_array");
 	auto *udm_add_property_struct_array = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,uint32_t,UdmType*,const char**,UdmArrayType,uint32_t)>("udm_add_property_struct_array");
 
+	auto *udm_get_array_value_type = lib->FindSymbolAddress<UdmType(*)(UdmProperty,const char*)>("udm_get_array_value_type");
 	auto *udm_get_array_size = lib->FindSymbolAddress<uint32_t(*)(UdmProperty,const char*)>("udm_get_array_size");
 	auto *udm_set_array_size = lib->FindSymbolAddress<bool(*)(UdmProperty,const char*,uint32_t)>("udm_set_array_size");
 	auto *udm_get_struct_member_types = lib->FindSymbolAddress<UdmType*(*)(UdmProperty,const char*,uint32_t*)>("udm_get_struct_member_types");
 	
 	auto *udm_get_property_type = lib->FindSymbolAddress<UdmType(*)(UdmProperty,const char*)>("udm_get_property_type");
+	auto *udm_get_property_child_count = lib->FindSymbolAddress<uint32_t(*)(UdmProperty,const char*)>("udm_get_property_child_count");
 	auto *udm_create_property_child_name_iterator = lib->FindSymbolAddress<UdmElementIterator(*)(UdmProperty,const char*)>("udm_create_property_child_name_iterator");
 	auto *udm_destroy_property_child_name_iterator = lib->FindSymbolAddress<void(*)(UdmElementIterator)>("udm_destroy_property_child_name_iterator");
 	auto *udm_fetch_property_child_name = lib->FindSymbolAddress<const char*(*)(UdmElementIterator)>("udm_fetch_property_child_name");
