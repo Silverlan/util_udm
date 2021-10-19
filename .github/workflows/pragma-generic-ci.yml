@@ -54,7 +54,7 @@ jobs:
       - name: Define CMake Variables
         uses: Silverlan/common_actions/define_cmake_var@actions
         with:
-          cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF'
+          cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF -DLINK_COMMON_LIBS_STATIC=ON'
           
       - name: Download submodule - lz4
         uses: Silverlan/common_actions/build_submodule@actions
