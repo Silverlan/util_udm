@@ -62,6 +62,7 @@ jobs:
           repo_name: 'lz4'
           repo_branch: 'release'
           cmake_var: 'DEPENDENCY_LZ4_INCLUDE'
+          include_dir: 'lib'
           
       - name: CMake Build
         uses: Silverlan/common_actions/build_cmake@actions
