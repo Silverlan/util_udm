@@ -67,12 +67,17 @@ set(DEFINITIONS)
 
 ##### CONFIGURATION #####
 
+add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 if(${UTIL_UDM_STATIC})
 	set(LIB_TYPE STATIC)
 else()
 	set(LIB_TYPE SHARED)
 	add_definitions(-DUDM_SHARED)
 	add_definitions(-DUDM_EXPORT)
+	
+	add_definitions(-DSHUTIL_STATIC)
+	add_definitions(-DMUTIL_STATIC)
+	add_definitions(-DVFILESYSTEM_STATIC)
 endif()
 
 foreach(def IN LISTS DEFINITIONS)
