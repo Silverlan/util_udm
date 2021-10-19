@@ -50,6 +50,11 @@ jobs:
       - name: Download binaries
         uses: Silverlan/common_actions/download_build_binaries@actions
         continue-on-error: true
+        
+      - name: Define CMake Variables
+        uses: Silverlan/common_actions/define_cmake_var@actions
+        with:
+          cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF'
 
       - name: Download common external libs
         uses: Silverlan/common_actions/get_common_external_libs@actions
