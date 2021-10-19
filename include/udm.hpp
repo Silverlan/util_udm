@@ -572,6 +572,7 @@ namespace udm
 		LinkedPropertyWrapper *GetLinked();
 		const LinkedPropertyWrapper *GetLinked() const {return const_cast<PropertyWrapper*>(this)->GetLinked();};
 	protected:
+		bool IsArrayItem(bool includeIfElementOfArrayItem) const;
 		bool linked = false;
 	};
 
@@ -1731,14 +1732,17 @@ template<class T>
 template<typename T>
 	T &udm::PropertyWrapper::GetValue() const
 {
-	if(IsArrayItem())
+	if(arrayIndex != std::numeric_limits<uint32_t>::max())
 	{
-		auto &a = *GetOwningArray();
-		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValue<T>();
-		if(a.IsValueType(type_to_enum<T>()) == false)
-			throw LogicError{"Type mismatch, requested type is " +std::string{magic_enum::enum_name(type_to_enum<T>())} +", but actual type is " +std::string{magic_enum::enum_name(a.GetValueType())} +"!"};
-		return static_cast<T*>(a.GetValues())[arrayIndex];
+		auto *a = prop->GetValuePtr<Array>();
+		if(a)
+		{
+			if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+				return const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValue<T>();
+			if(a->IsValueType(type_to_enum<T>()) == false)
+				throw LogicError{"Type mismatch, requested type is " +std::string{magic_enum::enum_name(type_to_enum<T>())} +", but actual type is " +std::string{magic_enum::enum_name(a->GetValueType())} +"!"};
+			return static_cast<T*>(a->GetValues())[arrayIndex];
+		}
 	}
 	return (*this)->GetValue<T>();
 }
@@ -1746,14 +1750,17 @@ template<typename T>
 template<typename T>
 	T *udm::PropertyWrapper::GetValuePtr() const
 {
-	if(IsArrayItem())
+	if(arrayIndex != std::numeric_limits<uint32_t>::max())
 	{
-		auto &a = *GetOwningArray();
-		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr<T>();
-		if(a.IsValueType(type_to_enum<T>()) == false)
-			return nullptr;
-		return &static_cast<T*>(a.GetValues())[arrayIndex];
+		auto *a = prop->GetValuePtr<Array>();
+		if(a)
+		{
+			if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+				return const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr<T>();
+			if(a->IsValueType(type_to_enum<T>()) == false)
+				return nullptr;
+			return &static_cast<T*>(a->GetValues())[arrayIndex];
+		}
 	}
 	return prop ? (*this)->GetValuePtr<T>() : nullptr;
 }
