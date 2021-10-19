@@ -86,4 +86,4 @@ jobs:
           name: udm-standalone
           retention-days: 30
           path: |
-            ${{ matrix.config.build_type }}/util_udm${{ env.GA_SHARED_BINARY_LIBRARY_EXT }}
+            ${{ matrix.config.build_dir }}/${{ matrix.config.build_type }}/util_udm${{ env.GA_SHARED_BINARY_LIBRARY_EXT }}
