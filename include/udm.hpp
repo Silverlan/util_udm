@@ -1830,9 +1830,9 @@ template<typename T>
 {
 	if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 		return {};
-	if(IsArrayItem())
+	if(IsArrayItem(true))
 	{
-		auto &a = *GetOwningArray();
+		auto &a = prop->GetValue<Array>();
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
 			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->ToValue<T>();
 		auto vs = [&](auto tag) -> std::optional<T> {
