@@ -109,7 +109,7 @@ bool udm::PropertyWrapper::IsType(Type type) const
 {
 	if(!prop)
 		return false;
-	if(IsArrayItem())
+	if(IsArrayItem(true))
 	{
 		if(!is_array_type(prop->type))
 			return false;
@@ -175,9 +175,9 @@ udm::BlobResult udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferS
 {
 	if(!*this)
 		return BlobResult::InvalidProperty;
-	if(IsArrayItem())
+	if(IsArrayItem(true))
 	{
-		auto &a = *GetOwningArray();
+		auto &a = prop->GetValue<Array>();
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
 			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetBlobData(outBuffer,bufferSize,optOutRequiredSize);
 		switch(a.GetValueType())
@@ -204,9 +204,9 @@ udm::BlobResult udm::PropertyWrapper::GetBlobData(void *outBuffer,size_t bufferS
 
 udm::Blob udm::PropertyWrapper::GetBlobData(Type &outType) const
 {
-	if(IsArrayItem())
+	if(IsArrayItem(true))
 	{
-		auto &a = *GetOwningArray();
+		auto &a = prop->GetValue<Array>();
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
 			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetBlobData(outType);
 		return a.IsValueType(Type::Blob) ? a.GetValue<Blob>(arrayIndex) :
