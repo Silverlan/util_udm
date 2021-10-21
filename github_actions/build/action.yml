@@ -36,6 +36,11 @@ runs:
       with:
         cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF -DLINK_COMMON_LIBS_STATIC=ON'
 
+    - name: Copy lz4-cmake script
+      shell: bash
+      run: |
+        cp -n ./third_party_libs/lz4-cmake/CMakeLists.txt ${{ inputs.root_dir }}/third_party_libs/lz4-cmake/CMakeLists.txt
+
     - name: Download submodule - lz4
       uses: Silverlan/common_actions/build_submodule@actions
       with:
@@ -46,8 +51,7 @@ runs:
         cmake_var: 'DEPENDENCY_LZ4_INCLUDE'
         cmake_var_lib: 'DEPENDENCY_LZ4_LIBRARY'
         include_dir: 'lib'
-        cmake_script_location: '${{ inputs.root_dir }}/third_party_libs/lz4-cmake'
-        is_cmake_script_location_absolute: '1'
+        cmake_script_location: 'third_party_libs/lz4-cmake'
             
     - name: Download common external libs
       uses: Silverlan/common_actions/get_common_external_libs@main
