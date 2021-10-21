@@ -4,6 +4,7 @@ on:
     branches: [ master, actions ]
   pull_request:
     branches: [ master, actions ]
+
 jobs:
   build:
     name: Build
@@ -31,56 +32,30 @@ jobs:
           #  archiver: "7z a"
           #  generators: "Unix Makefiles"
           #  build_dir: 'build'
-
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
-          
+
       - name: Setup
         id: setup
-        uses: Silverlan/common_actions/setup@actions
-        
-      - name: Install GCC-11
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update
-          sudo apt install gcc-11 g++-11
+        uses: Silverlan/common_actions/setup@main
           
       - name: Download binaries
-        uses: Silverlan/common_actions/download_build_binaries@actions
+        uses: Silverlan/common_actions/download_build_binaries@main
         continue-on-error: true
-        
-      - name: Define CMake Variables
-        uses: Silverlan/common_actions/define_cmake_var@actions
-        with:
-          cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF -DLINK_COMMON_LIBS_STATIC=ON'
           
-      - name: Download submodule - lz4
-        uses: Silverlan/common_actions/build_submodule@actions
+      - name: Build
+        id: build
+        uses: Silverlan/util_udm/github_actions/build@actions
         with:
-          build_target: 'lz4'
-          repo: 'https://github.com/lz4/lz4.git'
-          repo_name: 'lz4'
-          repo_branch: 'release'
-          cmake_var: 'DEPENDENCY_LZ4_INCLUDE'
-          cmake_var_lib: 'DEPENDENCY_LZ4_LIBRARY'
-          include_dir: 'lib'
-          cmake_script_location: 'third_party_libs/lz4-cmake'
-
-      - name: Download common external libs
-        uses: Silverlan/common_actions/get_common_external_libs@actions
-          
-      - name: CMake Build
-        uses: Silverlan/common_actions/build_cmake@actions
-        with:
-          build_target: util_udm
-          build_type: ${{ matrix.config.build_type }}
-          build_generator: ${{ matrix.config.generators }}
+          root_dir: "${{ env.GA_ROOT_DIR }}"
+          should_checkout: "0"
+          dir: '.'
           
       - name: Upload binaries
-        uses: Silverlan/common_actions/upload_build_binaries@actions
-        
+        uses: Silverlan/common_actions/upload_build_binaries@main
+
       - uses: actions/upload-artifact@v2.2.4
         with:
           name: udm-standalone
