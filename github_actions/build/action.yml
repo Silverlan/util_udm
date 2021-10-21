@@ -36,6 +36,12 @@ runs:
       with:
         cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF -DLINK_COMMON_LIBS_STATIC=ON'
 
+    - name: Copy lz4-cmake script
+      shell: bash
+      run: |
+        mkdir -p ./third_party_libs/lz4-cmake
+        cp -n ${{ inputs.root_dir }}/third_party_libs/lz4-cmake/CMakeLists.txt ./third_party_libs/lz4-cmake/CMakeLists.txt
+
     - name: Download submodule - lz4
       uses: Silverlan/common_actions/build_submodule@main
       with:
