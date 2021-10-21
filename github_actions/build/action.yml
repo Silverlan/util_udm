@@ -43,7 +43,7 @@ runs:
         cp -n ${{ inputs.root_dir }}/third_party_libs/lz4-cmake/CMakeLists.txt ./third_party_libs/lz4-cmake/CMakeLists.txt
 
     - name: Download submodule - lz4
-      uses: Silverlan/common_actions/build_submodule@actions
+      uses: Silverlan/common_actions/build_submodule@main
       with:
         build_target: 'lz4'
         repo: 'https://github.com/lz4/lz4.git'
