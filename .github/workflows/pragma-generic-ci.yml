@@ -1,108 +1,64 @@
 name: Build
-
-#on: [push]
 on:
   push:
-    branches: [ master ]
+    branches: [ master, actions ]
   pull_request:
-    branches: [ master ]
-    
-    
-env:
-  shared_cmake_definitions: -DDEPENDENCY_LZ4_INCLUDE=../third_party_libs/lz4/lib -DDEPENDENCY_GLM_INCLUDE=../third_party_libs/glm -DDEPENDENCY_MATHUTIL_INCLUDE=../external_libs/mathutil/include -DDEPENDENCY_SHAREDUTILS_INCLUDE=../external_libs/sharedutils/include -DDEPENDENCY_VFILESYSTEM_INCLUDE=../external_libs/vfilesystem/include -DMATHUTIL_ENABLE_MESH_FUNCTIONS=OFF -DSHAREDUTILS_STATIC=ON -DMATHUTIL_STATIC=ON -DVFILESYSTEM_STATIC=ON
+    branches: [ master, actions ]
 
 jobs:
-  # WINDOWS x64 MSVC
-  build-windows:
-    name: Build-Windows-x64
+  build:
+    name: Build
     runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
         config:
-        - {
-            name: "Windows x64 MSVC",
-            os: windows-latest,
-            artifact: "Windows-MSVC.tar.xz",
-            build_type: "RelWithDebInfo",
-            environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat",
-            cc: "cl",
-            cxx: "cl",
-            archiver: "7z a",
+          - os: windows-latest
+            name: "Windows x64 MSVC"
+            artifact: "Windows-MSVC.tar.xz"
+            build_type: "RelWithDebInfo"
+            environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+            cc: "cl"
+            cxx: "cl"
+            archiver: "7z a"
             generators: "Visual Studio 16 2019"
-          }
-
+            build_dir: 'build'
+          #- os: ubuntu-latest
+          #  name: "Ubuntu GCC-11"
+          #  artifact: "ubuntu_gcc.7z"
+          #  build_type: "RelWithDebInfo"
+          #  cc: "gcc-11"
+          #  cxx: "g++-11"
+          #  archiver: "7z a"
+          #  generators: "Unix Makefiles"
+          #  build_dir: 'build'
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+        with:
+          submodules: true
 
-      - name: Download submodules
-        run: |
-          git submodule update --init --recursive
+      - name: Setup
+        id: setup
+        uses: Silverlan/common_actions/setup@main
           
-      - name: Download common external libs
-        uses: Silverlan/common_actions/get_common_external_libs@main
-        
-      - name: Download submodule - lz4
-        uses: Silverlan/common_actions/get_submodule@main
+      - name: Download binaries
+        uses: Silverlan/common_actions/download_build_binaries@main
+        continue-on-error: true
+          
+      - name: Build
+        id: build
+        uses: Silverlan/util_udm/github_actions/build@actions
         with:
-          dir: 'third_party_libs'
-          repo: 'https://github.com/lz4/lz4.git'
-          repo_name: 'lz4'
-          repo_branch: 'release'
+          root_dir: "${{ env.GA_ROOT_DIR }}"
+          should_checkout: "0"
+          dir: '.'
           
-      - name: CMake Build
-        uses: Silverlan/common_actions/build_cmake@main
-        with:
-          build_type: ${{ matrix.config.build_type }}
-          build_generator: ${{ matrix.config.generators }}
-          cmake_definitions: ${{ env.shared_cmake_definitions }} -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
-          
-  # UBUNTU x64 GCC
-  build-ubuntu:
-    name: Build-Ubuntu-x64
-    runs-on: ${{ matrix.config.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-        - {
-            name: "Ubuntu GCC-11",
-            os: ubuntu-latest,
-            artifact: "ubuntu_gcc.7z",
-            build_type: "RelWithDebInfo",
-            cc: "gcc-11",
-            cxx: "g++-11",
-            archiver: "7z a",
-            generators: "Unix Makefiles"
-          }
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Upload binaries
+        uses: Silverlan/common_actions/upload_build_binaries@main
 
-      - name: Install GCC-11
-        run: |
-          sudo apt update
-          sudo apt install gcc-11 g++-11
-          
-      - name: Download submodules
-        run: |
-          git submodule update --init --recursive
-          
-      - name: Download common external libs
-        uses: Silverlan/common_actions/get_common_external_libs@main
-        
-      - name: Download submodule - lz4
-        uses: Silverlan/common_actions/get_submodule@main
+      - uses: actions/upload-artifact@v2.2.4
         with:
-          dir: 'third_party_libs'
-          repo: 'https://github.com/lz4/lz4.git'
-          repo_name: 'lz4'
-          repo_branch: 'release'
-          
-      - name: CMake Build
-        uses: Silverlan/common_actions/build_cmake@main
-        with:
-          build_type: ${{ matrix.config.build_type }}
-          build_generator: ${{ matrix.config.generators }}
-          cmake_definitions: ${{ env.shared_cmake_definitions }} -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+          name: udm-standalone
+          retention-days: 30
+          path: |
+            ${{ matrix.config.build_dir }}/${{ matrix.config.build_type }}/util_udm${{ env.GA_SHARED_BINARY_LIBRARY_EXT }}
