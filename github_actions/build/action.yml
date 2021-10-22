@@ -12,6 +12,10 @@ inputs:
     description: 'Library directory'
     required: true
     default: 'external_libs/util_udm'
+  build_shared:
+    description: 'Build as shared library?'
+    required: true
+    default: '0'
 runs:
   using: "composite"
   steps:
@@ -31,11 +35,15 @@ runs:
             cmake_var: 'DEPENDENCY_UTIL_UDM_INCLUDE'
             dir: 'external_libs'
             
-    - name: Define CMake Variables
-      uses: Silverlan/common_actions/define_cmake_var@main
+    - uses: ChristopherHX/conditional@b4a9649204f81002ec9a4ef7d4bf7d6b2ab7fa55
+      name: Define CMake Variables
       with:
-        cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF -DLINK_COMMON_LIBS_STATIC=ON'
-
+        if: ${{inputs.build_shared == '1'}}
+        step: |
+          uses: Silverlan/common_actions/define_cmake_var@main
+          with:
+            cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF -DLINK_COMMON_LIBS_STATIC=ON'
+           
     - name: Copy lz4-cmake script
       shell: bash
       run: |
