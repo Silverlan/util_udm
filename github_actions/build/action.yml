@@ -16,6 +16,11 @@ inputs:
     description: 'Build as shared library?'
     required: true
     default: '0'
+outputs:
+  include_directory:
+    description: 'The include directory for this library'
+  library_file_path:
+    description: 'The path (including filename and extension) of the generated library'
 runs:
   using: "composite"
   steps:
@@ -67,6 +72,7 @@ runs:
 
     - uses: Silverlan/common_actions/build_cmake@main
       name: CMake Build
+      id: build
       with:
         build_type: ${{ matrix.config.build_type }}
         build_generator: ${{ matrix.config.generators }}
@@ -74,3 +80,10 @@ runs:
         build_target: util_udm
         build_dir: '${{ matrix.config.build_dir }}/${{ inputs.dir }}'
         cmake_script_location: '${{ inputs.dir }}'
+        
+    - name: Write outputs
+      shell: bash
+      id: write-outputs
+      run: |
+        echo "::set-output name=include-directory::$(echo ${{ inputs.root_dir }}/${{ inputs.dir }}/include)"
+        echo "::set-output name=library-file-path::$(echo ${{ steps.build.outputs.library_file_path }})"
