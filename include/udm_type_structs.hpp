@@ -100,6 +100,34 @@ namespace udm
 		bool operator!=(const Utf8String &other) const {return !operator==(other);}
 	};
 	
+	struct LinkedPropertyWrapper;
+	template<typename T>
+		class ArrayIterator
+	{
+	public:
+		using iterator_category = std::forward_iterator_tag;
+		using value_type = T&;
+		using difference_type = std::ptrdiff_t;
+		using pointer = T*;
+		using reference = T&;
+	
+		ArrayIterator();
+		ArrayIterator(udm::Array &a);
+		ArrayIterator(udm::Array &a,uint32_t idx);
+		ArrayIterator(const ArrayIterator &other);
+		ArrayIterator &operator++();
+		ArrayIterator operator++(int);
+		ArrayIterator operator+(uint32_t n);
+		reference operator*();
+		pointer operator->();
+		bool operator==(const ArrayIterator &other) const;
+		bool operator!=(const ArrayIterator &other) const;
+
+		udm::LinkedPropertyWrapper &GetProperty() {return m_curProperty;}
+	private:
+		udm::LinkedPropertyWrapper m_curProperty;
+	};
+	
 	struct DLLUDM PropertyWrapper
 	{
 		PropertyWrapper()=default;
@@ -291,33 +319,6 @@ namespace udm
 		// For internal use only!
 		void InitializeProperty(Type type=Type::Element,bool getOnly=false);
 		Property *GetProperty(std::vector<uint32_t> *optOutArrayIndices=nullptr) const;
-	};
-	
-	template<typename T>
-		class ArrayIterator
-	{
-	public:
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = T&;
-		using difference_type = std::ptrdiff_t;
-		using pointer = T*;
-		using reference = T&;
-	
-		ArrayIterator();
-		ArrayIterator(udm::Array &a);
-		ArrayIterator(udm::Array &a,uint32_t idx);
-		ArrayIterator(const ArrayIterator &other);
-		ArrayIterator &operator++();
-		ArrayIterator operator++(int);
-		ArrayIterator operator+(uint32_t n);
-		reference operator*();
-		pointer operator->();
-		bool operator==(const ArrayIterator &other) const;
-		bool operator!=(const ArrayIterator &other) const;
-
-		udm::LinkedPropertyWrapper &GetProperty() {return m_curProperty;}
-	private:
-		udm::LinkedPropertyWrapper m_curProperty;
 	};
 
 	struct DLLUDM Reference
