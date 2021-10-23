@@ -204,8 +204,8 @@ template<typename T>
 		auto *ptrMemberValue = static_cast<uint8_t*>(a.GetValuePtr(arrayIndex)) +offset;
 		auto memberType = strct->types[memberIndex];
 		return udm::visit(static_cast<udm::Type>(type),[memberType,numValues,ptrMemberValue,values](auto tag) {
-			using T = decltype(tag)::type;
-			using TUnderlying = UdmUnderlyingType<T>;
+			using TT = decltype(tag)::type;
+			using TUnderlying = UdmUnderlyingType<TT>;
 			if(udm::size_of(memberType) != udm::size_of(udm::type_to_enum<TUnderlying>()) *numValues)
 				return false;
 			memcpy(ptrMemberValue,values,udm::size_of(memberType));
@@ -651,14 +651,6 @@ extern "C" {
 	}
 	
 	DLLUDM void udm_free_memory(UdmData udmData) {udmData->FreeMemory();}
-}
-
-const HMODULE GetCurrentModule()
-{
-    MEMORY_BASIC_INFORMATION mbi = {0};
-    ::VirtualQuery( GetCurrentModule, &mbi, sizeof(mbi) );
-
-    return reinterpret_cast<HMODULE>(mbi.AllocationBase);
 }
 
 #include <sharedutils/util_library.hpp>

@@ -5,8 +5,9 @@
 #ifndef __UDM_TRIVIAL_TYPES_HPP__
 #define __UDM_TRIVIAL_TYPES_HPP__
 
-#include "udm_definitions.hpp"
-#include <cinttypes>
+#include "udm_type_structs.hpp"
+#include "udm_enums.hpp"
+#include "udm_basic_types.hpp"
 #include <string>
 #include <variant>
 #include <map>
@@ -16,104 +17,6 @@
 
 namespace udm
 {
-	using DataValue = void*;
-	using String = std::string;
-	using Int8 = int8_t;
-	using UInt8 = uint8_t;
-	using Int16 = int16_t;
-	using UInt16 = uint16_t;
-	using Int32 = int32_t;
-	using UInt32 = uint32_t;
-	using Int64 = int64_t;
-	using UInt64 = uint64_t;
-	using Enum = int32_t;
-
-#pragma pack(push,1)
-	struct DLLUDM Half
-	{
-		Half()=default;
-		Half(uint16_t value)
-			: value{value}
-		{}
-		Half(const Half &other)=default;
-		Half(float value);
-		operator float() const;
-		Half &operator=(float value);
-		Half &operator=(uint16_t value);
-		Half &operator=(const Half &other)=default;
-		uint16_t value;
-	};
-#pragma pack(pop)
-	static_assert(sizeof(Half) == sizeof(uint16_t));
-
-	using Float = float;
-	using Double = double;
-	using Boolean = bool;
-
-	using Vector2 = ::Vector2;
-	using Vector3 = ::Vector3;
-	using Vector4 = ::Vector4;
-	using Vector2i = ::Vector2i;
-	using Vector3i = ::Vector3i;
-	using Vector4i = ::Vector4i;
-	using Quaternion = Quat;
-	using EulerAngles = ::EulerAngles;
-	using Srgba = std::array<uint8_t,4>;
-	using HdrColor = std::array<uint16_t,3>;
-	using Transform = umath::Transform;
-	using ScaledTransform = umath::ScaledTransform;
-	using Mat4 = Mat4;
-	using Mat3x4 = Mat3x4;
-	using Nil = std::monostate;
-
-	enum class Type : uint8_t
-	{
-		Nil = 0,
-		String,
-		Utf8String,
-
-		Int8,
-		UInt8,
-		Int16,
-		UInt16,
-		Int32,
-		UInt32,
-		Int64,
-		UInt64,
-
-		Float,
-		Double,
-		Boolean,
-
-		Vector2,
-		Vector3,
-		Vector4,
-		Quaternion,
-		EulerAngles,
-		Srgba,
-		HdrColor,
-		Transform,
-		ScaledTransform,
-		Mat4,
-		Mat3x4,
-
-		Blob,
-		BlobLz4,
-
-		Element,
-		Array,
-		ArrayLz4,
-		Reference,
-		Struct,
-		Half,
-		Vector2i,
-		Vector3i,
-		Vector4i,
-
-		Count,
-		Last = Count -1,
-		Invalid = std::numeric_limits<uint8_t>::max()
-	};
 	static constexpr std::array<Type,12> NUMERIC_TYPES = {
 		Type::Int8,Type::UInt8,
 		Type::Int16,Type::UInt16,
@@ -422,7 +325,8 @@ template<typename T>
 {
 	constexpr auto type = type_to_enum_s<T>();
 	if constexpr(umath::to_integral(type) > umath::to_integral(Type::Last))
-		static_assert(false,"Unsupported type!");
+		[]<bool flag = false>()
+			{static_assert(flag, "Unsupported type!");}();
 	return type;
 }
 
@@ -517,16 +421,16 @@ constexpr size_t udm::size_of(Type t)
 	if(is_numeric_type(t))
 	{
 		auto tag = get_numeric_tag(t);
-		return std::visit([&](auto tag){return sizeof(decltype(tag)::type);},tag);
+		return std::visit([&](auto tag){return sizeof(typename decltype(tag)::type);},tag);
 	}
 
 	if(is_generic_type(t))
 	{
 		auto tag = get_generic_tag(t);
 		return std::visit([&](auto tag){
-			if constexpr(std::is_same_v<decltype(tag)::type,std::monostate>)
+			if constexpr(std::is_same_v<typename decltype(tag)::type,std::monostate>)
 				return static_cast<uint64_t>(0);
-			return sizeof(decltype(tag)::type);
+			return sizeof(typename decltype(tag)::type);
 		},tag);
 	}
 	throw InvalidUsageError{std::string{"UDM type "} +std::string{magic_enum::enum_name(t)} +" has non-constant size!"};
@@ -539,7 +443,7 @@ constexpr size_t udm::size_of_base_type(Type t)
 	if(is_non_trivial_type(t))
 	{
 		auto tag = get_non_trivial_tag(t);
-		return std::visit([&](auto tag){return sizeof(decltype(tag)::type);},tag);
+		return std::visit([&](auto tag){return sizeof(typename decltype(tag)::type);},tag);
 	}
 	return size_of(t);
 }
@@ -549,6 +453,24 @@ template<typename T>
 {
 	static_assert(util::is_specialization<T,std::vector>::value);
 	return udm::type_to_enum<T::value_type>();
+}
+
+template<typename T1,typename T2,typename ...T>
+    void udm::StructDescription::DefineTypes(std::initializer_list<std::string>::iterator it)
+{
+    DefineTypes<T1>(it);
+    DefineTypes<T2,T...>(it +1);
+}
+template<typename T>
+    void udm::StructDescription::DefineTypes(std::initializer_list<std::string>::iterator it)
+{
+    types.push_back(type_to_enum<T>());
+    names.push_back(*it);
+}
+
+constexpr bool udm::ArrayLz4::IsValueTypeSupported(Type type)
+{
+	return is_numeric_type(type) || is_generic_type(type) || type == Type::Struct || type == Type::Element || type == Type::String;
 }
 
 #endif

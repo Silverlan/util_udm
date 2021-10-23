@@ -8,6 +8,7 @@
 #include "udm_types.hpp"
 #include "udm_trivial_types.hpp"
 #include <type_traits>
+#include <cstring>
 
 #pragma warning( push )
 #pragma warning( disable : 4715 )
@@ -107,19 +108,19 @@ namespace udm
 				else if constexpr(is_vector_type<T1>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,T1::length()>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,T1::length()>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::is_same_v<T1,Mat4> || std::is_same_v<T1,Mat3x4>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,T1::length() *4>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,T1::length() *4>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::is_same_v<T1,Srgba> || std::is_same_v<T1,HdrColor>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,v1.size()>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,v1.size()>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::is_same_v<T1,EulerAngles>)
@@ -131,20 +132,20 @@ namespace udm
 				else if constexpr(std::is_same_v<T1,Quaternion>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,T1::length(),translate_quaternion_index>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,T1::length(),translate_quaternion_index>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::derived_from<T1,Transform>)
 				{
 					T1 v1;
 					using TTranslation = decltype(T1::translation);
-					parse_value_list<TTranslation,TTranslation::value_type,TTranslation::length()>(v0,v1.translation);
+					parse_value_list<TTranslation,typename TTranslation::value_type,TTranslation::length()>(v0,v1.translation);
 					using TRotation = decltype(T1::rotation);
-					parse_value_list<TRotation,TRotation::value_type,TRotation::length(),translate_quaternion_index>(v0,v1.rotation);
+					parse_value_list<TRotation,typename TRotation::value_type,TRotation::length(),translate_quaternion_index>(v0,v1.rotation);
 					if constexpr(std::is_same_v<T1,ScaledTransform>)
 					{
 						using TScale = decltype(T1::scale);
-						parse_value_list<TScale,TScale::value_type,TScale::length()>(v0,v1.scale);
+						parse_value_list<TScale,typename TScale::value_type,TScale::length()>(v0,v1.scale);
 					}
 					return v1;
 				}
@@ -152,7 +153,7 @@ namespace udm
 				{
 					std::vector<uint8_t> data;
 					data.resize(v0.size() +1);
-					memcpy(data.data(),v0.data(),v0.size());
+					std::memcpy(data.data(),v0.data(),v0.size());
 					data.back() = '\0';
 					return T1 {std::move(data)};
 				}
@@ -211,9 +212,9 @@ namespace udm
 			static T1 convert(const T0 &v0)
 			{
 				return T1{
-					static_cast<T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<T1::value_type>::max())),
-					static_cast<T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<T1::value_type>::max())),
-					static_cast<T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<T1::value_type>::max()))
+					static_cast<typename T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+					static_cast<typename T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+					static_cast<typename T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<typename T1::value_type>::max()))
 				};
 			}
 		};
@@ -227,18 +228,18 @@ namespace udm
 				if constexpr(std::is_same_v<T1,Srgba>)
 				{
 					return T1{
-						static_cast<T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<T1::value_type>::max())),
-						static_cast<T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<T1::value_type>::max())),
-						static_cast<T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<T1::value_type>::max())),
-						static_cast<T1::value_type>(std::clamp<float>(v0.w *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<T1::value_type>::max()))
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.w *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max()))
 					};
 				}
 				else
 				{
 					return T1{
-						static_cast<T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<T1::value_type>::max())),
-						static_cast<T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<T1::value_type>::max())),
-						static_cast<T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<T1::value_type>::max()))
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<uint8_t>::max(),0,std::numeric_limits<typename T1::value_type>::max()))
 					};
 				}
 			}
@@ -352,11 +353,10 @@ template<typename TTo>
 	constexpr bool udm::is_convertible_from(Type tFrom)
 {
 	if(is_ng_type(tFrom))
-		return visit_ng(tFrom,[&](auto tag){return is_convertible<decltype(tag)::type,TTo>();});
+		return visit_ng(tFrom,[&](auto tag){return is_convertible<typename decltype(tag)::type,TTo>();});
 
 	if(tFrom == Type::String)
 		return is_convertible<String,TTo>();
-	static_assert(umath::to_integral(Type::Count) == 33,"Update this list when new types are added!");
 	return false;
 }
 
@@ -364,22 +364,20 @@ template<typename TFrom>
 	constexpr bool udm::is_convertible(Type tTo)
 {
 	if(is_ng_type(tTo))
-		return visit_ng(tTo,[&](auto tag){return is_convertible<TFrom,decltype(tag)::type>();});
+		return visit_ng(tTo,[&](auto tag){return is_convertible<TFrom,typename decltype(tag)::type>();});
 
 	if(tTo == Type::String)
 		return is_convertible<TFrom,String>();
-	static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 	return false;
 }
 
 constexpr bool udm::is_convertible(Type tFrom,Type tTo)
 {
 	if(is_ng_type(tFrom))
-		return visit_ng(tFrom,[&](auto tag){return is_convertible<decltype(tag)::type>(tTo);});
+		return visit_ng(tFrom,[&](auto tag){return is_convertible<typename decltype(tag)::type>(tTo);});
 
 	if(tFrom == Type::String)
 		return is_convertible<String>(tTo);
-	static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 	return false;
 }
 
