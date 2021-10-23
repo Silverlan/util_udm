@@ -108,19 +108,19 @@ namespace udm
 				else if constexpr(is_vector_type<T1>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,T1::length()>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,T1::length()>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::is_same_v<T1,Mat4> || std::is_same_v<T1,Mat3x4>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,T1::length() *4>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,T1::length() *4>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::is_same_v<T1,Srgba> || std::is_same_v<T1,HdrColor>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,v1.size()>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,v1.size()>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::is_same_v<T1,EulerAngles>)
@@ -139,13 +139,13 @@ namespace udm
 				{
 					T1 v1;
 					using TTranslation = decltype(T1::translation);
-					parse_value_list<TTranslation,TTranslation::value_type,TTranslation::length()>(v0,v1.translation);
+					parse_value_list<TTranslation,typename TTranslation::value_type,TTranslation::length()>(v0,v1.translation);
 					using TRotation = decltype(T1::rotation);
-					parse_value_list<TRotation,TRotation::value_type,TRotation::length(),translate_quaternion_index>(v0,v1.rotation);
+					parse_value_list<TRotation,typename TRotation::value_type,TRotation::length(),translate_quaternion_index>(v0,v1.rotation);
 					if constexpr(std::is_same_v<T1,ScaledTransform>)
 					{
 						using TScale = decltype(T1::scale);
-						parse_value_list<TScale,TScale::value_type,TScale::length()>(v0,v1.scale);
+						parse_value_list<TScale,typename TScale::value_type,TScale::length()>(v0,v1.scale);
 					}
 					return v1;
 				}
