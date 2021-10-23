@@ -422,7 +422,8 @@ template<typename T>
 {
 	constexpr auto type = type_to_enum_s<T>();
 	if constexpr(umath::to_integral(type) > umath::to_integral(Type::Last))
-		static_assert(false,"Unsupported type!");
+		[]<bool flag = false>()
+			{static_assert(flag, "Unsupported type!");}();
 	return type;
 }
 
@@ -517,16 +518,16 @@ constexpr size_t udm::size_of(Type t)
 	if(is_numeric_type(t))
 	{
 		auto tag = get_numeric_tag(t);
-		return std::visit([&](auto tag){return sizeof(decltype(tag)::type);},tag);
+		return std::visit([&](auto tag){return sizeof(typename decltype(tag)::type);},tag);
 	}
 
 	if(is_generic_type(t))
 	{
 		auto tag = get_generic_tag(t);
 		return std::visit([&](auto tag){
-			if constexpr(std::is_same_v<decltype(tag)::type,std::monostate>)
+			if constexpr(std::is_same_v<typename decltype(tag)::type,std::monostate>)
 				return static_cast<uint64_t>(0);
-			return sizeof(decltype(tag)::type);
+			return sizeof(typename decltype(tag)::type);
 		},tag);
 	}
 	throw InvalidUsageError{std::string{"UDM type "} +std::string{magic_enum::enum_name(t)} +" has non-constant size!"};
@@ -539,7 +540,7 @@ constexpr size_t udm::size_of_base_type(Type t)
 	if(is_non_trivial_type(t))
 	{
 		auto tag = get_non_trivial_tag(t);
-		return std::visit([&](auto tag){return sizeof(decltype(tag)::type);},tag);
+		return std::visit([&](auto tag){return sizeof(typename decltype(tag)::type);},tag);
 	}
 	return size_of(t);
 }
