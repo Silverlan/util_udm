@@ -8,6 +8,7 @@
 #include "udm_types.hpp"
 #include "udm_trivial_types.hpp"
 #include <type_traits>
+#include <cstring>
 
 #pragma warning( push )
 #pragma warning( disable : 4715 )
@@ -152,7 +153,7 @@ namespace udm
 				{
 					std::vector<uint8_t> data;
 					data.resize(v0.size() +1);
-					memcpy(data.data(),v0.data(),v0.size());
+					std::memcpy(data.data(),v0.data(),v0.size());
 					data.back() = '\0';
 					return T1 {std::move(data)};
 				}
