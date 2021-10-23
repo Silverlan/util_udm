@@ -26,6 +26,7 @@
 #include "udm_trivial_types.hpp"
 #include "udm_conversion.hpp"
 #include "udm_exception.hpp"
+#include "udm_enums.hpp"
 
 #pragma warning( push )
 #pragma warning( disable : 4715 )
@@ -48,28 +49,6 @@ namespace udm
 
 	struct DLLUDM SyntaxError : public AsciiException {using AsciiException::AsciiException;};
 	struct DLLUDM DataError : public AsciiException {using AsciiException::AsciiException;};
-
-	enum class ArrayType : uint8_t
-	{
-		Raw = 0,
-		Compressed
-	};
-
-	enum class BlobResult : uint8_t
-	{
-		Success = 0,
-		DecompressedSizeMismatch,
-		InsufficientSize,
-		ValueTypeMismatch,
-		NotABlobType,
-		InvalidProperty
-	};
-
-	enum class MergeFlags : uint32_t
-	{
-		None = 0u,
-		OverwriteExisting = 1u
-	};
 
 	constexpr const char *enum_type_to_ascii(Type t)
 	{
@@ -327,20 +306,7 @@ namespace udm
 		LinkedPropertyWrapper operator*() const {return GetData();}
 		LinkedPropertyWrapper operator->() const {return GetData();}
 	};
-
-	enum class FormatType : uint8_t
-	{
-		Binary = 0,
-		Ascii
-	};
-
-	enum class AsciiSaveFlags : uint32_t
-	{
-		None = 0u,
-		IncludeHeader = 1u,
-		DontCompressLz4Arrays = IncludeHeader<<1u
-	};
-
+	
 	struct DLLUDM IFile
 	{
 		template<typename T>
