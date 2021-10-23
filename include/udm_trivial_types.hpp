@@ -5,8 +5,7 @@
 #ifndef __UDM_TRIVIAL_TYPES_HPP__
 #define __UDM_TRIVIAL_TYPES_HPP__
 
-#include "udm_definitions.hpp"
-#include <cinttypes>
+#include "udm_type_structs.hpp"
 #include <string>
 #include <variant>
 #include <map>
@@ -27,93 +26,6 @@ namespace udm
 	using Int64 = int64_t;
 	using UInt64 = uint64_t;
 	using Enum = int32_t;
-
-#pragma pack(push,1)
-	struct DLLUDM Half
-	{
-		Half()=default;
-		Half(uint16_t value)
-			: value{value}
-		{}
-		Half(const Half &other)=default;
-		Half(float value);
-		operator float() const;
-		Half &operator=(float value);
-		Half &operator=(uint16_t value);
-		Half &operator=(const Half &other)=default;
-		uint16_t value;
-	};
-#pragma pack(pop)
-	static_assert(sizeof(Half) == sizeof(uint16_t));
-	
-	struct DLLUDM Blob
-	{
-		Blob()=default;
-		Blob(const Blob&)=default;
-		Blob(Blob&&)=default;
-		Blob(std::vector<uint8_t> &&data)
-			: data{data}
-		{}
-		std::vector<uint8_t> data;
-
-		Blob &operator=(Blob &&other);
-		Blob &operator=(const Blob &other);
-
-		bool operator==(const Blob &other) const
-		{
-			auto res = (data == other.data);
-			UDM_ASSERT_COMPARISON(res);
-			return res;
-		}
-		bool operator!=(const Blob &other) const {return !operator==(other);}
-	};
-
-	struct DLLUDM BlobLz4
-	{
-		BlobLz4()=default;
-		BlobLz4(const BlobLz4&)=default;
-		BlobLz4(BlobLz4&&)=default;
-		BlobLz4(std::vector<uint8_t> &&compressedData,size_t uncompressedSize)
-			: compressedData{compressedData},uncompressedSize{uncompressedSize}
-		{}
-		size_t uncompressedSize = 0;
-		std::vector<uint8_t> compressedData;
-
-		BlobLz4 &operator=(BlobLz4 &&other);
-		BlobLz4 &operator=(const BlobLz4 &other);
-
-		bool operator==(const BlobLz4 &other) const
-		{
-			auto res = (uncompressedSize == other.uncompressedSize && compressedData == other.compressedData);
-			UDM_ASSERT_COMPARISON(res);
-			return res;
-		}
-		bool operator!=(const BlobLz4 &other) const {return !operator==(other);}
-	};
-
-	struct DLLUDM Utf8String
-	{
-		Utf8String()=default;
-		Utf8String(std::vector<uint8_t> &&data)
-			: data{data}
-		{}
-		Utf8String(const Utf8String &str)
-			: data{str.data}
-		{}
-		std::vector<uint8_t> data;
-
-		Utf8String &operator=(Utf8String &&other);
-		Utf8String &operator=(const Utf8String &other);
-
-		bool operator==(const Utf8String &other) const
-		{
-			auto res = (data == other.data);
-			UDM_ASSERT_COMPARISON(res);
-			return res;
-		}
-		bool operator!=(const Utf8String &other) const {return !operator==(other);}
-	};
-
 	using Float = float;
 	using Double = double;
 	using Boolean = bool;
