@@ -6,6 +6,7 @@
 #define __UDM_TRIVIAL_TYPES_HPP__
 
 #include "udm_type_structs.hpp"
+#include "udm_enums.hpp"
 #include <string>
 #include <variant>
 #include <map>
@@ -46,54 +47,6 @@ namespace udm
 	using Mat3x4 = Mat3x4;
 	using Nil = std::monostate;
 
-	enum class Type : uint8_t
-	{
-		Nil = 0,
-		String,
-		Utf8String,
-
-		Int8,
-		UInt8,
-		Int16,
-		UInt16,
-		Int32,
-		UInt32,
-		Int64,
-		UInt64,
-
-		Float,
-		Double,
-		Boolean,
-
-		Vector2,
-		Vector3,
-		Vector4,
-		Quaternion,
-		EulerAngles,
-		Srgba,
-		HdrColor,
-		Transform,
-		ScaledTransform,
-		Mat4,
-		Mat3x4,
-
-		Blob,
-		BlobLz4,
-
-		Element,
-		Array,
-		ArrayLz4,
-		Reference,
-		Struct,
-		Half,
-		Vector2i,
-		Vector3i,
-		Vector4i,
-
-		Count,
-		Last = Count -1,
-		Invalid = std::numeric_limits<uint8_t>::max()
-	};
 	static constexpr std::array<Type,12> NUMERIC_TYPES = {
 		Type::Int8,Type::UInt8,
 		Type::Int16,Type::UInt16,
