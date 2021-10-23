@@ -228,10 +228,10 @@ namespace udm
 				if constexpr(std::is_same_v<T1,Srgba>)
 				{
 					return T1{
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.w *std::numeric_limits<T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max()))
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.x *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.y *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.z *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max())),
+						static_cast<typename T1::value_type>(std::clamp<float>(v0.w *std::numeric_limits<typename T1::value_type>::max(),0,std::numeric_limits<typename T1::value_type>::max()))
 					};
 				}
 				else
