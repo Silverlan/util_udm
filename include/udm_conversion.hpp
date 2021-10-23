@@ -132,7 +132,7 @@ namespace udm
 				else if constexpr(std::is_same_v<T1,Quaternion>)
 				{
 					T1 v1;
-					parse_value_list<T1,T1::value_type,T1::length(),translate_quaternion_index>(v0,v1);
+					parse_value_list<T1,typename T1::value_type,T1::length(),translate_quaternion_index>(v0,v1);
 					return v1;
 				}
 				else if constexpr(std::derived_from<T1,Transform>)
