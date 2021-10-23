@@ -925,7 +925,7 @@ template<typename T>
 	{
 		if(type != Type::Element)
 			return {};
-		using TValue = decltype(typename T::value_type::second);
+		using TValue = typename decltype(T::value_type::second);
 		auto &e = GetValue<Element>();
 		T result {};
 		for(auto &pair : e.children)
