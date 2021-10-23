@@ -971,7 +971,7 @@ template<typename T>
 	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const T *data,uint32_t strctItems,ArrayType arrayType,bool pathToElements) const
 {
 	auto prop = AddArray(path,strct,strctItems,arrayType,pathToElements);
-	auto &a = prop.GetValue<Array>();
+	auto &a = prop.template GetValue<Array>();
 	auto sz = a.GetValueSize() *a.GetSize();
 	auto *ptr = a.GetValues();
 	memcpy(ptr,data,sz);
@@ -982,7 +982,7 @@ template<typename T>
 	udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view &path,const StructDescription &strct,const std::vector<T> &values,ArrayType arrayType,bool pathToElements) const
 {
 	auto prop = AddArray(path,strct,values.size(),arrayType,pathToElements);
-	auto &a = prop.GetValue<Array>();
+	auto &a = prop.template GetValue<Array>();
 	auto sz = a.GetValueSize() *a.GetSize();
 	auto szValues = util::size_of_container(values);
 	if(szValues != sz)
@@ -1003,7 +1003,7 @@ template<typename T>
 {
 	constexpr auto valueType = type_to_enum<T>();
 	auto prop = AddArray(path,size,valueType,arrayType,pathToElements);
-	auto &a = prop.GetValue<Array>();
+	auto &a = prop.template GetValue<Array>();
 	if constexpr(is_non_trivial_type(valueType) && valueType != Type::Struct)
 	{
 		for(auto i=decltype(size){0u};i<size;++i)
