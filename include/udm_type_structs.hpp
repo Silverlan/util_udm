@@ -583,10 +583,7 @@ namespace udm
 		void ClearUncompressedMemory();
 		using Array::GetStructuredDataInfo;
 
-		static constexpr bool IsValueTypeSupported(Type type)
-		{
-			return is_numeric_type(type) || is_generic_type(type) || type == Type::Struct || type == Type::Element || type == Type::String;
-		}
+		static constexpr bool IsValueTypeSupported(Type type);
 	private:
 		friend Property;
 		friend PropertyWrapper;
