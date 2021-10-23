@@ -12,10 +12,10 @@
 namespace udm
 {
 	struct DLLUDM Exception
-		: public std::exception
+		: public std::runtime_error
 	{
 		Exception(const std::string &msg)
-			: std::exception{msg.c_str()},m_msg{msg}
+			: std::runtime_error{msg.c_str()},m_msg{msg}
 		{}
 	private:
 		std::string m_msg;
