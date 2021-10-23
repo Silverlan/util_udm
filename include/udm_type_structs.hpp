@@ -397,17 +397,9 @@ namespace udm
 		std::vector<String> names;
 	private:
 		template<typename T1,typename T2,typename ...T>
-			void DefineTypes(std::initializer_list<std::string>::iterator it)
-		{
-			DefineTypes<T1>(it);
-			DefineTypes<T2,T...>(it +1);
-		}
+			void DefineTypes(std::initializer_list<std::string>::iterator it);
 		template<typename T>
-			void DefineTypes(std::initializer_list<std::string>::iterator it)
-		{
-			types.push_back(type_to_enum<T>());
-			names.push_back(*it);
-		}
+			void DefineTypes(std::initializer_list<std::string>::iterator it);
 	};
 
 	struct DLLUDM Struct
