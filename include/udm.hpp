@@ -550,7 +550,7 @@ template<bool ENABLE_EXCEPTIONS,typename T>
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	if constexpr(util::is_specialization<TBase,std::vector>::value)
 	{
-		using TValueType = TBase::value_type;
+		using TValueType = typename TBase::value_type;
 		if(!is_array_type(type))
 		{
 			if constexpr(ENABLE_EXCEPTIONS)
@@ -565,7 +565,7 @@ template<bool ENABLE_EXCEPTIONS,typename T>
 		a.SetValueType(valueType);
 		a.Resize(size);
 
-		if(size_of_base_type(valueType) != sizeof(TBase::value_type))
+		if(size_of_base_type(valueType) != sizeof(typename TBase::value_type))
 		{
 			if constexpr(ENABLE_EXCEPTIONS)
 				throw InvalidUsageError{"Type size mismatch!"};
@@ -925,7 +925,7 @@ template<typename T>
 	{
 		if(type != Type::Element)
 			return {};
-		using TValue = decltype(T::value_type::second);
+		using TValue = decltype(typename T::value_type::second);
 		auto &e = GetValue<Element>();
 		T result {};
 		for(auto &pair : e.children)
@@ -1034,12 +1034,12 @@ template<class T>
 	}
 	if(result != BlobResult::NotABlobType)
 		return result;
-	if constexpr(is_trivial_type(type_to_enum_s<T::value_type>()))
+	if constexpr(is_trivial_type(type_to_enum_s<typename T::value_type>()))
 	{
 		if(is_array_type(this->type))
 		{
 			auto &a = GetValue<Array>();
-			if(a.GetValueType() == type_to_enum<T::value_type>())
+			if(a.GetValueType() == type_to_enum<typename T::value_type>())
 			{
 				v.resize(a.GetSize());
 				memcpy(v.data(),a.GetValues(),v.size() *sizeof(v[0]));
