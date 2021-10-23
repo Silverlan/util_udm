@@ -455,4 +455,17 @@ template<typename T>
 	return udm::type_to_enum<T::value_type>();
 }
 
+template<typename T1,typename T2,typename ...T>
+    void udm::StructDescription::DefineTypes(std::initializer_list<std::string>::iterator it)
+{
+    DefineTypes<T1>(it);
+    DefineTypes<T2,T...>(it +1);
+}
+template<typename T>
+    void udm::StructDescription::DefineTypes(std::initializer_list<std::string>::iterator it)
+{
+    types.push_back(type_to_enum<T>());
+    names.push_back(*it);
+}
+
 #endif
