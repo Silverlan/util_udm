@@ -27,13 +27,6 @@
 #include "udm_conversion.hpp"
 #include "udm_exception.hpp"
 
-#define UDM_ASSERT_COMPARISON(res) \
-	if constexpr(ENABLE_COMPARISON_EXCEPTION) \
-	{ \
-		if(!res) \
-			throw ComparisonError{std::string{"Comparison failure "} + " in " + __FILE__ + ':' + std::to_string(__LINE__) + ':' + __func__}; \
-	}
-
 #pragma warning( push )
 #pragma warning( disable : 4715 )
 namespace udm
@@ -44,8 +37,6 @@ namespace udm
 	DLLUDM bool is_whitespace_character(char c);
 	DLLUDM bool is_control_character(char c);
 	DLLUDM bool does_key_require_quotes(const std::string_view &key);
-
-	static constexpr auto ENABLE_COMPARISON_EXCEPTION = false;
 
 	struct DLLUDM AsciiException
 		: public Exception
