@@ -6,6 +6,7 @@
 #define __UDM_TYPE_STRUCTS_HPP__
 
 #include "udm_definitions.hpp"
+#include "udm_exception.hpp"
 #include <cinttypes>
 #include <string>
 #include <vector>
