@@ -468,4 +468,9 @@ template<typename T>
     names.push_back(*it);
 }
 
+constexpr bool udm::ArrayLz4::IsValueTypeSupported(Type type)
+{
+	return is_numeric_type(type) || is_generic_type(type) || type == Type::Struct || type == Type::Element || type == Type::String;
+}
+
 #endif
