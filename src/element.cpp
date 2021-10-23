@@ -69,7 +69,6 @@ udm::Element &udm::Element::operator=(Element &&other)
 	children = std::move(other.children);
 	fromProperty = other.fromProperty;
 	parentProperty = other.parentProperty;
-	static_assert(sizeof(*this) == 96,"Update this function when the struct has changed!");
 	return *this;
 }
 udm::Element &udm::Element::operator=(const Element &other)
@@ -79,7 +78,6 @@ udm::Element &udm::Element::operator=(const Element &other)
 	children = other.children;
 	fromProperty = other.fromProperty;
 	parentProperty = other.parentProperty;
-	static_assert(sizeof(*this) == 96,"Update this function when the struct has changed!");
 	return *this;
 }
 
