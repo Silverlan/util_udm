@@ -7,6 +7,7 @@
 
 #include "udm_definitions.hpp"
 #include "udm_exception.hpp"
+#include "udm_enums.hpp"
 #include <cinttypes>
 #include <string>
 #include <vector>
