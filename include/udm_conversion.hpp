@@ -357,7 +357,6 @@ template<typename TTo>
 
 	if(tFrom == Type::String)
 		return is_convertible<String,TTo>();
-	static_assert(umath::to_integral(Type::Count) == 33,"Update this list when new types are added!");
 	return false;
 }
 
@@ -369,7 +368,6 @@ template<typename TFrom>
 
 	if(tTo == Type::String)
 		return is_convertible<TFrom,String>();
-	static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 	return false;
 }
 
@@ -380,7 +378,6 @@ constexpr bool udm::is_convertible(Type tFrom,Type tTo)
 
 	if(tFrom == Type::String)
 		return is_convertible<String>(tTo);
-	static_assert(umath::to_integral(Type::Count) == 36,"Update this list when new types are added!");
 	return false;
 }
 
