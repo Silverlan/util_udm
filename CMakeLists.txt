@@ -100,10 +100,12 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_LIST_DIR}/include/*.h"
     "${CMAKE_CURRENT_LIST_DIR}/include/*.hpp"
 )
+add_library(${PROJ_NAME} ${LIB_TYPE} ${SRC_FILES})
 if(WIN32)
 	add_compile_options(/bigobj)
+else()
+	target_link_options(${PROJ_NAME} PRIVATE "LINKER:--strip-unneeded")
 endif()
-add_library(${PROJ_NAME} ${LIB_TYPE} ${SRC_FILES})
 if(WIN32)
 	target_compile_options(${PROJ_NAME} PRIVATE /wd4251)
 	target_compile_options(${PROJ_NAME} PRIVATE /wd4996)
