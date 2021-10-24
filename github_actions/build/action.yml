@@ -70,10 +70,13 @@ runs:
       shell: bash
       run: |
         extLibShared='1'
+        udmLibStatic='1'
         if [[ "${{ inputs.build_shared }}" == "1" ]]; then
           extLibShared='0'
+          udmLibStatic='0'
         fi
         echo "::set-output name=ext-build-shared::$(echo $extLibShared)"
+        echo "::set-output name=udm-build-static::$(echo $udmLibStatic)"
             
     - name: Download common external libs
       uses: Silverlan/common_actions/get_common_external_libs@main
@@ -90,6 +93,7 @@ runs:
         build_target: util_udm
         build_dir: '${{ matrix.config.build_dir }}/${{ inputs.dir }}'
         cmake_script_location: '${{ inputs.dir }}'
+        static_library: '${{ steps.update-shared-state.outputs.udm-build-static }}'
         
     - name: Write outputs
       shell: bash
