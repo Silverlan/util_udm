@@ -54,23 +54,16 @@ runs:
           with:
             cmake_var: ' -DMATHUTIL_STATIC=ON -DSHAREDUTILS_STATIC=ON -DVFILESYSTEM_STATIC=ON -DUTIL_UDM_STATIC=OFF -DLINK_COMMON_LIBS_STATIC=ON'
            
-    - name: Copy lz4-cmake script
-      shell: bash
-      run: |
-        mkdir -p ./third_party_libs/lz4-cmake
-        cp -n ${{ inputs.root_dir }}/third_party_libs/lz4-cmake/CMakeLists.txt ./third_party_libs/lz4-cmake/CMakeLists.txt
-
     - name: Build submodule - lz4
       uses: Silverlan/common_actions/build_submodule@main
       with:
         build_target: 'lz4'
-        repo: 'https://github.com/lz4/lz4.git'
+        repo: 'https://github.com/Silverlan/lz4.git'
         repo_name: 'lz4'
         repo_branch: 'release'
         cmake_var: 'DEPENDENCY_LZ4_INCLUDE'
         cmake_var_lib: 'DEPENDENCY_LZ4_LIBRARY'
         include_dir: 'lib'
-        cmake_script_location: 'third_party_libs/lz4-cmake'
         static_library: '1'
         
     - id: update-shared-state
