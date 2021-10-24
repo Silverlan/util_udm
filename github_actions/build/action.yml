@@ -23,6 +23,9 @@ outputs:
   library_file_path:
     description: 'The path (including filename and extension) of the generated library'
     value: ${{ steps.write-outputs.outputs.library-file-path }}
+  binary_file_path:
+    description: 'The path (including filename and extension) of the generated binary'
+    value: ${{ steps.write-outputs.outputs.binary-file-path }}
 runs:
   using: "composite"
   steps:
@@ -57,7 +60,7 @@ runs:
         mkdir -p ./third_party_libs/lz4-cmake
         cp -n ${{ inputs.root_dir }}/third_party_libs/lz4-cmake/CMakeLists.txt ./third_party_libs/lz4-cmake/CMakeLists.txt
 
-    - name: Download submodule - lz4
+    - name: Build submodule - lz4
       uses: Silverlan/common_actions/build_submodule@main
       with:
         build_target: 'lz4'
@@ -68,9 +71,21 @@ runs:
         cmake_var_lib: 'DEPENDENCY_LZ4_LIBRARY'
         include_dir: 'lib'
         cmake_script_location: 'third_party_libs/lz4-cmake'
+        static_library: '1'
+        
+    - id: update-shared-state
+      shell: bash
+      run: |
+        extLibShared='1'
+        if [[ "${{ inputs.build_shared }}" == "1" ]]; then
+          extLibShared='0'
+        fi
+        echo "::set-output name=ext-build-shared::$(echo $extLibShared)"
             
     - name: Download common external libs
       uses: Silverlan/common_actions/get_common_external_libs@main
+      with:
+        build_shared: '${{ steps.update-shared-state.outputs.ext-build-shared }}'
 
     - uses: Silverlan/common_actions/build_cmake@main
       name: CMake Build
@@ -89,3 +104,4 @@ runs:
       run: |
         echo "::set-output name=include-directory::$(echo ${{ inputs.root_dir }}/${{ inputs.dir }}/include)"
         echo "::set-output name=library-file-path::$(echo ${{ steps.build.outputs.library_file_path }})"
+        echo "::set-output name=binary-file-path::$(echo ${{ steps.build.outputs.binary_file_path }})"
