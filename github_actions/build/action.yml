@@ -71,9 +71,20 @@ runs:
         cmake_var_lib: 'DEPENDENCY_LZ4_LIBRARY'
         include_dir: 'lib'
         cmake_script_location: 'third_party_libs/lz4-cmake'
+        
+    - id: update-shared-state
+      shell: bash
+      run: |
+        extLibShared='1'
+        if [[ "${{ inputs.build_shared }}" == "1" ]]; then
+          extLibShared='0'
+        fi
+        echo "::set-output name=ext-build-shared::$(echo $extLibShared)"
             
     - name: Download common external libs
       uses: Silverlan/common_actions/get_common_external_libs@main
+      with:
+        build_shared: '${{ steps.update-shared-state.outputs.ext-build-shared }}'
 
     - uses: Silverlan/common_actions/build_cmake@main
       name: CMake Build
