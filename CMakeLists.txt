@@ -58,9 +58,9 @@ set(CMAKE_CXX_STANDARD 20)
 option(UTIL_UDM_STATIC "Build as static library?" ON)
 
 link_external_library(glm)
+link_external_library(vfilesystem)
 link_external_library(sharedutils)
 link_external_library(mathutil)
-link_external_library(vfilesystem)
 link_external_library(lz4)
 
 set(DEFINITIONS)
