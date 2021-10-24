@@ -19,8 +19,10 @@ inputs:
 outputs:
   include_directory:
     description: 'The include directory for this library'
+    value: ${{ steps.write-outputs.outputs.include-directory }}
   library_file_path:
     description: 'The path (including filename and extension) of the generated library'
+    value: ${{ steps.write-outputs.outputs.library-file-path }}
 runs:
   using: "composite"
   steps:
