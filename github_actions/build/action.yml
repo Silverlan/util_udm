@@ -23,6 +23,9 @@ outputs:
   library_file_path:
     description: 'The path (including filename and extension) of the generated library'
     value: ${{ steps.write-outputs.outputs.library-file-path }}
+  binary_file_path:
+    description: 'The path (including filename and extension) of the generated binary'
+    value: ${{ steps.write-outputs.outputs.binary-file-path }}
 runs:
   using: "composite"
   steps:
@@ -89,3 +92,4 @@ runs:
       run: |
         echo "::set-output name=include-directory::$(echo ${{ inputs.root_dir }}/${{ inputs.dir }}/include)"
         echo "::set-output name=library-file-path::$(echo ${{ steps.build.outputs.library_file_path }})"
+        echo "::set-output name=binary-file-path::$(echo ${{ steps.build.outputs.binary_file_path }})"
