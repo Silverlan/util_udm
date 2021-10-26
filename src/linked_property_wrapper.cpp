@@ -115,7 +115,18 @@ void udm::LinkedPropertyWrapper::InitializeProperty(Type type,bool getOnly)
 	{
 		if(prev->prop && prev->prop->type == Type::Array && prev->arrayIndex != std::numeric_limits<uint32_t>::max() && static_cast<Array*>(prev->prop->value)->IsValueType(Type::Element))
 		{
-			prop = static_cast<Array*>(prev->prop->value)->GetValue<Element>(prev->arrayIndex).Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
+			auto *e = static_cast<Array*>(prev->prop->value)->GetValuePtr<Element>(prev->arrayIndex);
+			if(!e)
+				return;
+			if(getOnly)
+			{
+				auto it = e->children.find(propName);
+				if(it == e->children.end())
+					return;
+				prop = it->second.get();
+				return;
+			}
+			prop = e->Add(propName,!isArrayElement ? Type::Element : Type::Array).prop;
 			return;
 		}
 		if(isArrayElement && prev->prop && prev->prop->type == Type::Array)

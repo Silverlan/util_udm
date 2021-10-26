@@ -65,12 +65,15 @@ udm::PropertyWrapper::operator bool() const
 	if(!linked)
 		return false;
 	auto *a = prop->GetValuePtr<Array>();
-	if(a == nullptr)
+	if(a == nullptr || arrayIndex >= a->GetSize())
 		return false;
 	auto &linkedWrapper = static_cast<const LinkedPropertyWrapper&>(*this);
 	if(linkedWrapper.propName.empty())
-		return arrayIndex < a->GetSize();
-	return true;
+		return true;
+	if(a->GetValueType() != udm::Type::Element)
+		return false;
+	auto &el = a->GetValue<Element>(arrayIndex);
+	return el.children.find(linkedWrapper.propName) != el.children.end();
 }
 
 void *udm::PropertyWrapper::GetValuePtr(Type &outType) const
