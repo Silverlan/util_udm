@@ -292,7 +292,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::AddArray(const std::string_view
 {
 	if(arrayIndex != std::numeric_limits<uint32_t>::max())
 	{
-		if(IsArrayItem())
+		if(IsArrayItem(true))
 		{
 			auto &a = *static_cast<Array*>(prop->value);
 			if(a.GetValueType() == Type::Element)
@@ -482,14 +482,21 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 			return {};
 		if(linked && static_cast<const LinkedPropertyWrapper&>(*this).propName.empty() == false)
 		{
-			el = &static_cast<Array*>(prop->value)->GetValue<Element>(arrayIndex);
+			/*el = &static_cast<Array*>(prop->value)->GetValue<Element>(arrayIndex);
 			auto it = el->children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
 			if(it == el->children.end())
 				return {};
 			el = it->second->GetValuePtr<Element>();
 			if(el == nullptr)
 				return {};
-			return getElementProperty(*this,*el,key);
+			return getElementProperty(*this,*el,key);*/
+			el = &static_cast<Array*>(prop->value)->GetValue<Element>(arrayIndex);
+			auto prop = getElementProperty(*this,*el,static_cast<const LinkedPropertyWrapper&>(*this).propName);
+			prop.InitializeProperty(); // TODO: Don't initialize if this is used as a getter
+			el = prop.GetValuePtr<Element>();
+			if(el == nullptr)
+				return {};
+			return getElementProperty(prop,*el,key);
 		}
 		else
 		{

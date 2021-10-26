@@ -1068,8 +1068,21 @@ template<class T>
 	}
 	if(result != BlobResult::NotABlobType)
 		return result;
-	if(IsArrayItem())
+	if(IsArrayItem(true))
+	{
+		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+		{
+			auto &a = prop->GetValue<Array>();
+			auto *el = a.GetValuePtr<Element>(arrayIndex);
+			if(!el)
+				return BlobResult::InvalidProperty;
+			auto it = el->children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
+			if(it != el->children.end())
+				return it->second->GetBlobData<T>(v);
+			return BlobResult::InvalidProperty;
+		}
 		return BlobResult::NotABlobType;
+	}
 	return (*this)->GetBlobData(v);
 }
 template<typename T>
