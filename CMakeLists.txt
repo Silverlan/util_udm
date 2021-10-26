@@ -102,8 +102,8 @@ file(GLOB_RECURSE SRC_FILES
     "${CMAKE_CURRENT_LIST_DIR}/include/*.hpp"
 )
 add_library(${PROJ_NAME} ${LIB_TYPE} ${SRC_FILES})
-if(WIN32)
-	add_compile_options(/bigobj)
+if(MSVC)
+	target_compile_options(${PROJ_NAME} PUBLIC "/bigobj")
 else()
 	target_link_options(${PROJ_NAME} PRIVATE "LINKER:--strip-all")
 endif()
