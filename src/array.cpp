@@ -400,7 +400,15 @@ void udm::ArrayLz4::Compress()
 	util::ScopeGuard sgState {[this]() {m_state = State::Compressed;}};
 	auto *p = GetValuePtr();
 	if(!p)
+	{
+		auto *pStrct = Array::GetStructuredDataInfo();
+		if(pStrct)
+		{
+			m_structuredDataInfo = std::make_unique<StructDescription>();
+			*m_structuredDataInfo = std::move(*pStrct);
+		}
 		return;
+	}
 	if(m_valueType == Type::Element)
 	{
 		auto n = GetSize();

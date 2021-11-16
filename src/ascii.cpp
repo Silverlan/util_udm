@@ -470,6 +470,10 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 				}
 
 				auto &a = *static_cast<ArrayLz4*>(outData);
+				// If this is an array of struct, this will move the struct info to the compressed portion of the array
+				a.Compress();
+				// Ensure the array is empty
+				a.ReleaseValues();
 				a.InitializeSize(*size);
 				auto &blob = a.GetCompressedBlob();
 				if(uncompressedSize.has_value())
