@@ -5,6 +5,7 @@
 #include "udm.hpp"
 #include <sharedutils/magic_enum.hpp>
 #include <sharedutils/util_string.h>
+#include <fsys/ifile.hpp>
 
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName,std::string &outErr)
 {
@@ -18,7 +19,7 @@ std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileN
 }
 std::optional<udm::FormatType> udm::Data::GetFormatType(const ::VFilePtr &f,std::string &outErr)
 {
-	return GetFormatType(std::make_unique<VFilePtr>(f),outErr);
+	return GetFormatType(std::make_unique<fsys::File>(f),outErr);
 }
 std::optional<udm::FormatType> udm::Data::GetFormatType(std::unique_ptr<IFile> &&f,std::string &outErr)
 {
@@ -62,7 +63,7 @@ bool udm::Data::Save(const std::string &fileName) const
 		throw FileError{"Unable to open file!"};
 		return false;
 	}
-	VFilePtr fp{f};
+	fsys::File fp{f};
 	return Save(fp);
 }
 
@@ -281,12 +282,12 @@ bool udm::Data::DebugTest()
 			{
 				if(binary)
 				{
-					VFilePtr fp{fw};
+					fsys::File fp{fw};
 					data->Save(fp);
 				}
 				else
 				{
-					VFilePtr fp{fw};
+					fsys::File fp{fw};
 					data->SaveAscii(fp);
 				}
 				fw = nullptr;
@@ -340,7 +341,7 @@ std::shared_ptr<udm::Data> udm::Data::Open(const std::string &fileName)
 	}
 	return Open(f);
 }
-std::shared_ptr<udm::Data> udm::Data::Open(const ::VFilePtr &f) {return Open(std::make_unique<VFilePtr>(f));}
+std::shared_ptr<udm::Data> udm::Data::Open(const ::VFilePtr &f) {return Open(std::make_unique<fsys::File>(f));}
 std::shared_ptr<udm::Data> udm::Data::Open(std::unique_ptr<IFile> &&f)
 {
 	auto udmData = std::shared_ptr<udm::Data>{new udm::Data{}};
@@ -391,7 +392,7 @@ namespace udm
 {
 	std::shared_ptr<udm::Data> load_ascii(std::unique_ptr<IFile> &&f);
 };
-std::shared_ptr<udm::Data> udm::Data::Load(const ::VFilePtr &f) {return Load(std::make_unique<VFilePtr>(f));}
+std::shared_ptr<udm::Data> udm::Data::Load(const ::VFilePtr &f) {return Load(std::make_unique<fsys::File>(f));}
 std::shared_ptr<udm::Data> udm::Data::Load(std::unique_ptr<IFile> &&f)
 {
 	auto offset = f->Tell();
@@ -704,7 +705,7 @@ bool udm::Data::Save(IFile &f) const
 
 bool udm::Data::Save(const ::VFilePtr &f)
 {
-	VFilePtr fp{f};
+	fsys::File fp{f};
 	return Save(fp);
 }
 
@@ -725,28 +726,3 @@ bool udm::Data::operator==(const Data &other) const
 	UDM_ASSERT_COMPARISON(res);
 	return res;
 }
-
-udm::VFilePtr::VFilePtr(const ::VFilePtr &f)
-	: m_file{f}
-{}
-size_t udm::VFilePtr::Read(void *data,size_t size) {return m_file->Read(data,size);}
-size_t udm::VFilePtr::Write(const void *data,size_t size)
-{
-	auto type = m_file->GetType();
-	if(type != VFILE_LOCAL)
-		return 0;
-	return static_cast<VFilePtrInternalReal*>(m_file.get())->Write(data,size);
-}
-size_t udm::VFilePtr::Tell() {return m_file->Tell();}
-void udm::VFilePtr::Seek(size_t offset,Whence whence)
-{
-	switch(whence)
-	{
-	case Whence::Cur:
-		return m_file->Seek(offset,SEEK_CUR);
-	case Whence::End:
-		return m_file->Seek(offset,SEEK_END);
-	}
-	return m_file->Seek(offset,SEEK_SET);
-}
-int32_t udm::VFilePtr::ReadChar() {return m_file->ReadChar();}

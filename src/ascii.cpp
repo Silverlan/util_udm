@@ -5,6 +5,7 @@
 #include "udm.hpp"
 #include <sharedutils/base64.hpp>
 #include <sharedutils/util_string.h>
+#include <fsys/ifile.hpp>
 #include <sstream>
 
 namespace udm
@@ -598,7 +599,7 @@ bool udm::Data::SaveAscii(IFile &f,AsciiSaveFlags flags) const
 }
 bool udm::Data::SaveAscii(const ::VFilePtr &f,AsciiSaveFlags flags) const
 {
-	VFilePtr fp{f};
+	fsys::File fp{f};
 	return SaveAscii(fp,flags);
 }
 

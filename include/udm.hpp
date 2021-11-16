@@ -21,6 +21,7 @@
 #include <mathutil/transform.hpp>
 #include <sharedutils/util.h>
 #include <sharedutils/magic_enum.hpp>
+#include <sharedutils/util_ifile.hpp>
 #include <fsys/filesystem.h>
 #include "udm_types.hpp"
 #include "udm_trivial_types.hpp"
@@ -143,6 +144,10 @@ namespace udm
 	{
 		return compress_lz4_blob(v.data(),v.size() *sizeof(v[0]));
 	}
+
+	using IFile = ufile::IFile;
+	using MemoryFile = ufile::MemoryFile;
+	using VectorFile = ufile::VectorFile;
 	
 	struct DLLUDM Property
 	{
@@ -305,104 +310,6 @@ namespace udm
 		LinkedPropertyWrapper GetData() const;
 		LinkedPropertyWrapper operator*() const {return GetData();}
 		LinkedPropertyWrapper operator->() const {return GetData();}
-	};
-	
-	struct DLLUDM IFile
-	{
-		template<typename T>
-			T Read()
-		{
-			T v;
-			Read(&v,sizeof(T));
-			return v;
-		}
-		template<typename T>
-			size_t Write(const T &v)
-		{
-			return Write(&v,sizeof(T));
-		}
-		enum class Whence : uint8_t
-		{
-			Set = 0,
-			Cur,
-			End
-		};
-		virtual ~IFile()=default;
-		virtual size_t Read(void *data,size_t size)=0;
-		virtual size_t Write(const void *data,size_t size)=0;
-		virtual size_t Tell()=0;
-		virtual void Seek(size_t offset,Whence whence=Whence::Set)=0;
-		virtual int32_t ReadChar()=0;
-		size_t GetSize()
-		{
-			auto pos = Tell();
-			Seek(0,Whence::End);
-			auto size = Tell();
-			Seek(pos);
-			return size;
-		}
-
-		int32_t WriteString(const std::string &str);
-	};
-
-	struct DLLUDM MemoryFile
-		: public udm::IFile
-	{
-		MemoryFile(uint8_t *data,size_t dataSize);
-		void *GetData() {return m_data;}
-		const void *GetData() const {return const_cast<MemoryFile*>(this)->GetData();}
-		size_t GetDataSize() const {return m_dataSize;}
-		virtual size_t Read(void *data,size_t size) override;
-		virtual size_t Write(const void *data,size_t size) override;
-		virtual size_t Tell() override;
-		virtual void Seek(size_t offset,Whence whence=Whence::Set) override;
-		virtual int32_t ReadChar() override;
-		char *GetMemoryDataPtr();
-
-		template<typename T>
-			T &GetValue() {return *reinterpret_cast<T*>(GetMemoryDataPtr());}
-		template<typename T>
-			const T &GetValue() const {return const_cast<MemoryFile*>(this)->GetValue<T>();}
-
-		template<typename T>
-			T &GetValueAndAdvance()
-		{
-			auto &val = GetValue<T>();
-			Seek(sizeof(T),Whence::Cur);
-			return val;
-		}
-		template<typename T>
-			const T &GetValueAndAdvance() const {return const_cast<MemoryFile*>(this)->GetValueAndAdvance<T>();}
-	protected:
-		uint8_t *m_data = nullptr;
-		size_t m_dataSize = 0;
-		size_t m_pos = 0;
-	};
-
-	struct DLLUDM VectorFile
-		: public MemoryFile
-	{
-		VectorFile();
-		VectorFile(size_t size);
-		const std::vector<uint8_t> &GetVector() const;
-		void Resize(size_t size);
-	private:
-		std::vector<uint8_t> m_data;
-	};
-
-	struct DLLUDM VFilePtr
-		: public IFile
-	{
-		VFilePtr()=default;
-		VFilePtr(const ::VFilePtr &f);
-		virtual ~VFilePtr() override=default;
-		virtual size_t Read(void *data,size_t size) override;
-		virtual size_t Write(const void *data,size_t size) override;
-		virtual size_t Tell() override;
-		virtual void Seek(size_t offset,Whence whence=Whence::Set) override;
-		virtual int32_t ReadChar() override;
-	private:
-		::VFilePtr m_file;
 	};
 
 	class DLLUDM Data

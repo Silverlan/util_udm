@@ -226,19 +226,6 @@ udm::BlobLz4 &udm::BlobLz4::operator=(const BlobLz4 &other)
 
 //////////////
 
-int32_t udm::IFile::WriteString(const std::string &str)
-{
-	unsigned int pos = 0;
-	while(str[pos] != '\0')
-	{
-		Write<char>(str[pos]);
-		pos++;
-	}
-	return 0;
-}
-
-//////////////
-
 void udm::detail::test_conversions()
 {
 	auto c = umath::to_integral(udm::Type::Count);

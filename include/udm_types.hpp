@@ -36,7 +36,6 @@ namespace udm
 	using LinkedPropertyWrapperArg = const LinkedPropertyWrapper&;
 	struct Array;
 	struct StructDescription;
-	struct IFile;
 	struct Property;
 	using PProperty = std::shared_ptr<Property>;
 	using WPProperty = std::weak_ptr<Property>;
@@ -56,10 +55,6 @@ namespace udm
 	using AssetDataArg = const AssetData&;
 	enum class FormatType : uint8_t;
 	enum class AsciiSaveFlags : uint32_t;
-	struct IFile;
-	struct MemoryFile;
-	struct VectorFile;
-	struct VFilePtr;
 	class Data;
 };
 
