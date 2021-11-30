@@ -338,10 +338,9 @@ void udm::Array::ReleaseValues()
 void udm::ArrayLz4::InitializeSize(uint32_t size) {m_size = size;}
 udm::StructDescription *udm::ArrayLz4::GetStructuredDataInfo()
 {
-	auto *strct = Array::GetStructuredDataInfo();
-	if(strct)
-		return strct;
-	return m_structuredDataInfo.get();
+	if(m_structuredDataInfo)
+		return m_structuredDataInfo.get();
+	return Array::GetStructuredDataInfo();
 }
 void udm::ArrayLz4::ClearUncompressedMemory() {Compress();}
 
