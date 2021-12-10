@@ -585,7 +585,7 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 
 bool udm::Data::SaveAscii(const std::string &fileName,AsciiSaveFlags flags) const
 {
-	auto f = FileManager::OpenFile<VFilePtrReal>(fileName.c_str(),"w");
+	auto f = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName,filemanager::FileMode::Write));
 	if(f == nullptr)
 	{
 		throw FileError{"Unable to open file!"};

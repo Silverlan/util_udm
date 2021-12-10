@@ -9,7 +9,7 @@
 
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName,std::string &outErr)
 {
-	auto f = FileManager::OpenFile(fileName.c_str(),"rb");
+	auto f = filemanager::open_file(fileName,filemanager::FileMode::Read | filemanager::FileMode::Binary);
 	if(f == nullptr)
 	{
 		outErr = "Unable to open file!";
@@ -46,7 +46,7 @@ std::optional<udm::FormatType> udm::Data::GetFormatType(std::unique_ptr<IFile> &
 
 std::shared_ptr<udm::Data> udm::Data::Load(const std::string &fileName)
 {
-	auto f = FileManager::OpenFile(fileName.c_str(),"rb");
+	auto f = filemanager::open_file(fileName,filemanager::FileMode::Read | filemanager::FileMode::Binary);
 	if(f == nullptr)
 	{
 		throw FileError{"Unable to open file!"};
@@ -57,7 +57,7 @@ std::shared_ptr<udm::Data> udm::Data::Load(const std::string &fileName)
 
 bool udm::Data::Save(const std::string &fileName) const
 {
-	auto f = FileManager::OpenFile<VFilePtrReal>(fileName.c_str(),"wb");
+	auto f = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName,filemanager::FileMode::Write | filemanager::FileMode::Binary));
 	if(f == nullptr)
 	{
 		throw FileError{"Unable to open file!"};
@@ -277,7 +277,7 @@ bool udm::Data::DebugTest()
 		//aNested["b"] = 3.f;
 
 		auto fTestFileIo = [&data](const std::string &fileName,bool binary) {
-			auto fw = FileManager::OpenFile<VFilePtrReal>(fileName.c_str(),binary ? "wb" : "w");
+			auto fw = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName,binary ? (filemanager::FileMode::Write | filemanager::FileMode::Binary) : filemanager::FileMode::Write));
 			if(fw)
 			{
 				if(binary)
@@ -295,7 +295,7 @@ bool udm::Data::DebugTest()
 			else
 				throw Exception {"Unable to write '" +fileName +"'"};
 
-			auto fr = FileManager::OpenFile(fileName.c_str(),binary ? "rb" : "r");
+			auto fr = filemanager::open_file(fileName,binary ? (filemanager::FileMode::Write | filemanager::FileMode::Binary) : filemanager::FileMode::Write);
 			if(fr)
 			{
 				auto udmDataLoad = udm::Data::Load(fr);
@@ -333,7 +333,7 @@ bool udm::Data::DebugTest()
 
 std::shared_ptr<udm::Data> udm::Data::Open(const std::string &fileName)
 {
-	auto f = FileManager::OpenFile(fileName.c_str(),"rb");
+	auto f = filemanager::open_file(fileName,filemanager::FileMode::Read | filemanager::FileMode::Binary);
 	if(f == nullptr)
 	{
 		throw FileError{"Unable to open file!"};
