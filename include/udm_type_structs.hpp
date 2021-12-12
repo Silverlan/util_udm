@@ -605,7 +605,7 @@ namespace udm
 		ElementIterator begin();
 		ElementIterator end();
 	private:
-		LinkedPropertyWrapper &m_prop;
+		LinkedPropertyWrapper m_prop;
 	};
 	
 	struct DLLUDM Element
