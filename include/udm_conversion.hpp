@@ -88,7 +88,7 @@ namespace udm
 				}
 				else if constexpr(std::is_same_v<T1,Half>)
 				{
-					uint16_t v1 {};
+					float v1 {};
 					std::from_chars(v0.data(),v0.data() +v0.size(),v1);
 					return Half{v1};
 				}
@@ -97,13 +97,6 @@ namespace udm
 					T1 v1 {};
 					std::from_chars(v0.data(),v0.data() +v0.size(),v1);
 					return v1;
-				}
-				else if constexpr(std::is_same_v<T1,Half>)
-				{
-					Half half;
-					half.value = 0;
-					std::from_chars(v0.data(),v0.data() +v0.size(),half.value);
-					return half;
 				}
 				else if constexpr(is_vector_type<T1>)
 				{
@@ -327,7 +320,7 @@ namespace udm
 				else if constexpr(std::is_same_v<T0,Reference>)
 					return v0.path;
 				else if constexpr(std::is_same_v<T0,Half>)
-					return std::to_string(v0.value);
+					return std::to_string(static_cast<float>(v0.value));
 				else if constexpr(std::is_same_v<T0,Nil>)
 					return "nil";
 			}
