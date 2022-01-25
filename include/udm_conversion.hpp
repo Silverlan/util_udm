@@ -354,9 +354,13 @@ template<typename TTo>
 {
 	if(is_ng_type(tFrom))
 		return visit_ng(tFrom,[&](auto tag){return is_convertible<typename decltype(tag)::type,TTo>();});
-
-	if(tFrom == Type::String)
+	switch(tFrom)
+	{
+	case Type::String:
 		return is_convertible<String,TTo>();
+	case Type::Reference:
+		return is_convertible<Reference,TTo>();
+	}
 	return false;
 }
 
@@ -365,9 +369,13 @@ template<typename TFrom>
 {
 	if(is_ng_type(tTo))
 		return visit_ng(tTo,[&](auto tag){return is_convertible<TFrom,typename decltype(tag)::type>();});
-
-	if(tTo == Type::String)
+	switch(tTo)
+	{
+	case Type::String:
 		return is_convertible<TFrom,String>();
+	case Type::Reference:
+		return is_convertible<TFrom,Reference>();
+	}
 	return false;
 }
 
@@ -375,9 +383,13 @@ constexpr bool udm::is_convertible(Type tFrom,Type tTo)
 {
 	if(is_ng_type(tFrom))
 		return visit_ng(tFrom,[&](auto tag){return is_convertible<typename decltype(tag)::type>(tTo);});
-
-	if(tFrom == Type::String)
+	switch(tFrom)
+	{
+	case Type::String:
 		return is_convertible<String>(tTo);
+	case Type::Reference:
+		return is_convertible<Reference>(tTo);
+	}
 	return false;
 }
 
