@@ -320,7 +320,7 @@ namespace udm
 				else if constexpr(std::is_same_v<T0,Reference>)
 					return v0.path;
 				else if constexpr(std::is_same_v<T0,Half>)
-					return std::to_string(static_cast<float>(v0.value));
+					return std::to_string(static_cast<float>(v0));
 				else if constexpr(std::is_same_v<T0,Nil>)
 					return "nil";
 			}
