@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "udm.hpp"
-
+#pragma optimize("",off)
 udm::PropertyWrapper::PropertyWrapper(Property &o)
 	: prop{&o}
 {}
@@ -82,7 +82,11 @@ void *udm::PropertyWrapper::GetValuePtr(Type &outType) const
 	{
 		auto &a = prop->GetValue<Array>();
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr(outType);
+		{
+			auto &e = const_cast<Element&>(a.GetValue<Element>(arrayIndex));
+			auto it = e.children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
+			return (it != e.children.end()) ? it->second->GetValuePtr(outType) : nullptr;
+		}
 		outType = a.GetValueType();
 		return static_cast<uint8_t*>(a.GetValues()) +arrayIndex *size_of_base_type(a.GetValueType());
 	}
@@ -533,3 +537,4 @@ bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
 bool udm::PropertyWrapper::operator!=(const PropertyWrapper &other) const {return !operator==(other);}
 
 udm::LinkedPropertyWrapper *udm::PropertyWrapper::GetLinked() {return linked ? static_cast<LinkedPropertyWrapper*>(this) : nullptr;}
+#pragma optimize("",on)

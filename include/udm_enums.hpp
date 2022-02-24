@@ -75,7 +75,8 @@ namespace udm
 	enum class MergeFlags : uint32_t
 	{
 		None = 0u,
-		OverwriteExisting = 1u
+		OverwriteExisting = 1u,
+		DeepCopy = OverwriteExisting<<1u
 	};
 	
 	enum class FormatType : uint8_t

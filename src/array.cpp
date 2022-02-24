@@ -73,6 +73,11 @@ udm::Array &udm::Array::operator=(const Array &other)
 
 void udm::Array::Merge(const Array &other,MergeFlags mergeFlags)
 {
+	if(umath::is_flag_set(mergeFlags,MergeFlags::DeepCopy))
+	{
+		Clear();
+		SetValueType(other.GetValueType());
+	}
 	if(m_valueType != other.m_valueType)
 		return;
 	auto size = GetSize();

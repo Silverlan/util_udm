@@ -34,20 +34,39 @@ udm::Property::~Property() {Clear();}
 
 udm::Property &udm::Property::operator=(const Property &other)
 {
+	Copy(other);
+	return *this;
+}
+
+void udm::Property::Copy(const Property &other,bool deepCopy)
+{
 	Clear();
 	type = other.type;
 	Initialize();
 	if(is_trivial_type(type))
 	{
 		memcpy(value,other.value,size_of_base_type(type));
-		return *this;
+		return;
 	}
 	auto tag = get_non_trivial_tag(type);
-	std::visit([this,&other](auto tag) {
+	std::visit([this,&other,deepCopy](auto tag) {
 		using T = decltype(tag)::type;
+		if constexpr(std::is_same_v<T,Element>)
+		{
+			if(deepCopy)
+			{
+				static_cast<T*>(value)->Copy(*static_cast<T*>(other.value));
+				return;
+			}
+		}
 		*static_cast<T*>(value) = *static_cast<T*>(other.value);
 	},tag);
-	return *this;
+}
+udm::PProperty udm::Property::Copy(bool deepCopy) const
+{
+	auto newProp = Property::Create();
+	newProp->Copy(*this,deepCopy);
+	return newProp;
 }
 
 void udm::Property::SetAppropriatePrecision(std::stringstream &ss,Type type)

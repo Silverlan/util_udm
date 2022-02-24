@@ -612,6 +612,7 @@ namespace udm
 	{
 		void AddChild(std::string &&key,const PProperty &o);
 		void AddChild(const std::string &key,const PProperty &o);
+		void Copy(const Element &other);
 		std::unordered_map<std::string,PProperty> children;
 		PropertyWrapper fromProperty {};
 		PropertyWrapper parentProperty {};

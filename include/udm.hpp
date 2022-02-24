@@ -166,6 +166,8 @@ namespace udm
 		Property &operator=(Property &&other)=delete;
 		template<typename T>
 			void operator=(T &&v);
+		void Copy(const Property &other,bool deepCopy);
+		PProperty Copy(bool deepCopy=false) const;
 
 		Type type = Type::Nil;
 		DataValue value = nullptr;
