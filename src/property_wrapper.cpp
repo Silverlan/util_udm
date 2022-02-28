@@ -356,7 +356,20 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 				auto &a = *static_cast<Array*>(prop->value);
 				if(a.GetValueType() == Type::Element)
 				{
-					auto wrapper = a.GetValue<Element>(arrayIndex).Add(path,type,pathToElements);
+					auto &e = a.GetValue<Element>(arrayIndex);
+					if(!linkedWrapper.propName.empty())
+					{
+						auto it = e.children.find(linkedWrapper.propName);
+						if(it == e.children.end())
+							throw InvalidUsageError{"Attempted to add key-value to invalid array element!"};
+						auto *elChild = it->second->GetValuePtr<Element>();
+						if(!elChild)
+							throw InvalidUsageError{"Attempted to add key-value to non-element array element!"}; // Unreachable?
+						auto wrapper = elChild->Add(path,type,pathToElements);
+						static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
+						return wrapper;
+					}
+					auto wrapper = e.Add(path,type,pathToElements);
 					static_cast<LinkedPropertyWrapper&>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
 					return wrapper;
 				}
