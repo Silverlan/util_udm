@@ -152,6 +152,12 @@ namespace udm
 	struct DLLUDM Property
 	{
 		template<typename T>
+			static void Construct(Property &prop,T &&value);
+		template<typename T>
+			static void Construct(Property &prop);
+		static void Construct(Property &prop,Type type);
+
+		template<typename T>
 			static PProperty Create(T &&value);
 		template<typename T>
 			static PProperty Create();
@@ -645,10 +651,23 @@ template<typename T>
 }
 
 template<typename T>
+	void udm::Property::Construct(Property &prop,T &&value)
+{
+	prop = value;	
+}
+
+template<typename T>
 	udm::PProperty udm::Property::Create()
 {
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	return Create(type_to_enum<TBase>());
+}
+
+template<typename T>
+	void udm::Property::Construct(Property &prop)
+{
+	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+	Construct(prop,type_to_enum<TBase>());
 }
 
 template<typename T>

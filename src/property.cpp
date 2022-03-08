@@ -6,7 +6,11 @@
 #include <sharedutils/base64.hpp>
 #include <sstream>
 
-
+void udm::Property::Construct(Property &prop,Type type)
+{
+	prop.type = type;
+	prop.Initialize();
+}
 udm::PProperty udm::Property::Create(Type type)
 {
 	auto prop = std::shared_ptr<Property>{new Property{}};
