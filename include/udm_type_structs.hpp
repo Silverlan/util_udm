@@ -542,12 +542,13 @@ namespace udm
 		{
 			return true;
 		}
+
+		using Range = std::tuple<uint32_t,uint32_t,uint32_t>;
+		void Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializeNewValues);
 	protected:
 		friend Property;
 		friend PropertyWrapper;
 		virtual void Clear();
-		using Range = std::tuple<uint32_t,uint32_t,uint32_t>;
-		void Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializeNewValues);
 
 		void *GetValuePtr();
 		const void *GetValuePtr() const {return const_cast<Array*>(this)->GetValuePtr();}
