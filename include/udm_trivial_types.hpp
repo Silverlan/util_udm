@@ -53,6 +53,11 @@ namespace udm
 		constexpr Type type_to_enum();
 	template<typename T>
 		constexpr Type type_to_enum_s();
+	template<typename T>
+		constexpr bool is_udm_type()
+	{
+		return type_to_enum_s<T>() != Type::Invalid;
+	}
 
 	constexpr size_t size_of(Type t);
 	constexpr size_t size_of_base_type(Type t);
