@@ -183,6 +183,12 @@ bool udm::Property::Read(IFile &f,Element &el)
 		auto prop = Property::Create();
 		if(prop->Read(f) == false)
 			return false;
+		if(prop->IsType(udm::Type::Element))
+		{
+			auto &el = prop->GetValue<udm::Element>();
+			el.parentProperty = {*this};
+			el.fromProperty = {*prop};
+		}
 		el.children[std::move(name)] = prop;
 	}
 	return true;
@@ -653,16 +659,13 @@ udm::Blob udm::Property::GetBlobData(Type &outType) const
 		return GetValue<Blob>();
 	if(IsType(Type::BlobLz4))
 		return decompress_lz4_blob(GetValue<BlobLz4>());
-	if(is_trivial_type(type))
+	if(is_array_type(this->type))
 	{
-		if(is_array_type(this->type))
-		{
-			auto &a = GetValue<Array>();
-			udm::Blob blob {};
-			blob.data.resize(a.GetSize() *size_of(a.GetValueType()));
-			memcpy(blob.data.data(),a.GetValues(),blob.data.size());
-			return blob;
-		}
+		auto &a = GetValue<Array>();
+		udm::Blob blob {};
+		blob.data.resize(a.GetByteSize());
+		memcpy(blob.data.data(),a.GetValues(),blob.data.size());
+		return blob;
 	}
 	return {};
 }
