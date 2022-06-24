@@ -152,6 +152,8 @@ void udm::Array::Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializ
 	auto isStructType = (m_valueType == Type::Struct);
 	if(newSize == m_size && (!isStructType || m_values))
 		return;
+	if(GetArrayType() == udm::ArrayType::Compressed)
+		static_cast<udm::ArrayLz4*>(this)->GetValues(); // Force decompression
 	auto headerSize = GetHeaderSize();
 	auto cpyData = [&r0,&r1](const void *curValues,void *dataPtr,uint32_t sizeOfElement,void(*fCpy)(const void*,void*,uint32_t,uint32_t,uint32_t,uint32_t)) {
 		if(std::get<0>(r1) == std::get<0>(r0) +std::get<2>(r0) && std::get<1>(r1) == std::get<1>(r0) +std::get<2>(r0)) // Check if no gap between both ranges (i.e. startSrc1 = startSrc0 +count0)
