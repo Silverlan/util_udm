@@ -5,6 +5,11 @@
 #include <udm.hpp>
 #include <sharedutils/util_file.h>
 
+static bool is_valid_property_path(const char *str)
+{
+	return str != nullptr && strlen(str) > 0;
+}
+
 struct BaseUdmData
 {
 	BaseUdmData(const std::shared_ptr<udm::Data> &udmData,bool clearDataOnDestruction)
@@ -69,6 +74,8 @@ static char *to_cstring(BaseUdmData &data,const std::string &str)
 }
 static udm::LinkedPropertyWrapper get_property(UdmProperty udmData,const char *path)
 {
+	if(!is_valid_property_path(path))
+		return {};
 	if(!path || strlen(path) == 0)
 		return udmData->prop;
 	return udmData->prop.GetFromPath(path);
@@ -653,6 +660,8 @@ extern "C" {
 	
 	DLLUDM char *udm_property_to_ascii(UdmProperty udmData,const char *propName)
 	{
+		if(!is_valid_property_path(propName))
+			return nullptr;
 		auto *prop = udmData->prop.GetProperty();
 		if(!prop)
 			return nullptr;
