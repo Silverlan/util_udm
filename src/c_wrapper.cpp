@@ -662,6 +662,11 @@ extern "C" {
 	}
 	
 	DLLUDM void udm_free_memory(UdmData udmData) {udmData->FreeMemory();}
+
+	DLLUDM void udm_add_custom_mount_path(const char *path)
+	{
+		filemanager::add_custom_mount_directory(path,true);
+	}
 }
 
 #include <sharedutils/util_library.hpp>
