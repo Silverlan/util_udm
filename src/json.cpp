@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "udm.hpp"
+#include <sharedutils/base64.hpp>
 
 static void to_json(udm::LinkedPropertyWrapperArg prop,std::stringstream &ss,const std::string &t)
 {
@@ -46,6 +47,26 @@ static void to_json(udm::LinkedPropertyWrapperArg prop,std::stringstream &ss,con
 			to_json(pair.property,ss,tsub);
 		}
 		ss<<"\n"<<t<<"}";
+		return;
+	}
+
+	if(prop.GetType() == udm::Type::Blob || prop.GetType() == udm::Type::BlobLz4)
+	{
+		uint64_t blobSize;
+		auto res = prop.GetBlobData(nullptr,0ull,&blobSize);
+		if(res == udm::BlobResult::InsufficientSize)
+		{
+			std::vector<uint8_t> blobData;
+			blobData.resize(blobSize);
+			auto res = prop.GetBlobData(blobData.data(),blobData.size());
+			if(res == udm::BlobResult::Success)
+			{
+				auto encoded = util::base64_encode(blobData.data(),blobData.size());
+				ss<<"\""<<encoded<<"\"";
+				return;
+			}
+		}
+		ss<<"\"\"";
 		return;
 	}
 
