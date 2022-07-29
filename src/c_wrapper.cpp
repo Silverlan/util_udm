@@ -364,7 +364,18 @@ extern "C" {
 		prop->data.AddDeleter([child]() {delete child;});
 		return child;
 	}
-
+	
+	DLLUDM bool udm_get_blob_size(UdmProperty udmData,const char *path,uint64_t &outSize)
+	{
+		auto childProp = get_property(udmData,path);
+		auto res = childProp->GetBlobData(nullptr,0ull,&outSize);
+		return res == udm::BlobResult::InsufficientSize;
+	}
+	DLLUDM udm::BlobResult udm_read_property_blob(UdmProperty prop,const char *path,uint8_t *outData,size_t outDataSize)
+	{
+		auto childProp = get_property(prop,path);
+		return childProp->GetBlobData(outData,outDataSize);
+	}
 	DLLUDM char *udm_read_property_s(UdmProperty prop,const char *path,const char *defaultValue)
 	{
 		auto childProp = get_property(prop,path);

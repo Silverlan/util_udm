@@ -585,6 +585,8 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 		auto &blob = GetValue<Blob>();
 		if(optOutRequiredSize)
 			*optOutRequiredSize = blob.data.size();
+		if(!outBuffer)
+			return udm::BlobResult::InsufficientSize;
 		return GetBlobData(blob,outBuffer,bufferSize);
 	}
 	case Type::BlobLz4:
@@ -592,6 +594,8 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 		auto &blob = GetValue<BlobLz4>();
 		if(optOutRequiredSize)
 			*optOutRequiredSize = blob.uncompressedSize;
+		if(!outBuffer)
+			return udm::BlobResult::InsufficientSize;
 		return GetBlobData(blob,outBuffer,bufferSize);
 	}
 	case Type::Array:
@@ -601,6 +605,8 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 		auto byteSize = a.GetValueSize() *a.GetSize();
 		if(optOutRequiredSize)
 			*optOutRequiredSize = byteSize;
+		if(!outBuffer)
+			return udm::BlobResult::InsufficientSize;
 		if(bufferSize != byteSize)
 			return BlobResult::InsufficientSize;
 		auto valueType = a.GetValueType();
