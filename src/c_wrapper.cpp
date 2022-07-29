@@ -265,6 +265,14 @@ extern "C" {
 		return new BaseUdmData{udmData,clearDataOnDestruction};
 	}
 	DLLUDM void udm_destroy(UdmData udmData) {delete udmData;}
+	DLLUDM char *udm_get_asset_type(UdmData udmData)
+	{
+		return to_cstring(*udmData,udmData->data->GetAssetType());
+	}
+	DLLUDM udm::Version udm_get_asset_version(UdmData udmData)
+	{
+		return udmData->data->GetAssetVersion();
+	}
 
 	DLLUDM bool udm_save_binary(UdmData udmData,const char *fileName)
 	{
