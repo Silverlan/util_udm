@@ -60,6 +60,12 @@ struct BaseUdmElementIterator
 using UdmElementIterator = BaseUdmElementIterator*;
 template<typename T>
 	using UdmUnderlyingType = std::conditional_t<std::is_same_v<T,udm::Transform> || std::is_same_v<T,udm::ScaledTransform>,float,udm::underlying_numeric_type<T>>;
+static char *to_cstring(const std::string &str)
+{
+	auto *cstr = new char[str.length() +1];
+	strcpy(cstr,str.data());
+	return cstr;
+}
 static char *to_cstring(BaseUdmData &data,const std::string &str)
 {
 	auto *cstr = new char[str.length() +1];
@@ -256,6 +262,21 @@ extern "C" {
 		if(!udmData)
 			return nullptr;
 		return new BaseUdmData{udmData,clearDataOnDestruction};
+	}
+	DLLUDM char *udm_read_header(const char *fileName,udm::Version &outVersion)
+	{
+		auto fileMode = filemanager::FileMode::Read;
+		std::string ext;
+		if(ufile::get_extension(fileName,&ext) && ext.length() > 2 && ext.substr(ext.length() -2) == "_b")
+			fileMode |= filemanager::FileMode::Binary;
+		auto f = filemanager::open_system_file(fileName,fileMode);
+		if(!f)
+			return nullptr;
+		auto udmData = udm::Data::Open(f);
+		if(!udmData)
+			return nullptr;
+		outVersion = udmData->GetAssetData().GetAssetVersion();
+		return to_cstring(udmData->GetAssetData().GetAssetType());
 	}
 	DLLUDM UdmData udm_create(const char *assetType,uint32_t assetVersion,bool clearDataOnDestruction)
 	{
