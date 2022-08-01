@@ -533,19 +533,26 @@ extern "C" {
 			return true;
 		});
 	}
-	DLLUDM bool udm_read_array_property(UdmProperty udmData,char *path,UdmType type,void *buffer,uint32_t bufferSize,uint32_t arrayOffset,uint32_t arraySize)
+	enum class ReadArrayPropertyResult : uint32_t
+	{
+		Success = 0,
+		NotAnArrayType,
+		RequestedRangeOutOfBounds,
+		BufferSizeDoesNotMatchExpectedSize
+	};
+	DLLUDM ReadArrayPropertyResult udm_read_array_property(UdmProperty udmData,char *path,UdmType type,void *buffer,uint32_t bufferSize,uint32_t arrayOffset,uint32_t arraySize)
 	{
 		auto childProp = get_property(udmData,path);
 		if(!udm::is_array_type(childProp.GetType()))
-			return false;
+			return ReadArrayPropertyResult::NotAnArrayType;
 		auto &a = childProp.GetValue<udm::Array>();
 		if((arrayOffset +arraySize) > a.GetSize() || (!udm::is_trivial_type(static_cast<udm::Type>(type)) && static_cast<udm::Type>(type) != udm::Type::Struct))
-			return false;
+			return ReadArrayPropertyResult::RequestedRangeOutOfBounds;
 		auto szPerValue = a.GetValueSize();
 		if(szPerValue *arraySize != bufferSize)
-			return false;
+			return ReadArrayPropertyResult::BufferSizeDoesNotMatchExpectedSize;
 		memcpy(buffer,a.GetValuePtr(arrayOffset),arraySize *szPerValue);
-		return true;
+		return ReadArrayPropertyResult::Success;
 	}
 	DLLUDM bool udm_write_array_property(
 		UdmProperty udmData,char *path,UdmType type,void *buffer,uint32_t bufferSize,uint32_t arrayOffset,uint32_t arraySize,UdmArrayType arrayType,uint32_t numMembers,UdmType *types,const char **names
