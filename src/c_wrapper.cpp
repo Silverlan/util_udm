@@ -703,6 +703,16 @@ extern "C" {
 	{
 		filemanager::add_custom_mount_directory(path,true);
 	}
+	DLLUDM void udm_pose_to_matrix(const float pos[3],const float rot[4],const float scale[3],float *outMatrix)
+	{
+		umath::ScaledTransform pose {
+			Vector3{pos[0],pos[1],pos[2]},
+			Quat{rot[0],rot[1],rot[2],rot[3]},
+			Vector3{scale[0],scale[1],scale[2]}
+		};
+		auto mat = pose.ToMatrix();
+		memcpy(outMatrix,&mat,sizeof(mat));
+	}
 }
 
 #include <sharedutils/util_library.hpp>
