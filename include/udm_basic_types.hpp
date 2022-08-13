@@ -9,6 +9,7 @@
 #include <cinttypes>
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
+#include <variant>
 
 namespace udm
 {
