@@ -236,9 +236,9 @@ void udm::detail::test_conversions()
 		{
 			auto t1 = static_cast<udm::Type>(j);
 			udm::visit(t0,[&](auto tag) {
-				using T0 = decltype(tag)::type;
+                using T0 = typename decltype(tag)::type;
 				udm::visit(t1,[&](auto tag) {
-					using T1 = decltype(tag)::type;
+                    using T1 = typename decltype(tag)::type;
 					if constexpr(!udm::detail::TypeConverter<T0,T1>::is_convertible)
 						std::cout<<magic_enum::enum_name(t0)<<" => "<<magic_enum::enum_name(t1)<<": "<<(udm::detail::TypeConverter<T0,T1>::is_convertible ? "defined" : "undefined")<<std::endl;
 					else

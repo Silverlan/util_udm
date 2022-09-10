@@ -102,7 +102,7 @@ template<typename T>
 	static bool udm_write_property_vt(UdmProperty udmData,const char *path,UdmType type,T *values,uint32_t numValues)
 	{
 		return udm::visit(static_cast<udm::Type>(type),[&udmData,path,values,numValues](auto tag) {
-			using TProperty = decltype(tag)::type;
+            using TProperty = typename decltype(tag)::type;
 			using TUnderlying = UdmUnderlyingType<TProperty>;
 			if constexpr(std::is_same_v<TUnderlying,T>)
 			{
@@ -137,7 +137,7 @@ template<typename T>
 			return r;
 		}
 		return udm::visit(childProp->type,[&udmData,&childProp,type,&outNumValues](auto tag) -> T* {
-			using TTag = decltype(tag)::type;
+            using TTag = typename decltype(tag)::type;
 			using TUnderlying = UdmUnderlyingType<TTag>;
 			if constexpr(std::is_same_v<TUnderlying,T>)
 			{
@@ -174,9 +174,9 @@ template<typename T>
 		auto *ptrMemberValue = static_cast<uint8_t*>(a.GetValuePtr(arrayIndex)) +offset;
 		auto memberType = strct->types[memberIndex];
 		return udm::visit(memberType,[&udmData,&strct,type,memberIndex,ptrMemberValue,&outNumValues](auto tag) -> T* {
-			using TMember = decltype(tag)::type;
+            using TMember = typename decltype(tag)::type;
 			return udm::visit(static_cast<udm::Type>(type),[&udmData,ptrMemberValue,&outNumValues](auto tag) -> T* {
-				using TValue = decltype(tag)::type;
+                using TValue = typename decltype(tag)::type;
 				if constexpr(udm::is_convertible<TMember,TValue>() && std::is_same_v<UdmUnderlyingType<TValue>,T>)
 				{
 					auto v = udm::convert<TMember,TValue>(*reinterpret_cast<TMember*>(ptrMemberValue));
@@ -210,7 +210,7 @@ template<typename T>
 		auto *ptrMemberValue = static_cast<uint8_t*>(a.GetValuePtr(arrayIndex)) +offset;
 		auto memberType = strct->types[memberIndex];
 		return udm::visit(static_cast<udm::Type>(type),[memberType,numValues,ptrMemberValue,values](auto tag) {
-			using TT = decltype(tag)::type;
+            using TT = typename decltype(tag)::type;
 			using TUnderlying = UdmUnderlyingType<TT>;
 			if(udm::size_of(memberType) != udm::size_of(udm::type_to_enum<TUnderlying>()) *numValues)
 				return false;
@@ -494,7 +494,7 @@ extern "C" {
 		if(!udm::is_trivial_type(static_cast<udm::Type>(type)))
 			return false;
 		return udm::visit_ng(static_cast<udm::Type>(type),[&childProp,buffer,bufferSize](auto tag) {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			if(bufferSize != sizeof(T))
 				return false;
 			auto v = childProp.ToValue<T>();
@@ -526,7 +526,7 @@ extern "C" {
 		if(!udm::is_trivial_type(static_cast<udm::Type>(type)))
 			return false;
 		return udm::visit_ng(static_cast<udm::Type>(type),[&childProp,buffer,bufferSize](auto tag) {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			if(bufferSize != sizeof(T))
 				return false;
 			childProp = *static_cast<T*>(buffer);
@@ -578,7 +578,7 @@ extern "C" {
 		if(!udm::is_trivial_type(static_cast<udm::Type>(type)))
 			return false;
 		return udm::visit(static_cast<udm::Type>(type),[udmData,path,arraySize,type,buffer,arrayType,bufferSize](auto tag) {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			if(sizeof(T) *arraySize != bufferSize)
 				return false;
 			udmData->prop.AddArray<T>(path,arraySize,static_cast<T*>(buffer),static_cast<udm::ArrayType>(arrayType));

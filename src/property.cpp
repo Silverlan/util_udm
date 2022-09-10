@@ -54,7 +54,7 @@ void udm::Property::Copy(const Property &other,bool deepCopy)
 	}
 	auto tag = get_non_trivial_tag(type);
 	std::visit([this,&other,deepCopy](auto tag) {
-		using T = decltype(tag)::type;
+        using T = typename decltype(tag)::type;
 		if constexpr(std::is_same_v<T,Element>)
 		{
 			if(deepCopy)
@@ -118,7 +118,7 @@ void udm::Property::Initialize()
 	if(is_non_trivial_type(type))
 	{
 		auto tag = get_non_trivial_tag(type);
-		std::visit([&](auto tag){value = new decltype(tag)::type{};},tag);
+        std::visit([&](auto tag){value = new typename decltype(tag)::type{};},tag);
 		return;
 	}
 	if(type == Type::Nil)
@@ -138,7 +138,7 @@ void udm::Property::Clear()
 		if(is_non_trivial_type(type))
 		{
 			auto tag = get_non_trivial_tag(type);
-			std::visit([&](auto tag){delete static_cast<decltype(tag)::type*>(this->value);},tag);
+            std::visit([&](auto tag){delete static_cast<typename decltype(tag)::type*>(this->value);},tag);
 		}
 	}
 	value = nullptr;
@@ -257,7 +257,7 @@ bool udm::Property::Read(IFile &f,Array &a)
 		{
 			auto tag = get_non_trivial_tag(a.GetValueType());
 			return std::visit([this,&f,&a,ptr](auto tag) {
-				using T = decltype(tag)::type;
+                using T = typename decltype(tag)::type;
 				auto size = a.GetSize();
 				for(auto i=decltype(size){0u};i<size;++i)
 				{
@@ -368,7 +368,7 @@ void udm::Property::Write(IFile &f,const Array &a)
 		{
 			auto tag = get_non_trivial_tag(a.GetValueType());
 			std::visit([&](auto tag){
-				using T = decltype(tag)::type;
+                using T = typename decltype(tag)::type;
 				for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
 					Property::Write(f,static_cast<const T*>(a.GetValues())[i]);
 			},tag);
@@ -459,7 +459,7 @@ void udm::Property::Write(IFile &f) const
 	{
 		auto tag = get_non_trivial_tag(type);
 		std::visit([&](auto tag){
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			Property::Write(f,*static_cast<const T*>(value));
 		},tag);
 		return;
@@ -485,7 +485,7 @@ bool udm::Property::operator==(const Property &other) const
 	}
 	auto tag = get_non_trivial_tag(type);
 	return std::visit([this,&other](auto tag) -> bool {
-		using T = decltype(tag)::type;
+        using T = typename decltype(tag)::type;
 		auto res = (*static_cast<T*>(value) == *static_cast<T*>(other.value));
 		UDM_ASSERT_COMPARISON(res);
 		return res;
@@ -614,7 +614,7 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer,size_t bufferSize,uin
 		{
 			auto tag = get_non_trivial_tag(valueType);
 			std::visit([this,outBuffer,&a](auto tag) {
-				using T = decltype(tag)::type;
+                using T = typename decltype(tag)::type;
 				auto n = a.GetSize();
 				auto *srcPtr = static_cast<const T*>(a.GetValues());
 				auto *dstPtr = static_cast<T*>(outBuffer);
@@ -691,7 +691,7 @@ bool udm::Property::Read(Type ptype,IFile &f)
 	if(is_non_trivial_type(type))
 	{
 		auto tag = get_non_trivial_tag(type);
-		return std::visit([this,&f](auto tag){return Read(f,*static_cast<decltype(tag)::type*>(value));},tag);
+        return std::visit([this,&f](auto tag){return Read(f,*static_cast<typename decltype(tag)::type*>(value));},tag);
 	}
 	auto size = size_of(type);
 	value = new uint8_t[size];
@@ -714,14 +714,14 @@ void udm::Property::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std
 	{
 		auto tag = get_numeric_tag(type);
 		std::visit([value,&ss](auto tag){
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			NumericTypeToString(*static_cast<T*>(value),ss);
 		},tag);
 	}
 	else
 	{
 		auto vs = [value,&ss,&prefix,flags](auto tag){
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			ss<<ToAsciiValue(flags,*static_cast<T*>(value),prefix);
 		};
 		if(is_gnt_type(type))
@@ -752,14 +752,14 @@ void udm::Property::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std
 	{
 		auto tag = get_numeric_tag(type);
 		std::visit([this,&ss](auto tag){
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			NumericTypeToString(*static_cast<T*>(value),ss);
 		},tag);
 	}
 	else
 	{
 		auto vs = [this,&ss,&prefix,flags](auto tag){
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			ss<<ToAsciiValue(flags,*static_cast<T*>(value),prefix);
 		};
 		if(is_gnt_type(type))

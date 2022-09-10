@@ -488,7 +488,7 @@ template<bool ENABLE_EXCEPTIONS,typename T>
 				return false;
 		}
 		auto vs = [this,&a,&v](auto tag) {
-			using TTag = decltype(tag)::type;
+            using TTag = typename decltype(tag)::type;
 			memcpy(a.GetValues(),v.data(),v.size() *sizeof(v[0]));
 		};
 		if(is_ng_type(valueType))
@@ -525,7 +525,7 @@ template<bool ENABLE_EXCEPTIONS,typename T>
 			return false;
 	}
 	auto vs = [this,&v](auto tag) {
-		using TTag = decltype(tag)::type;
+        using TTag = typename decltype(tag)::type;
 		if constexpr(is_convertible<TBase,TTag>())
 		{
 			*static_cast<TTag*>(value) = convert<TBase,TTag>(v);
@@ -748,7 +748,7 @@ template<typename T>
 		throw OutOfBoundsError{"Array index " +std::to_string(idx) +" out of bounds of array of size " +std::to_string(m_size) +"!"};
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	auto vs = [this,idx](auto tag) -> T& {
-		using TTag = decltype(tag)::type;
+        using TTag = typename decltype(tag)::type;
 		if constexpr(std::is_same_v<TTag,TBase>)
 			return static_cast<TTag*>(GetValues())[idx];
 		throw LogicError{"Attempted to retrieve value of type " +std::string{magic_enum::enum_name(type_to_enum<T>())} +" from array of type " +std::string{magic_enum::enum_name(m_valueType)} +"!"};
@@ -801,7 +801,7 @@ template<typename T>
 	}
 
 	auto vs = [this,idx,&v](auto tag) {
-		using TTag = decltype(tag)::type;
+        using TTag = typename decltype(tag)::type;
 		if constexpr(is_convertible<TBase,TTag>())
 			static_cast<TTag*>(GetValues())[idx] = convert<TBase,TTag>(v);
 	};

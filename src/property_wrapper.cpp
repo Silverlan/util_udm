@@ -450,7 +450,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](uint32_t idx) const
 	if(a == nullptr)
 		return {};
 	auto vs = [this,a,idx](auto tag) {
-		using TTag = decltype(tag)::type;
+        using TTag = typename decltype(tag)::type;
 		auto it = const_cast<PropertyWrapper*>(this)->begin<TTag>() +idx;
 		return it.GetProperty();
 	};
