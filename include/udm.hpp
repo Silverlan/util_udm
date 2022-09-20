@@ -1022,7 +1022,14 @@ template<typename T>
 		if(a)
 		{
 			if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-				return const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValue<T>();
+			{
+				auto &children = const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children;
+				auto &propName = static_cast<const LinkedPropertyWrapper&>(*this).propName;
+				auto it = children.find(propName);
+				if(it == children.end())
+					throw LogicError{"Attempted to retrieve value of property '" +propName +"' from array element at index " +std::to_string(arrayIndex) +", but property does not exist!"};
+				return it->second->GetValue<T>();
+			}
 			if(a->IsValueType(type_to_enum<T>()) == false)
 				throw LogicError{"Type mismatch, requested type is " +std::string{magic_enum::enum_name(type_to_enum<T>())} +", but actual type is " +std::string{magic_enum::enum_name(a->GetValueType())} +"!"};
 			return static_cast<T*>(a->GetValues())[arrayIndex];
@@ -1040,7 +1047,13 @@ template<typename T>
 		if(a)
 		{
 			if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-				return const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->GetValuePtr<T>();
+			{
+				auto &children = const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children;
+				auto it = children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
+				if(it == children.end())
+					return nullptr;
+				return it->second->GetValuePtr<T>();
+			}
 			if(a->IsValueType(type_to_enum<T>()) == false)
 				return nullptr;
 			return &static_cast<T*>(a->GetValues())[arrayIndex];
@@ -1118,7 +1131,13 @@ template<typename T>
 	{
 		auto &a = prop->GetValue<Array>();
 		if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-			return const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children[static_cast<const LinkedPropertyWrapper&>(*this).propName]->ToValue<T>();
+		{
+			auto &children = const_cast<Element&>(a.GetValue<Element>(arrayIndex)).children;
+			auto it = children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
+			if(it == children.end())
+				return {};
+			return it->second->ToValue<T>();
+		}
 		auto vs = [&](auto tag) -> std::optional<T> {
 			if constexpr(is_convertible<typename decltype(tag)::type,T>())
 				return std::optional<T>{convert<typename decltype(tag)::type,T>(const_cast<udm::PropertyWrapper*>(this)->GetValue<typename decltype(tag)::type>())};
