@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <optional>
 
 namespace udm
 {
@@ -445,29 +446,30 @@ namespace udm
 		LinkedPropertyWrapper property;
 	};
 
-	class DLLUDM ElementIterator
-	{
-	public:
-		using iterator_category = std::forward_iterator_tag;
-		using value_type = ElementIteratorPair&;
-		using difference_type = std::ptrdiff_t;
-		using pointer = ElementIteratorPair*;
-		using reference = ElementIteratorPair&;
-	
-		ElementIterator();
-		ElementIterator(udm::Element &e);
-		ElementIterator(udm::Element &e,std::unordered_map<std::string,PProperty>::iterator it);
-		ElementIterator(const ElementIterator &other);
-		ElementIterator &operator++();
-		ElementIterator operator++(int);
-		reference operator*();
-		pointer operator->();
-		bool operator==(const ElementIterator &other) const;
-		bool operator!=(const ElementIterator &other) const;
-	private:
-		std::unordered_map<std::string,PProperty>::iterator m_iterator {};
-		ElementIteratorPair m_pair;
-	};
+    class DLLUDM ElementIterator
+    {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = ElementIteratorPair&;
+        using difference_type = std::ptrdiff_t;
+        using pointer = ElementIteratorPair*;
+        using reference = ElementIteratorPair&;
+
+        ElementIterator();
+        ElementIterator(udm::Element &e);
+        ElementIterator(udm::Element &e,std::unordered_map<std::string,PProperty> &c,std::unordered_map<std::string,PProperty>::iterator it);
+        ElementIterator(const ElementIterator &other);
+        ElementIterator &operator++();
+        ElementIterator operator++(int);
+        reference operator*();
+        pointer operator->();
+        bool operator==(const ElementIterator &other) const;
+        bool operator!=(const ElementIterator &other) const;
+    private:
+        std::unordered_map<std::string,PProperty> *m_propertyMap = nullptr;
+        std::unordered_map<std::string,PProperty>::iterator m_iterator {};
+        ElementIteratorPair m_pair;
+    };
 
 	struct DLLUDM Array
 	{

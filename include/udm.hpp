@@ -1038,29 +1038,31 @@ template<typename T>
 	return (*this)->GetValue<T>();
 }
 
-template<typename T>
-	T *udm::PropertyWrapper::GetValuePtr() const
-{
-	if(arrayIndex != std::numeric_limits<uint32_t>::max())
-	{
-		auto *a = prop->GetValuePtr<Array>();
-		if(a)
-		{
-			if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-			{
-				auto &children = const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children;
-				auto it = children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
-				if(it == children.end())
-					return nullptr;
-				return it->second->GetValuePtr<T>();
-			}
-			if(a->IsValueType(type_to_enum<T>()) == false)
-				return nullptr;
-			return &static_cast<T*>(a->GetValues())[arrayIndex];
-		}
-	}
-	return prop ? (*this)->GetValuePtr<T>() : nullptr;
-}
+
+    template<typename T>
+        T *udm::PropertyWrapper::GetValuePtr() const
+    {
+        if(arrayIndex != std::numeric_limits<uint32_t>::max())
+        {
+            auto *a = prop->GetValuePtr<Array>();
+            if(a)
+            {
+                if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+                {
+                    auto &children = const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children;
+                    auto it = children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
+                    if(it == children.end())
+                        return nullptr;
+                    return it->second->GetValuePtr<T>();
+                }
+                if(a->IsValueType(type_to_enum<T>()) == false)
+                    return nullptr;
+                return &static_cast<T*>(a->GetValues())[arrayIndex];
+            }
+        }
+        return prop ? (*this)->GetValuePtr<T>() : nullptr;
+    }
+
 template<typename T>
 	T udm::PropertyWrapper::ToValue(const T &defaultValue,bool *optOutIsDefined) const
 {
@@ -1146,7 +1148,7 @@ template<typename T>
 		auto valueType = a.GetValueType();
 		return visit(valueType,vs);
 	}
-	return (*this)->ToValue<T>();
+    return prop ? (*this)->ToValue<T>() : std::optional<T>{};
 }
 
 template<typename T>
