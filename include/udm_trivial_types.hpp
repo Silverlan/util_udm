@@ -5,6 +5,7 @@
 #ifndef __UDM_TRIVIAL_TYPES_HPP__
 #define __UDM_TRIVIAL_TYPES_HPP__
 
+#include "sharedutils/util.h"
 #include "udm_type_structs.hpp"
 #include "udm_enums.hpp"
 #include "udm_basic_types.hpp"
@@ -341,7 +342,7 @@ template<typename T>
 	if constexpr(std::is_enum_v<T>)
 		return type_to_enum_s<std::underlying_type_t<T>>();
 
-	if constexpr(util::is_specialization<T,std::vector>::value)
+    if constexpr(util::is_specialization<T,std::vector>::value)
 		return Type::Array;
 	else if constexpr(util::is_specialization<T,std::unordered_map>::value || util::is_specialization<T,std::map>::value)
 		return Type::Element;

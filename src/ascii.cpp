@@ -281,7 +281,7 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 	if(is_float_based_type(type))
 	{
 		std::visit([this,&outData](auto tag) {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			auto &v = *static_cast<T*>(outData);
 			if constexpr(is_float_based_type(type_to_enum_s<T>())) // Always true in this context!
 			{
@@ -328,7 +328,7 @@ void udm::AsciiReader::ReadValue(Type type,void *outData)
 	else if(is_numeric_type(type) && type != Type::Half && type != Type::Boolean)
 	{
 		auto vs = [this,outData](auto tag){
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			if constexpr(!std::is_same_v<T,Half> && !std::is_same_v<T,Boolean>)
 				*static_cast<T*>(outData) = util::to_number<T>(ReadString());
 		};
@@ -988,7 +988,7 @@ void udm::Property::ArrayValuesToAscii(AsciiSaveFlags flags,std::stringstream &s
 	{
 		auto tag = get_numeric_tag(valueType);
 		std::visit([&a,&ss](auto tag) {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			auto *ptr = static_cast<const T*>(a.GetValues());
 			for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
 			{
@@ -1002,7 +1002,7 @@ void udm::Property::ArrayValuesToAscii(AsciiSaveFlags flags,std::stringstream &s
 	else
 	{
 		auto vs = [&a,&ss,&prefix,flags](auto tag){
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			auto *ptr = static_cast<const T*>(a.GetValues());
 			for(auto i=decltype(a.GetSize()){0u};i<a.GetSize();++i)
 			{
@@ -1081,14 +1081,14 @@ std::string udm::Property::StructToAsciiValue(AsciiSaveFlags flags,const StructD
 		if(is_numeric_type(type))
 		{
 			std::visit([ptr,&ss](auto tag) {
-				using T = decltype(tag)::type;
+                using T = typename decltype(tag)::type;
 				NumericTypeToString(*reinterpret_cast<const T*>(ptr),ss);
 			},get_numeric_tag(type));
 		}
 		else if(is_generic_type(type))
 		{
 			std::visit([ptr,&ss,flags](auto tag) {
-				using T = decltype(tag)::type;
+                using T = typename decltype(tag)::type;
 				ss<<ToAsciiValue(flags,*reinterpret_cast<const T*>(ptr));
 			},get_generic_tag(type));
 		}

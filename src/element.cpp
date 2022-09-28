@@ -130,9 +130,9 @@ void udm::Element::Merge(const Element &other,MergeFlags mergeFlags)
 
 udm::ElementIterator udm::Element::begin()
 {
-	return ElementIterator{*this,children.begin()};
+    return ElementIterator{*this,children,children.begin()};
 }
 udm::ElementIterator udm::Element::end()
 {
-	return ElementIterator{*this,children.end()};
+    return ElementIterator{*this,children,children.end()};
 }

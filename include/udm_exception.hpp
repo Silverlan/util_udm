@@ -7,6 +7,7 @@
 
 #include "udm_definitions.hpp"
 #include <exception>
+#include <stdexcept>
 #include <string>
 
 namespace udm

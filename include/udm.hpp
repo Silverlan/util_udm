@@ -488,7 +488,7 @@ template<bool ENABLE_EXCEPTIONS,typename T>
 				return false;
 		}
 		auto vs = [this,&a,&v](auto tag) {
-			using TTag = decltype(tag)::type;
+            using TTag = typename decltype(tag)::type;
 			memcpy(a.GetValues(),v.data(),v.size() *sizeof(v[0]));
 		};
 		if(is_ng_type(valueType))
@@ -525,7 +525,7 @@ template<bool ENABLE_EXCEPTIONS,typename T>
 			return false;
 	}
 	auto vs = [this,&v](auto tag) {
-		using TTag = decltype(tag)::type;
+        using TTag = typename decltype(tag)::type;
 		if constexpr(is_convertible<TBase,TTag>())
 		{
 			*static_cast<TTag*>(value) = convert<TBase,TTag>(v);
@@ -748,7 +748,7 @@ template<typename T>
 		throw OutOfBoundsError{"Array index " +std::to_string(idx) +" out of bounds of array of size " +std::to_string(m_size) +"!"};
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 	auto vs = [this,idx](auto tag) -> T& {
-		using TTag = decltype(tag)::type;
+        using TTag = typename decltype(tag)::type;
 		if constexpr(std::is_same_v<TTag,TBase>)
 			return static_cast<TTag*>(GetValues())[idx];
 		throw LogicError{"Attempted to retrieve value of type " +std::string{magic_enum::enum_name(type_to_enum<T>())} +" from array of type " +std::string{magic_enum::enum_name(m_valueType)} +"!"};
@@ -801,7 +801,7 @@ template<typename T>
 	}
 
 	auto vs = [this,idx,&v](auto tag) {
-		using TTag = decltype(tag)::type;
+        using TTag = typename decltype(tag)::type;
 		if constexpr(is_convertible<TBase,TTag>())
 			static_cast<TTag*>(GetValues())[idx] = convert<TBase,TTag>(v);
 	};
@@ -1038,29 +1038,31 @@ template<typename T>
 	return (*this)->GetValue<T>();
 }
 
-template<typename T>
-	T *udm::PropertyWrapper::GetValuePtr() const
-{
-	if(arrayIndex != std::numeric_limits<uint32_t>::max())
-	{
-		auto *a = prop->GetValuePtr<Array>();
-		if(a)
-		{
-			if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
-			{
-				auto &children = const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children;
-				auto it = children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
-				if(it == children.end())
-					return nullptr;
-				return it->second->GetValuePtr<T>();
-			}
-			if(a->IsValueType(type_to_enum<T>()) == false)
-				return nullptr;
-			return &static_cast<T*>(a->GetValues())[arrayIndex];
-		}
-	}
-	return prop ? (*this)->GetValuePtr<T>() : nullptr;
-}
+
+    template<typename T>
+        T *udm::PropertyWrapper::GetValuePtr() const
+    {
+        if(arrayIndex != std::numeric_limits<uint32_t>::max())
+        {
+            auto *a = prop->GetValuePtr<Array>();
+            if(a)
+            {
+                if(linked && !static_cast<const LinkedPropertyWrapper&>(*this).propName.empty())
+                {
+                    auto &children = const_cast<Element&>(a->GetValue<Element>(arrayIndex)).children;
+                    auto it = children.find(static_cast<const LinkedPropertyWrapper&>(*this).propName);
+                    if(it == children.end())
+                        return nullptr;
+                    return it->second->GetValuePtr<T>();
+                }
+                if(a->IsValueType(type_to_enum<T>()) == false)
+                    return nullptr;
+                return &static_cast<T*>(a->GetValues())[arrayIndex];
+            }
+        }
+        return prop ? (*this)->GetValuePtr<T>() : nullptr;
+    }
+
 template<typename T>
 	T udm::PropertyWrapper::ToValue(const T &defaultValue,bool *optOutIsDefined) const
 {
@@ -1146,7 +1148,7 @@ template<typename T>
 		auto valueType = a.GetValueType();
 		return visit(valueType,vs);
 	}
-	return (*this)->ToValue<T>();
+    return prop ? (*this)->ToValue<T>() : std::optional<T>{};
 }
 
 template<typename T>

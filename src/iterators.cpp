@@ -27,22 +27,25 @@ udm::ElementIterator::ElementIterator()
 {}
 
 udm::ElementIterator::ElementIterator(udm::Element &e)
-	: ElementIterator{e,e.children.begin()}
+    : ElementIterator{e,e.children,e.children.begin()}
 {}
 
-udm::ElementIterator::ElementIterator(udm::Element &e,std::unordered_map<std::string,PProperty>::iterator it)
-	: m_iterator{it},m_pair{it}
-{}
+udm::ElementIterator::ElementIterator(udm::Element &e,std::unordered_map<std::string,PProperty> &c,std::unordered_map<std::string,PProperty>::iterator it)
+    : m_iterator{it},m_pair{},m_propertyMap{&c}
+{
+    if(it != c.end())
+        m_pair = {it};
+}
 
 udm::ElementIterator::ElementIterator(const ElementIterator &other)
-	: m_iterator{other.m_iterator},m_pair{other.m_pair}
+    : m_iterator{other.m_iterator},m_pair{other.m_pair},m_propertyMap{other.m_propertyMap}
 {}
 
 udm::ElementIterator &udm::ElementIterator::operator++()
 {
-	++m_iterator;
-	m_pair = ElementIteratorPair{m_iterator};
-	return *this;
+    ++m_iterator;
+    m_pair = (m_propertyMap && m_iterator != m_propertyMap->end()) ? ElementIteratorPair{m_iterator} : ElementIteratorPair{};
+    return *this;
 }
 
 udm::ElementIterator udm::ElementIterator::operator++(int)

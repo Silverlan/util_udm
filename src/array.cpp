@@ -27,7 +27,7 @@ bool udm::Array::operator==(const Array &other) const
 	}
 	auto tag = get_non_trivial_tag(m_valueType);
 	return std::visit([this,&other,values,valuesOther](auto tag) -> bool {
-		using T = decltype(tag)::type;
+        using T = typename decltype(tag)::type;
 		auto *ptr0 = static_cast<const T*>(values);
 		auto *ptr1 = static_cast<const T*>(valuesOther);
 		for(auto i=decltype(m_size){0u};i<m_size;++i)
@@ -92,7 +92,7 @@ void udm::Array::Merge(const Array &other,MergeFlags mergeFlags)
 	}
 
 	std::visit([this,&other,offset,sizeOther](auto tag) {
-		using T = decltype(tag)::type;
+        using T = typename decltype(tag)::type;
 		auto *ptrDst = static_cast<T*>(GetValuePtr(offset));
 		auto *ptrSrc = static_cast<const T*>(other.GetValues());
 		for(auto i=decltype(sizeOther){0u};i<sizeOther;++i)
@@ -121,13 +121,13 @@ void *udm::Array::GetValuePtr(uint32_t idx)
 
 void udm::Array::SetValue(uint32_t idx,const void *value)
 {
-	auto vs = [&](auto tag){SetValue(idx,*static_cast<const decltype(tag)::type*>(value));};
+    auto vs = [&](auto tag){SetValue(idx,*static_cast<const typename decltype(tag)::type*>(value));};
 	visit(m_valueType,vs);
 }
 
 void udm::Array::InsertValue(uint32_t idx,void *value)
 {
-	auto vs = [&](auto tag){InsertValue(idx,*static_cast<const decltype(tag)::type*>(value));};
+    auto vs = [&](auto tag){InsertValue(idx,*static_cast<const typename decltype(tag)::type*>(value));};
 	visit(m_valueType,vs);
 }
 
@@ -168,7 +168,7 @@ void udm::Array::Resize(uint32_t newSize,Range r0,Range r1,bool defaultInitializ
 	{
 		auto tag = get_non_trivial_tag(m_valueType);
 		return std::visit([this,newSize,headerSize,defaultInitializeNewValues,&r0,&r1,&cpyData](auto tag) mutable {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			auto *newValues = AllocateData(newSize *sizeof(T));
 			//for(auto i=decltype(newSize){0u};i<newSize;++i)
 			//	new (&newValues[i]) T{};
@@ -306,7 +306,7 @@ uint8_t *udm::Array::AllocateData(uint64_t size) const
 		// We'll have to default-initialize non-trivial data ourselves
 		auto *tmp = ptr +GetHeaderSize();
 		std::visit([tmp,size](auto tag) {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			auto *p = reinterpret_cast<T*>(tmp);
 			if((size %sizeof(T)) != 0)
 				throw ImplementationError{"Array allocation size does not match multiple of size of value type!"};
@@ -329,7 +329,7 @@ void udm::Array::ReleaseValues()
 		// Call destructor for non-trivial data
 		auto *tmp = static_cast<uint8_t*>(m_values) +GetHeaderSize();
 		std::visit([this,tmp](auto tag) {
-			using T = decltype(tag)::type;
+            using T = typename decltype(tag)::type;
 			auto *p = reinterpret_cast<T*>(tmp);
 			for(auto i=decltype(m_size){0u};i<m_size;++i)
 				p[i].~T();

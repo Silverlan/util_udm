@@ -5,6 +5,9 @@
 #ifndef __UDM_ENUMS_HPP__
 #define __UDM_ENUMS_HPP__
 
+#include <cstdint>
+#include <limits>
+
 namespace udm
 {
 	enum class Type : uint8_t
