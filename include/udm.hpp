@@ -1148,9 +1148,7 @@ template<typename T>
 		auto valueType = a.GetValueType();
 		return visit(valueType,vs);
 	}
-	if(prop)
-		return (*this)->ToValue<T>();
-    return std::optional<T>{};
+    return prop ? (*this)->ToValue<T>() : std::optional<T>{};
 }
 
 template<typename T>
