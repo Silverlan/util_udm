@@ -1,9 +1,13 @@
 name: Build Linux
 on:
   push:
-    branches: [ master, actions ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, actions ]
+    branches: [ master ]
+
+concurrency:
+  group: environment-lin-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -13,12 +17,12 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             name: "Ubuntu GCC-11"
             artifact: "ubuntu_gcc.7z"
             build_type: "RelWithDebInfo"
-            cc: "gcc-11"
-            cxx: "g++-11"
+            cc: "clang-14"
+            cxx: "clang++-14"
             archiver: "7z a"
             generators: "Unix Makefiles"
             build_dir: 'build'
@@ -42,15 +46,18 @@ jobs:
           root_dir: "${{ env.GA_ROOT_DIR }}"
           should_checkout: "0"
           dir: '.'
-          build_shared: '1'
+          build_shared: '0'
           
-      - name: Upload binaries
-        uses: Silverlan/common_actions/upload_build_binaries@main
-
-      - uses: actions/upload-artifact@v2.2.4
+      - name: Create Release Files
+        shell: bash
+        run: |
+          mkdir release
+          mkdir release/lib
+          rsync build/libutil_udm.a release/lib/libutil_udm.a
+          
+      - name: Release Binaries
+        uses: Silverlan/common_actions/release_nightly_binaries@main
         with:
-          name: udm-standalone
-          retention-days: 30
-          path: |
-            ${{ steps.build.outputs.binary_file_path }}
-        
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit: ${{ github.ref_name }}
+          
