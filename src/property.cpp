@@ -52,6 +52,16 @@ void udm::Property::Copy(const Property &other,bool deepCopy)
 		memcpy(value,other.value,size_of_base_type(type));
 		return;
 	}
+	if(is_array_type(type))
+	{
+		GetValue<udm::Array>().Merge(other.GetValue<udm::Array>(),deepCopy ? MergeFlags::DeepCopy : MergeFlags::None);
+		return;
+	}
+	if(type == Type::Element)
+	{
+		GetValue<udm::Element>().Merge(other.GetValue<udm::Element>(),deepCopy ? MergeFlags::DeepCopy : MergeFlags::None);
+		return;
+	}
 	auto tag = get_non_trivial_tag(type);
 	std::visit([this,&other,deepCopy](auto tag) {
         using T = typename decltype(tag)::type;
