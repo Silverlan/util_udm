@@ -8,7 +8,7 @@ inputs:
   working-directory:
     description: 'Working Directory'
     required: true
-    default: './'
+    default: '${{ github.workspace }}'
   build-directory:
     description: 'Build Directory'
     required: true

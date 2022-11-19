@@ -43,9 +43,7 @@ jobs:
         id: build
         uses: Silverlan/util_udm/github_actions/build@master
         with:
-          root_dir: "${{ env.GA_ROOT_DIR }}"
-          should_checkout: "0"
-          dir: '.'
+          repo-directory: '${{ github.workspace }}'
           build_shared: '0'
           
       - name: Create Release Files
