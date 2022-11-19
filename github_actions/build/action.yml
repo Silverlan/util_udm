@@ -1,17 +1,18 @@
 name: Build
 description: 'Build library'
 inputs:
-  root_dir:
-    description: 'Root directory'
+  repo-directory:
+    description: 'Specifies source code location. If empty, source code will be downloaded to working-directory.'
     required: true
-  should_checkout:
-    description: 'Checkout the core library?'
+    default: ''
+  working-directory:
+    description: 'Working Directory'
     required: true
-    default: '1'
-  dir:
-    description: 'Library directory'
+    default: './'
+  build-directory:
+    description: 'Build Directory'
     required: true
-    default: 'external_libs/util_udm'
+    default: './build'
   build_shared:
     description: 'Build as shared library?'
     required: true
@@ -29,6 +30,11 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - uses: Silverlan/common_actions/action_start@main
+      with:
+        name: "util_udm > build"
+        input_values: "repo-directory: ${{inputs.repo-directory}},working-directory: ${{inputs.working-directory}},build-directory: ${{inputs.build-directory}},build_shared: ${{inputs.build_shared}}"
+        
     - name: Initialize Env
       id: init-env
       uses: Silverlan/common_actions/set_common_env_vars@main
@@ -36,14 +42,13 @@ runs:
     - uses: ChristopherHX/conditional@b4a9649204f81002ec9a4ef7d4bf7d6b2ab7fa55
       name: CMake Build
       with:
-        if: ${{inputs.should_checkout == '1'}}
+        if: ${{inputs.repo-directory == ''}}
         step: |
-          uses: Silverlan/common_actions/get_submodule@main
+          uses: Silverlan/common_actions/get_submodule_simple@main
           with:
             repo: 'Silverlan/util_udm'
-            repo_name: 'util_udm'
             cmake_var: 'DEPENDENCY_UTIL_UDM_INCLUDE'
-            dir: 'external_libs'
+            working-directory: ${{inputs.working-directory}}
             
     - uses: ChristopherHX/conditional@b4a9649204f81002ec9a4ef7d4bf7d6b2ab7fa55
       name: Define CMake Variables
@@ -65,6 +70,7 @@ runs:
         cmake_var_lib: 'DEPENDENCY_LZ4_LIBRARY'
         include_dir: 'lib'
         static_library: '1'
+        working-directory: ${{inputs.working-directory}}
         
     - id: update-shared-state
       shell: bash
@@ -82,6 +88,7 @@ runs:
       uses: Silverlan/common_actions/get_common_external_libs@main
       with:
         build_shared: '${{ steps.update-shared-state.outputs.ext-build-shared }}'
+        working-directory: ${{inputs.working-directory}}
 
     - uses: Silverlan/common_actions/build_cmake@main
       name: CMake Build
@@ -91,14 +98,18 @@ runs:
         build_generator: ${{ matrix.config.generators }}
         cmake_var: 'DEPENDENCY_UTIL_UDM_LIBRARY'
         build_target: util_udm
-        build_dir: '${{ matrix.config.build_dir }}/${{ inputs.dir }}'
-        cmake_script_location: '${{ inputs.dir }}'
+        build_dir: '${{ inputs.build-directory }}'
+        cmake_script_location: './'
         static_library: '${{ steps.update-shared-state.outputs.udm-build-static }}'
+        working-directory: ${{inputs.working-directory}}
         
     - name: Write outputs
       shell: bash
       id: write-outputs
       run: |
-        echo "::set-output name=include-directory::$(echo ${{ inputs.root_dir }}/${{ inputs.dir }}/include)"
+        echo "::set-output name=include-directory::$(echo $${{inputs.working-directory}}/include)"
         echo "::set-output name=library-file-path::$(echo ${{ steps.build.outputs.library_file_path }})"
         echo "::set-output name=binary-file-path::$(echo ${{ steps.build.outputs.binary_file_path }})"
+
+    - uses: Silverlan/common_actions/action_end@main
+    
