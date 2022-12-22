@@ -91,6 +91,18 @@ void udm::Array::Merge(const Array &other,MergeFlags mergeFlags)
 		return;
 	}
 
+	if(m_valueType == udm::Type::Element)
+	{
+		auto offset = size;
+		auto newSize = GetSize();
+		for(auto i=offset;i<newSize;++i)
+		{
+			auto iOther = i -offset;
+			GetValue<udm::Element>(i).Merge(other.GetValue<udm::Element>(iOther),mergeFlags);
+		}
+		return;
+	}
+
 	std::visit([this,&other,offset,sizeOther](auto tag) {
         using T = typename decltype(tag)::type;
 		auto *ptrDst = static_cast<T*>(GetValuePtr(offset));

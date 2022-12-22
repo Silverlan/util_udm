@@ -83,7 +83,7 @@ udm::Element &udm::Element::operator=(const Element &other)
 void udm::Element::Copy(const Element &other)
 {
 	for(auto &pair : other.children)
-		children[pair.first] = pair.second->Copy(true);
+		AddChild(pair.first,pair.second->Copy(true));
 }
 
 void udm::Element::ToAscii(AsciiSaveFlags flags,std::stringstream &ss,const std::optional<std::string> &prefix) const
@@ -107,7 +107,7 @@ void udm::Element::Merge(const Element &other,MergeFlags mergeFlags)
 		auto &prop = *pair.second;
 		if(!prop.IsType(Type::Element) && !is_array_type(prop.type))
 		{
-			children[pair.first] = umath::is_flag_set(mergeFlags,MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second;
+			AddChild(pair.first,umath::is_flag_set(mergeFlags,MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second);
 			continue;
 		}
 		auto it = children.find(pair.first);
@@ -115,7 +115,7 @@ void udm::Element::Merge(const Element &other,MergeFlags mergeFlags)
 		{
 			if(it != children.end() && umath::is_flag_set(mergeFlags,MergeFlags::OverwriteExisting) == false)
 				continue;
-			children[pair.first] = umath::is_flag_set(mergeFlags,MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second;
+			AddChild(pair.first,umath::is_flag_set(mergeFlags,MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second);
 			continue;
 		}
 		if(prop.IsType(Type::Element))

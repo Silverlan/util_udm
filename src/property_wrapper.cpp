@@ -455,7 +455,41 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](uint32_t idx) const
 		return it.GetProperty();
 	};
 	auto valueType = a->GetValueType();
-	return visit(valueType,vs);
+	auto item = visit(valueType,vs);
+	if(linked)
+	{
+		auto *l = static_cast<const udm::LinkedPropertyWrapper*>(this);
+		if(!l->propName.empty())
+		{
+			if(!l->prev)
+				return {};
+			auto *aPrev = l->prev->prop ? l->prev->prop->GetValuePtr<Array>() : nullptr;
+			if(aPrev)
+			{
+				if(!aPrev || l->prev->arrayIndex >= aPrev->GetSize())
+					return {};
+				auto *elPrev = aPrev->GetValuePtr<Element>(l->prev->arrayIndex);
+				if(!elPrev)
+					return {};
+				auto it = elPrev->children.find(l->propName);
+				if(it == elPrev->children.end())
+					return {};
+				item.prop = it->second.get();
+			}
+			else
+			{
+				auto *elPrev = l->prev->GetValuePtr<Element>();
+				if(!elPrev)
+					return {};
+				auto it = elPrev->children.find(l->propName);
+				if(it == elPrev->children.end())
+					return {};
+				item.prop = it->second.get();
+			}
+		}
+	}
+	item.prev = std::make_unique<udm::LinkedPropertyWrapper>(*this);
+	return item;
 }
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const char *key) const {return operator[](std::string{key});}
