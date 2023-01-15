@@ -345,6 +345,11 @@ std::shared_ptr<udm::Data> udm::Data::Open(const ::VFilePtr &f) {return Open(std
 std::shared_ptr<udm::Data> udm::Data::Open(std::unique_ptr<IFile> &&f)
 {
 	auto udmData = std::shared_ptr<udm::Data>{new udm::Data{}};
+	if(f->GetSize() < sizeof(Header))
+	{
+		throw InvalidFormatError{"Header is too small, file is not a valid UDM file!"};
+		return nullptr;
+	}
 	udmData->m_header = f->Read<Header>();
 	if(ustring::compare(udmData->m_header.identifier.data(),HEADER_IDENTIFIER,true,strlen(HEADER_IDENTIFIER)) == false)
 	{
