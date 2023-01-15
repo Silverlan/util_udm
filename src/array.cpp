@@ -263,6 +263,19 @@ void udm::Array::Resize(uint32_t newSize)
 	Resize(newSize,r0,r1,true);
 }
 
+void udm::Array::AddValueRange(uint32_t startIndex,uint32_t count)
+{
+	::udm::Array::Range r0 {0 /* src */,0 /* dst */,startIndex};
+	::udm::Array::Range r1 {startIndex /* src */,startIndex +count /* dst */,GetSize() -startIndex};
+	Resize(GetSize() +count,r0,r1,false);
+}
+void udm::Array::RemoveValueRange(uint32_t startIndex,uint32_t count)
+{
+	::udm::Array::Range r0 {0 /* src */,0 /* dst */,startIndex};
+	::udm::Array::Range r1 {startIndex +count /* src */,startIndex /* dst */,GetSize() -(startIndex +count)};
+	Resize(GetSize() -count,r0,r1,false);
+}
+
 udm::PropertyWrapper udm::Array::operator[](uint32_t idx)
 {
 	return PropertyWrapper{*this,idx};

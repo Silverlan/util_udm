@@ -493,6 +493,8 @@ namespace udm
 		virtual void *GetValues() {return GetValuePtr();}
 		const void *GetValues() const {return const_cast<Array*>(this)->GetValues();}
 		void Resize(uint32_t newSize);
+		void AddValueRange(uint32_t startIndex,uint32_t count);
+		void RemoveValueRange(uint32_t startIndex,uint32_t count);
 		void *GetValuePtr(uint32_t idx);
 		template<typename T>
 			T *GetValuePtr(uint32_t idx);
