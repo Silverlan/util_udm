@@ -10,27 +10,40 @@
 #include <stdexcept>
 #include <string>
 
-namespace udm
-{
-	struct DLLUDM Exception
-		: public std::runtime_error
-	{
-		Exception(const std::string &msg)
-			: std::runtime_error{msg.c_str()},m_msg{msg}
-		{}
-	private:
+namespace udm {
+	struct DLLUDM Exception : public std::runtime_error {
+		Exception(const std::string &msg) : std::runtime_error {msg.c_str()}, m_msg {msg} {}
+	  private:
 		std::string m_msg;
 	};
 
-	struct DLLUDM InvalidUsageError : public Exception {using Exception::Exception;};
-	struct DLLUDM CompressionError : public Exception {using Exception::Exception;};
-	struct DLLUDM FileError : public Exception {using Exception::Exception;};
-	struct DLLUDM InvalidFormatError : public Exception {using Exception::Exception;};
-	struct DLLUDM PropertyLoadError : public Exception {using Exception::Exception;};
-	struct DLLUDM OutOfBoundsError : public Exception {using Exception::Exception;};
-	struct DLLUDM ImplementationError : public Exception {using Exception::Exception;};
-	struct DLLUDM LogicError : public Exception {using Exception::Exception;};
-	struct DLLUDM ComparisonError : public Exception {using Exception::Exception;};
+	struct DLLUDM InvalidUsageError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM CompressionError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM FileError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM InvalidFormatError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM PropertyLoadError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM OutOfBoundsError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM ImplementationError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM LogicError : public Exception {
+		using Exception::Exception;
+	};
+	struct DLLUDM ComparisonError : public Exception {
+		using Exception::Exception;
+	};
 };
 
 #endif

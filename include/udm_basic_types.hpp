@@ -11,9 +11,8 @@
 #include <mathutil/transform.hpp>
 #include <variant>
 
-namespace udm
-{
-	using DataValue = void*;
+namespace udm {
+	using DataValue = void *;
 	using String = std::string;
 	using Int8 = int8_t;
 	using UInt8 = uint8_t;
@@ -36,8 +35,8 @@ namespace udm
 	using Vector4i = ::Vector4i;
 	using Quaternion = Quat;
 	using EulerAngles = ::EulerAngles;
-	using Srgba = std::array<uint8_t,4>;
-	using HdrColor = std::array<uint16_t,3>;
+	using Srgba = std::array<uint8_t, 4>;
+	using HdrColor = std::array<uint16_t, 3>;
 	using Transform = umath::Transform;
 	using ScaledTransform = umath::ScaledTransform;
 	using Mat4 = Mat4;
