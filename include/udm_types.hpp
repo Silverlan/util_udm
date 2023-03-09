@@ -8,8 +8,7 @@
 #include <cinttypes>
 #include <memory>
 
-namespace udm
-{
+namespace udm {
 	struct Half;
 	struct Exception;
 	struct InvalidUsageError;
@@ -33,7 +32,7 @@ namespace udm
 	enum class MergeFlags : uint32_t;
 	enum class AsciiSaveFlags : uint32_t;
 	struct LinkedPropertyWrapper;
-	using LinkedPropertyWrapperArg = const LinkedPropertyWrapper&;
+	using LinkedPropertyWrapperArg = const LinkedPropertyWrapper &;
 	struct Array;
 	struct StructDescription;
 	struct Property;
@@ -52,7 +51,7 @@ namespace udm
 	class AsciiReader;
 	struct ArrayLz4;
 	struct AssetData;
-	using AssetDataArg = const AssetData&;
+	using AssetDataArg = const AssetData &;
 	enum class FormatType : uint8_t;
 	enum class AsciiSaveFlags : uint32_t;
 	class Data;
