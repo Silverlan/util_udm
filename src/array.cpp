@@ -73,7 +73,7 @@ udm::Array &udm::Array::operator=(const Array &other)
 
 void udm::Array::Merge(const Array &other, MergeFlags mergeFlags)
 {
-	if(umath::is_flag_set(mergeFlags, MergeFlags::DeepCopy)) {
+	if(umath::is_flag_set(mergeFlags, MergeFlags::OverwriteExisting) || GetValueType() != other.GetValueType()) { // TODO: Copy files if compatible?
 		Clear();
 		SetValueType(other.GetValueType());
 	}
