@@ -28,6 +28,7 @@
 #include "udm_conversion.hpp"
 #include "udm_exception.hpp"
 #include "udm_enums.hpp"
+#undef VERSION
 
 #pragma warning(push)
 #pragma warning(disable : 4715)
