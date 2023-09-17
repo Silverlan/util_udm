@@ -306,22 +306,16 @@ namespace udm {
 		// Failure case, return default value
 		if constexpr(ENABLE_DEFAULT_RETURN && (!ENABLE_NUMERIC || !ENABLE_GENERIC || !ENABLE_NON_TRIVIAL)) {
 			if constexpr(ENABLE_NUMERIC) {
-				if(is_numeric_type(type)) {
-					auto tag = get_numeric_tag(type);
+				if(is_numeric_type(type))
 					return decltype(std::visit(vs, get_numeric_tag(type)))();
-				}
 			}
 			if constexpr(ENABLE_GENERIC) {
-				if(is_generic_type(type)) {
-					auto tag = get_generic_tag(type);
+				if(is_generic_type(type))
 					return decltype(std::visit(vs, get_generic_tag(type)))();
-				}
 			}
 			if constexpr(ENABLE_NON_TRIVIAL) {
-				if(is_non_trivial_type(type)) {
-					auto tag = get_non_trivial_tag(type);
+				if(is_non_trivial_type(type))
 					return decltype(std::visit(vs, get_non_trivial_tag(type)))();
-				}
 			}
 		}
 	}
@@ -335,15 +329,24 @@ namespace udm {
 	{
 		return visit<false, true, true, ENABLE_DEFAULT_RETURN>(type, vs);
 	}
-	template<typename T>
+	template<bool ENABLE_DEFAULT_RETURN = true, typename T>
 	constexpr decltype(auto) visit_c(Type type, T vs)
 	{
 		if(is_numeric_type(type))
 			return std::visit(vs, get_numeric_tag(type));
-		if(is_generic_type(type))
+		else if(is_generic_type(type))
 			return std::visit(vs, get_generic_tag(type));
-		if(type == Type::String)
+		else if(is_common_type(type))
 			return std::visit(vs, get_common_tag_exclusive(type));
+
+		if constexpr(ENABLE_DEFAULT_RETURN) {
+			if(is_numeric_type(type))
+				return decltype(std::visit(vs, get_numeric_tag(type)))();
+			else if(is_generic_type(type))
+				return decltype(std::visit(vs, get_generic_tag(type)))();
+			else if(is_common_type(type))
+				return decltype(std::visit(vs, get_common_tag_exclusive(type)))();
+		}
 	}
 };
 
