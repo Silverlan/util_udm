@@ -140,6 +140,8 @@ namespace udm {
 		return false;
 	}
 
+	constexpr bool is_common_type(Type t) { return is_numeric_type(t) || is_generic_type(t) || t == Type::String; }
+
 	template<bool ENABLE_NUMERIC = true, bool ENABLE_GENERIC = true, bool ENABLE_NON_TRIVIAL = true>
 	constexpr bool is_type(Type type)
 	{
@@ -245,6 +247,14 @@ namespace udm {
 		}
 	}
 
+	constexpr std::variant<tag_t<String>> get_common_tag_exclusive(Type e)
+	{
+		switch(e) {
+		case Type::String:
+			return tag<String>;
+		}
+	}
+
 	struct Element;
 	struct Array;
 	struct ArrayLz4;
@@ -324,6 +334,16 @@ namespace udm {
 	constexpr decltype(auto) visit_gnt(Type type, auto vs)
 	{
 		return visit<false, true, true, ENABLE_DEFAULT_RETURN>(type, vs);
+	}
+	template<typename T>
+	constexpr decltype(auto) visit_c(Type type, T vs)
+	{
+		if(is_numeric_type(type))
+			return std::visit(vs, get_numeric_tag(type));
+		if(is_generic_type(type))
+			return std::visit(vs, get_generic_tag(type));
+		if(type == Type::String)
+			return std::visit(vs, get_common_tag_exclusive(type));
 	}
 };
 
