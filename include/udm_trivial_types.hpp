@@ -25,6 +25,8 @@ namespace udm {
 	template<typename T>
 	concept is_vector_type = std::is_same_v<T, Vector2> || std::is_same_v<T, Vector2i> || std::is_same_v<T, Vector3> || std::is_same_v<T, Vector3i> || std::is_same_v<T, Vector4> || std::is_same_v<T, Vector4i>;
 	template<typename T>
+	concept is_integral_vector_type = std::is_same_v<T, Vector2i> || std::is_same_v<T, Vector3i> || std::is_same_v<T, Vector4i>;
+	template<typename T>
 	concept is_matrix_type = std::is_same_v<T, Mat4> || std::is_same_v<T, Mat3x4>;
 	template<typename T>
 	concept is_arithmetic = std::is_arithmetic_v<T> || std::is_same_v<T, Half>;
@@ -32,7 +34,9 @@ namespace udm {
 	template<typename T>
 	using underlying_numeric_type = std::conditional_t<std::is_same_v<T, Half>, uint16_t,
 	  std::conditional_t<is_arithmetic<T>, T,
-	    std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T, Quaternion>, float, std::conditional_t<std::is_same_v<T, Srgba>, uint8_t, std::conditional_t<std::is_same_v<T, HdrColor>, uint16_t, std::conditional_t<std::is_same_v<T, EulerAngles>, float, void>>>>>>;
+	    std::conditional_t<is_integral_vector_type<T>, Vector3i::value_type,
+	      std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T, Quaternion>, float,
+	        std::conditional_t<std::is_same_v<T, Srgba>, uint8_t, std::conditional_t<std::is_same_v<T, HdrColor>, uint16_t, std::conditional_t<std::is_same_v<T, EulerAngles>, float, void>>>>>>>;
 
 	template<typename T>
 	constexpr Type type_to_enum();
@@ -120,6 +124,33 @@ namespace udm {
 			return 16;
 		}
 		return 0;
+	}
+
+	template<typename T>
+	underlying_numeric_type<T> &get_numeric_component(T &value, uint8_t idx)
+	{
+		if constexpr(std::is_same_v<T,Half>)
+			return value.value;
+		else if constexpr(udm::is_arithmetic<T>)
+			return value;
+		else if constexpr(udm::is_vector_type<T> || std::is_same_v<T, udm::EulerAngles> || std::is_same_v<T, udm::Srgba> || std::is_same_v<T, udm::HdrColor>)
+			return value[idx];
+		else if constexpr(std::is_same_v<T, udm::Quaternion>) {
+			// Quaternion memory order is xyzw, but we want wxyz
+			if(idx == 0)
+				return value[3];
+			return value[idx - 1];
+		}
+		else {
+			static_assert(std::is_same_v<underlying_numeric_type<T>, float>);
+			return *(reinterpret_cast<float *>(&value) + idx);
+		}
+	}
+
+	template<typename T>
+	const underlying_numeric_type<T> &get_numeric_component(const T &value, uint8_t idx)
+	{
+		return get_numeric_component<T>(const_cast<T &>(value), idx);
 	}
 
 	constexpr bool is_non_trivial_type(Type t)
