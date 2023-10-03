@@ -129,7 +129,7 @@ namespace udm {
 	template<typename T>
 	underlying_numeric_type<T> &get_numeric_component(T &value, uint8_t idx)
 	{
-		if constexpr(std::is_same_v<T,Half>)
+		if constexpr(std::is_same_v<T, Half>)
 			return value.value;
 		else if constexpr(udm::is_arithmetic<T>)
 			return value;
@@ -151,6 +151,28 @@ namespace udm {
 	const underlying_numeric_type<T> &get_numeric_component(const T &value, uint8_t idx)
 	{
 		return get_numeric_component<T>(const_cast<T &>(value), idx);
+	}
+
+	template<typename T>
+	void set_numeric_component(T &value, uint8_t idx, const underlying_numeric_type<T> &compVal)
+	{
+		if constexpr(std::is_same_v<T, Half>)
+			value.value = compVal;
+		else if constexpr(udm::is_arithmetic<T>)
+			value = compVal;
+		else if constexpr(udm::is_vector_type<T> || std::is_same_v<T, udm::EulerAngles> || std::is_same_v<T, udm::Srgba> || std::is_same_v<T, udm::HdrColor>)
+			value[idx] = compVal;
+		else if constexpr(std::is_same_v<T, udm::Quaternion>) {
+			// Quaternion memory order is xyzw, but we want wxyz
+			if(idx == 0)
+				value[3] = compVal;
+			else
+				value[idx - 1] = compVal;
+		}
+		else {
+			static_assert(std::is_same_v<underlying_numeric_type<T>, float>);
+			*(reinterpret_cast<float *>(&value) + idx) = compVal;
+		}
 	}
 
 	constexpr bool is_non_trivial_type(Type t)
