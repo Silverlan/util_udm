@@ -414,7 +414,7 @@ udm::PProperty udm::Data::LoadProperty(const std::string_view &path) const
 	auto &f = *m_file;
 	f.Seek(sizeof(m_header));
 	auto type = f.Read<Type>();
-	return LoadProperty(type, std::string {KEY_ASSET_DATA} + "." + std::string {path});
+	return LoadProperty(type, std::string {KEY_ASSET_DATA} + "/" + std::string {path});
 }
 
 void udm::Data::SkipProperty(IFile &f, Type type)
@@ -515,7 +515,7 @@ void udm::Data::WriteKey(IFile &f, const std::string &key)
 
 udm::PProperty udm::Data::LoadProperty(Type type, const std::string_view &path) const
 {
-	auto end = std::string::npos; // path.find('.');
+	auto end = path.find('/');
 	auto name = path.substr(0, end);
 	if(name.empty()) {
 		throw PropertyLoadError {"Invalid property name!"};
