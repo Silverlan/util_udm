@@ -21,8 +21,8 @@ jobs:
             name: "Ubuntu GCC-11"
             artifact: "ubuntu_gcc.7z"
             build_type: "RelWithDebInfo"
-            cc: "clang-14"
-            cxx: "clang++-14"
+            cc: "clang-15"
+            cxx: "clang++-15"
             archiver: "7z a"
             generators: "Unix Makefiles"
             build_dir: 'build'
@@ -38,20 +38,33 @@ jobs:
       - name: Download binaries
         uses: Silverlan/common_actions/download_build_binaries@main
         continue-on-error: true
+
+      - name: Build Dynamic Library
+        id: build-dynamic
+        uses: Silverlan/util_udm/github_actions/build@master
+        with:
+          repo-directory: '${{ github.workspace }}'
+          build_shared: '1'
+          build-directory: './build_dynamic'
           
-      - name: Build
-        id: build
+      - name: Build Static Library
+        id: build-static
         uses: Silverlan/util_udm/github_actions/build@master
         with:
           repo-directory: '${{ github.workspace }}'
           build_shared: '0'
+          build-directory: './build_static'
           
       - name: Create Release Files
         shell: bash
         run: |
           mkdir release
           mkdir release/lib
-          rsync build/libutil_udm.a release/lib/libutil_udm.a
+          rsync build_static/libutil_udm.a release/lib/libutil_udm.a
+          rsync build_dynamic/libutil_udm.so release/lib/libutil_udm.so
+
+          # find . -type f -name "*.so" -exec cp {} release/lib/ \;
+          # find . -type f -name "*.a" -exec cp {} release/lib/ \;
           
       - name: Release Binaries
         uses: Silverlan/common_actions/release_nightly_binaries@main
