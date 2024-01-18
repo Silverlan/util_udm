@@ -256,6 +256,15 @@ namespace udm {
 		void operator=(LinkedPropertyWrapper &&v);
 		void operator=(const PropertyWrapper &v);
 		void operator=(const LinkedPropertyWrapper &v);
+
+		LinkedPropertyWrapper operator[](uint32_t idx) const;
+		LinkedPropertyWrapper operator[](int32_t idx) const;
+		LinkedPropertyWrapper operator[](size_t idx) const;
+
+		LinkedPropertyWrapper operator[](const std::string_view &key) const;
+		LinkedPropertyWrapper operator[](const std::string &key) const;
+		LinkedPropertyWrapper operator[](const char *key) const;
+
 		std::string GetPath() const;
 		PProperty ClaimOwnership() const;
 		ElementIteratorWrapper ElIt();
