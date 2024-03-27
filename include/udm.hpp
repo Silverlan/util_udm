@@ -32,6 +32,9 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4715)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
 namespace udm {
 	static std::string CONTROL_CHARACTERS = "{}[]<>$,:;";
 	static std::string WHITESPACE_CHARACTERS = " \t\f\v\n\r";
@@ -1221,6 +1224,7 @@ udm::Struct &udm::Struct::operator=(const T &other)
 	memcpy(data.data(), &other, sizeof(T));
 	return *this;
 }
+#pragma GCC diagnostic pop
 #pragma warning(pop)
 
 #endif
