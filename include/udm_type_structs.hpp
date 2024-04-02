@@ -151,13 +151,23 @@ namespace udm {
 		template<typename T>
 		bool operator()(T &valOut) const
 		{
-			if constexpr(util::is_specialization<T, std::vector>::value || util::is_specialization<T, std::map>::value || util::is_specialization<T, std::unordered_map>::value) {
+			using TBase = std::remove_reference_t<T>;
+			if constexpr(util::is_specialization<TBase, std::optional>::value) {
+				typename TBase::value_type v;
+				if(!(*this)(v)) {
+					valOut = {};
+					return false;
+				}
+				valOut = v;
+				return true;
+			}
+			else if constexpr(util::is_specialization<TBase, std::vector>::value || util::is_specialization<TBase, std::map>::value || util::is_specialization<TBase, std::unordered_map>::value) {
 				bool isDefined;
 				valOut = std::move((*this)(const_cast<const T &>(valOut), isDefined));
 				return isDefined;
 			}
-			else if constexpr(std::is_enum_v<std::remove_reference_t<T>>) {
-				using TEnum = std::remove_reference_t<T>;
+			else if constexpr(std::is_enum_v<TBase>) {
+				using TEnum = TBase;
 				auto *ptr = GetValuePtr<std::string>();
 				if(ptr) {
 					auto e = magic_enum::enum_cast<TEnum>(*ptr);
@@ -170,13 +180,13 @@ namespace udm {
 				valOut = static_cast<TEnum>((*this)(reinterpret_cast<const std::underlying_type_t<TEnum> &>(valOut), isDefined));
 				return isDefined;
 			}
-			else if constexpr(std::is_same_v<std::remove_reference_t<T>, PProperty>) {
+			else if constexpr(std::is_same_v<TBase, PProperty>) {
 				if(!prop)
 					return false;
 				valOut->Assign<false>(*prop);
 				return true;
 			}
-			else if constexpr(std::is_same_v<std::remove_reference_t<T>, Property>) {
+			else if constexpr(std::is_same_v<TBase, Property>) {
 				if(!prop)
 					return false;
 				valOut.Assign<false>(*prop);
@@ -615,6 +625,8 @@ namespace udm {
 		friend PropertyWrapper;
 		template<typename T>
 		void SetValue(Element &child, T &&v);
+		template<typename T>
+		void EraseValue(const Element &child);
 	};
 };
 
