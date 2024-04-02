@@ -139,6 +139,11 @@ namespace udm {
 		template<typename T>
 		std::optional<T> ToValue() const;
 		template<typename T>
+		bool operator>>(T &valOut) const
+		{
+			return (*this)(valOut);
+		}
+		template<typename T>
 		T operator()(const T &defaultValue) const
 		{
 			return ToValue<T>(defaultValue);
@@ -266,6 +271,13 @@ namespace udm {
 		void operator=(LinkedPropertyWrapper &&v);
 		void operator=(const PropertyWrapper &v);
 		void operator=(const LinkedPropertyWrapper &v);
+
+		// Alias
+		template<typename T>
+		void operator<<(T &&v)
+		{
+			operator=(v);
+		}
 
 		LinkedPropertyWrapper operator[](uint32_t idx) const;
 		LinkedPropertyWrapper operator[](int32_t idx) const;
