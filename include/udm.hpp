@@ -635,7 +635,7 @@ void udm::PropertyWrapper::operator=(T &&v) const
 				auto &parent = wpParent;
 				switch(parent->type) {
 				case Type::Element:
-					static_cast<Element *>(parent->value)->EraseValue(el);
+					static_cast<Element *>(parent->value)->EraseValue<const udm::Element &>(el);
 					break;
 				/*case Type::Array:
 				if(arrayIndex == std::numeric_limits<uint32_t>::max())
