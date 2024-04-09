@@ -591,10 +591,74 @@ void udm::PropertyWrapper::operator=(T &&v) const
 {
 	if(prop == nullptr)
 		throw LogicError {"Cannot assign property value: Property is invalid!"};
-	if constexpr(std::is_enum_v<std::remove_reference_t<T>>)
+	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+	if constexpr(util::is_specialization<TBase, std::optional>::value) {
+		// Value is std::optional
+		if(!v) {
+			// nullopt case
+			// TODO: This code is somewhat redundant (see other cases below) and should be streamlined
+			if(is_array_type(prop->type)) {
+				if(arrayIndex == std::numeric_limits<uint32_t>::max())
+					throw LogicError {"Cannot assign propety value to array: No index has been specified!"};
+				if(linked && !static_cast<const LinkedPropertyWrapper *>(this)->propName.empty()) {
+					auto &a = *static_cast<Array *>(prop->value);
+					if(a.GetValueType() != Type::Element)
+						return;
+					auto &e = a.GetValue<Element>(arrayIndex);
+					auto it = e.children.find(static_cast<const LinkedPropertyWrapper *>(this)->propName);
+					if(it != e.children.end())
+						e.children.erase(it);
+				}
+				else
+					throw LogicError {"Cannot assign nullopt value to array!"};
+				return;
+			}
+			if constexpr(std::is_same_v<TBase, PProperty>) {
+				if(linked && !static_cast<const LinkedPropertyWrapper *>(this)->propName.empty()) {
+					auto &linked = *GetLinked();
+					if(linked.prev && linked.prev->IsType(Type::Element)) {
+						auto &el = linked.prev->GetValue<Element>();
+						auto it = el.children.find(linked.propName);
+						if(it != el.children.end())
+							el.children.erase(it);
+						return;
+					}
+				}
+			}
+			if(prop->type != Type::Element) {
+				throw LogicError {"Cannot assign nullopt value to concrete UDM value!"};
+				return;
+			}
+			if constexpr(type_to_enum_s<TBase>() != Type::Invalid) {
+				if(prop->value == nullptr)
+					throw LogicError {"Cannot assign property value: Property is invalid!"};
+				auto &el = *static_cast<Element *>(prop->value);
+				auto &wpParent = el.parentProperty;
+				if(!wpParent)
+					throw InvalidUsageError {"Attempted to change value of element property without a valid parent, this is not allowed!"};
+				auto &parent = wpParent;
+				switch(parent->type) {
+				case Type::Element:
+					static_cast<Element *>(parent->value)->EraseValue<const udm::Element &>(el);
+					break;
+				/*case Type::Array:
+				if(arrayIndex == std::numeric_limits<uint32_t>::max())
+					throw std::runtime_error{"Element has parent of type " +std::string{magic_enum::enum_name(parent->type)} +", but is not indexed!"};
+				(*static_cast<Array*>(parent->value))[arrayIndex] = v;
+				break;*/
+				default:
+					throw InvalidUsageError {"Element has parent of type " + std::string {magic_enum::enum_name(parent->type)} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
+				}
+			}
+			else
+				throw LogicError {"Cannot assign custom type to non-struct property!"};
+			return;
+		}
+		return operator=(*v);
+	}
+	else if constexpr(std::is_enum_v<std::remove_reference_t<TBase>>)
 		return operator=(magic_enum::enum_name(v));
 	else {
-		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 		if(is_array_type(prop->type)) {
 			if(arrayIndex == std::numeric_limits<uint32_t>::max())
 				throw LogicError {"Cannot assign propety value to array: No index has been specified!"};
@@ -816,6 +880,15 @@ void udm::Array::SetValue(uint32_t idx, T &&v)
 			static_cast<TTag *>(GetValues())[idx] = convert<TBase, TTag>(v);
 	};
 	visit(valueType, vs);
+}
+
+template<typename T>
+void udm::Element::EraseValue(const Element &child)
+{
+	auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) { return pair.second->type == udm::Type::Element && pair.second->value == &child; });
+	if(it == children.end())
+		return;
+	children.erase(it);
 }
 
 template<typename T>
