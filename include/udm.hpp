@@ -577,8 +577,13 @@ template<typename T>
 void udm::LinkedPropertyWrapper::operator=(T &&v) const
 {
 	using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-	if(prop == nullptr)
+	if(prop == nullptr) {
+		if constexpr(util::is_specialization<TBase, std::optional>::value) {
+			if(!v) // nullopt
+				return;
+		}
 		const_cast<LinkedPropertyWrapper *>(this)->InitializeProperty();
+	}
 	/*if(prev && prev->arrayIndex != std::numeric_limits<uint32_t>::max() && prev->prev && prev->prev->prop && prev->prev->prop->type == Type::Array)
 	{
 		(*static_cast<Array*>(prev->prev->prop->value))[prev->arrayIndex][propName] = v;
