@@ -15,7 +15,10 @@
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
 #include "udm_exception.hpp"
-
+#pragma warning( push )
+#pragma warning( disable : 4715 )
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
 namespace udm {
 	static constexpr std::array<Type, 12> NUMERIC_TYPES = {Type::Int8, Type::UInt8, Type::Int16, Type::UInt16, Type::Int32, Type::UInt32, Type::Int64, Type::UInt64, Type::Float, Type::Double, Type::Boolean, Type::Half};
 	static constexpr std::array<Type, 15> GENERIC_TYPES
@@ -227,6 +230,7 @@ namespace udm {
 
 	constexpr bool is_trivial_type(Type t) { return !is_non_trivial_type(t) && t != Type::Invalid; }
 
+
 	template<class T>
 	struct tag_t {
 		using type = T;
@@ -336,12 +340,11 @@ namespace udm {
 			return tag<Struct>;
 		}
 		static_assert(NON_TRIVIAL_TYPES.size() == 9, "Update this list when new non-trivial types have been added!");
-	}
-
+    }
 	template<bool ENABLE_NUMERIC = true, bool ENABLE_GENERIC = true, bool ENABLE_NON_TRIVIAL = true, bool ENABLE_DEFAULT_RETURN = true, typename T>
 	    requires(ENABLE_NUMERIC || ENABLE_GENERIC || ENABLE_NON_TRIVIAL)
 	constexpr decltype(auto) visit(Type type, T vs)
-	{
+    {
 		if constexpr(ENABLE_NUMERIC) {
 			if(is_numeric_type(type))
 				return std::visit(vs, get_numeric_tag(type));
@@ -552,4 +555,6 @@ void udm::StructDescription::DefineTypes(std::initializer_list<std::string>::ite
 
 constexpr bool udm::ArrayLz4::IsValueTypeSupported(Type type) { return is_numeric_type(type) || is_generic_type(type) || type == Type::Struct || type == Type::Element || type == Type::String; }
 
+#pragma GCC diagnostic pop
+#pragma warning( pop )
 #endif
