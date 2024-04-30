@@ -130,3 +130,5 @@ if(DEFINED PRECOMPILED_HEADER)
 	add_precompiled_header(${PROJ_NAME} "src/${PRECOMPILED_HEADER}.h" c++17 FORCEINCLUDE)
 endif()
 set_target_properties(${PROJ_NAME} PROPERTIES ${TARGET_PROPERTIES})
+
+add_dependencies(${PROJ_NAME} lz4 sharedutils mathutil vfilesystem)
