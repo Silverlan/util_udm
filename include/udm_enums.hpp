@@ -57,14 +57,36 @@ namespace udm {
 		Invalid = std::numeric_limits<uint8_t>::max()
 	};
 
-	enum class ArrayType : uint8_t { Raw = 0, Compressed };
+	enum class ArrayType : uint8_t {
+		Raw = 0,
+		Compressed,
+	};
 
-	enum class BlobResult : uint8_t { Success = 0, DecompressedSizeMismatch, InsufficientSize, ValueTypeMismatch, NotABlobType, InvalidProperty };
+	enum class BlobResult : uint8_t {
+		Success = 0,
+		DecompressedSizeMismatch,
+		InsufficientSize,
+		ValueTypeMismatch,
+		NotABlobType,
+		InvalidProperty,
+	};
 
-	enum class MergeFlags : uint32_t { None = 0u, OverwriteExisting = 1u, DeepCopy = OverwriteExisting << 1u };
+	enum class MergeFlags : uint32_t {
+		None = 0u,
+		OverwriteExisting = 1u,
+		DeepCopy = OverwriteExisting << 1u,
+	};
 
-	enum class FormatType : uint8_t { Binary = 0, Ascii };
+	enum class FormatType : uint8_t {
+		Binary = 0,
+		Ascii,
+	};
 
-	enum class AsciiSaveFlags : uint32_t { None = 0u, IncludeHeader = 1u, DontCompressLz4Arrays = IncludeHeader << 1u };
+	enum class AsciiSaveFlags : uint32_t {
+		None = 0u,
+		IncludeHeader = 1u,
+		DontCompressLz4Arrays = IncludeHeader << 1u,
+		Default = None,
+	};
 };
 #endif

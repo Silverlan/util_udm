@@ -87,12 +87,24 @@ void udm::Element::ToAscii(AsciiSaveFlags flags, std::stringstream &ss, const st
 {
 	auto childPrefix = prefix.has_value() ? (*prefix + '\t') : "";
 	auto first = true;
-	for(auto &pair : children) {
+
+	// We want to sort the children by name to have some consistency
+	std::vector<std::string_view> names;
+	names.reserve(children.size());
+	for(auto &[name, child] : children)
+		names.push_back(name);
+	std::sort(names.begin(), names.end());
+
+	for(auto &name : names) {
+		auto it = children.find(name);
+		assert(it != children.end());
+		if(it == children.end())
+			throw ImplementationError {"Failed to find key with name '" + std::string {name} + "'!"};
 		if(first)
 			first = false;
 		else
 			ss << "\n";
-		pair.second->ToAscii(flags, ss, pair.first, childPrefix);
+		it->second->ToAscii(flags, ss, it->first, childPrefix);
 	}
 }
 

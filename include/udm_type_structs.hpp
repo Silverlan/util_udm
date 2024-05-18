@@ -9,6 +9,7 @@
 #include "udm_exception.hpp"
 #include "udm_enums.hpp"
 #include "udm_basic_types.hpp"
+#include <sharedutils/util_string_hash.hpp>
 #include <cinttypes>
 #include <string>
 #include <vector>
@@ -426,7 +427,7 @@ namespace udm {
 	};
 
 	struct DLLUDM ElementIteratorPair {
-		ElementIteratorPair(std::unordered_map<std::string, PProperty>::iterator &it);
+		ElementIteratorPair(util::StringMap<PProperty>::iterator &it);
 		ElementIteratorPair();
 		bool operator==(const ElementIteratorPair &other) const;
 		bool operator!=(const ElementIteratorPair &other) const;
@@ -444,7 +445,7 @@ namespace udm {
 
 		ElementIterator();
 		ElementIterator(udm::Element &e);
-		ElementIterator(udm::Element &e, std::unordered_map<std::string, PProperty> &c, std::unordered_map<std::string, PProperty>::iterator it);
+		ElementIterator(udm::Element &e, util::StringMap<PProperty> &c, util::StringMap<PProperty>::iterator it);
 		ElementIterator(const ElementIterator &other);
 		ElementIterator &operator++();
 		ElementIterator operator++(int);
@@ -453,8 +454,8 @@ namespace udm {
 		bool operator==(const ElementIterator &other) const;
 		bool operator!=(const ElementIterator &other) const;
 	  private:
-		std::unordered_map<std::string, PProperty> *m_propertyMap = nullptr;
-		std::unordered_map<std::string, PProperty>::iterator m_iterator {};
+		util::StringMap<PProperty> *m_propertyMap = nullptr;
+		util::StringMap<PProperty>::iterator m_iterator {};
 		ElementIteratorPair m_pair;
 	};
 
@@ -611,7 +612,7 @@ namespace udm {
 		void AddChild(std::string &&key, const PProperty &o);
 		void AddChild(const std::string &key, const PProperty &o);
 		void Copy(const Element &other);
-		std::unordered_map<std::string, PProperty> children;
+		util::StringMap<PProperty> children;
 		PropertyWrapper fromProperty {};
 		PropertyWrapper parentProperty {};
 

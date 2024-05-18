@@ -16,7 +16,6 @@
 #include <variant>
 #include <map>
 #include <sstream>
-#include <unordered_map>
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
 #include <sharedutils/util.h>
@@ -344,9 +343,9 @@ namespace udm {
 		bool Save(const std::string &fileName) const;
 		bool Save(IFile &f) const;
 		bool Save(const ::VFilePtr &f);
-		bool SaveAscii(const std::string &fileName, AsciiSaveFlags flags = AsciiSaveFlags::None) const;
-		bool SaveAscii(IFile &f, AsciiSaveFlags flags = AsciiSaveFlags::None) const;
-		bool SaveAscii(const ::VFilePtr &f, AsciiSaveFlags flags = AsciiSaveFlags::None) const;
+		bool SaveAscii(const std::string &fileName, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
+		bool SaveAscii(IFile &f, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
+		bool SaveAscii(const ::VFilePtr &f, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
 		Element &GetRootElement() { return *static_cast<Element *>(m_rootProperty->value); }
 		const Element &GetRootElement() const { return const_cast<Data *>(this)->GetRootElement(); }
 		AssetData GetAssetData() const;
@@ -365,7 +364,7 @@ namespace udm {
 		void SetAssetType(const std::string &assetType);
 		void SetAssetVersion(Version version);
 
-		void ToAscii(std::stringstream &ss, AsciiSaveFlags flags = AsciiSaveFlags::None) const;
+		void ToAscii(std::stringstream &ss, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
 
 		const Header &GetHeader() const { return m_header; }
 
