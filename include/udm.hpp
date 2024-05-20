@@ -397,7 +397,7 @@ namespace udm {
 	}
 
 	template<typename TEnum>
-	static TEnum string_to_enum(udm::LinkedPropertyWrapperArg udmEnum, TEnum def)
+	TEnum string_to_enum(udm::LinkedPropertyWrapperArg udmEnum, TEnum def)
 	{
 		std::string str;
 		udmEnum(str);
@@ -406,7 +406,7 @@ namespace udm {
 	}
 
 	template<typename TEnum>
-	static TEnum string_to_flags(udm::LinkedPropertyWrapperArg udmEnum, TEnum def)
+	TEnum string_to_flags(udm::LinkedPropertyWrapperArg udmEnum, TEnum def)
 	{
 		std::string str;
 		udmEnum(str);
@@ -415,7 +415,7 @@ namespace udm {
 	}
 
 	template<typename TEnum>
-	static void to_enum_value(udm::LinkedPropertyWrapperArg udmEnum, TEnum &def)
+	void to_enum_value(udm::LinkedPropertyWrapperArg udmEnum, TEnum &def)
 	{
 		std::string str;
 		udmEnum(str);
@@ -424,7 +424,7 @@ namespace udm {
 	}
 
 	template<typename TEnum>
-	static void to_flags(udm::LinkedPropertyWrapperArg udmEnum, TEnum &def)
+	void to_flags(udm::LinkedPropertyWrapperArg udmEnum, TEnum &def)
 	{
 		std::string str;
 		udmEnum(str);
