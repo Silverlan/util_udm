@@ -10,8 +10,10 @@
 #include <type_traits>
 #include <cstring>
 
+#ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable : 4715)
+#endif
 namespace udm {
 	template<typename T>
 	using base_type = typename std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
@@ -335,7 +337,8 @@ constexpr bool udm::is_convertible(Type tFrom, Type tTo)
 	}
 	return false;
 }
-
+#ifdef _WIN32
 #pragma warning(pop)
+#endif
 
 #endif

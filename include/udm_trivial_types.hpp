@@ -15,10 +15,13 @@
 #include <mathutil/uvec.h>
 #include <mathutil/transform.hpp>
 #include "udm_exception.hpp"
-#pragma warning( push )
-#pragma warning( disable : 4715 )
+#ifdef __linux__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreturn-type"
+#elif _WIN32
+#pragma warning( push )
+#pragma warning( disable : 4715 )
+#endif
 namespace udm {
 	static constexpr std::array<Type, 12> NUMERIC_TYPES = {Type::Int8, Type::UInt8, Type::Int16, Type::UInt16, Type::Int32, Type::UInt32, Type::Int64, Type::UInt64, Type::Float, Type::Double, Type::Boolean, Type::Half};
 	static constexpr std::array<Type, 15> GENERIC_TYPES
@@ -554,7 +557,9 @@ void udm::StructDescription::DefineTypes(std::initializer_list<std::string>::ite
 }
 
 constexpr bool udm::ArrayLz4::IsValueTypeSupported(Type type) { return is_numeric_type(type) || is_generic_type(type) || type == Type::Struct || type == Type::Element || type == Type::String; }
-
+#ifdef __linux__
 #pragma GCC diagnostic pop
+#elif _WIN32
 #pragma warning( pop )
+#endif
 #endif

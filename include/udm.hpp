@@ -29,11 +29,13 @@
 #include "udm_enums.hpp"
 #undef VERSION
 
-#pragma warning(push)
-#pragma warning(disable : 4715)
-
+#ifdef __linux__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreturn-type"
+#elif _WIN32
+#pragma warning(push)
+#pragma warning(disable : 4715)
+#endif
 namespace udm {
 	static std::string CONTROL_CHARACTERS = "{}[]<>$,:;";
 	static std::string WHITESPACE_CHARACTERS = " \t\f\v\n\r";
@@ -1301,7 +1303,10 @@ udm::Struct &udm::Struct::operator=(const T &other)
 	memcpy(data.data(), &other, sizeof(T));
 	return *this;
 }
+#ifdef __linux__
 #pragma GCC diagnostic pop
+#elif _WIN32
 #pragma warning(pop)
+#endif
 
 #endif
