@@ -453,6 +453,8 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](size_t idx) const { 
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_view &key) const
 {
+	if(key.empty())
+		throw InvalidUsageError {"Empty string is not allowed as key!"};
 	if(prop == nullptr) {
 		udm::LinkedPropertyWrapper wrapper {};
 		wrapper.prev = linked ? std::make_unique<udm::LinkedPropertyWrapper>(static_cast<const LinkedPropertyWrapper &>(*this)) : std::make_unique<udm::LinkedPropertyWrapper>(*this);
