@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "udm.hpp"
-#pragma optimize("", off)
+
 udm::PropertyWrapper::PropertyWrapper(Property &o) : prop {&o} {}
 
 udm::PropertyWrapper::PropertyWrapper(const PropertyWrapper &other) : prop {other.prop}, arrayIndex {other.arrayIndex} { static_assert(sizeof(PropertyWrapper) == 16, "Update this function when the struct has changed!"); }
@@ -342,7 +342,9 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::Add(const std::string_view &pat
 	}
 	if(prop == nullptr && linked)
 		const_cast<udm::LinkedPropertyWrapper &>(static_cast<const udm::LinkedPropertyWrapper &>(*this)).InitializeProperty();
-	if(prop == nullptr || prop->type != Type::Element)
+	if(prop == nullptr)
+		throw InvalidUsageError {"Attempted to add key-value to invalid property'" + std::string {path} + "'!"};
+	if(prop->type != Type::Element)
 		throw InvalidUsageError {"Attempted to add key-value to non-element property of type " + std::string {magic_enum::enum_name(prop->type)} + ", which is not allowed!"};
 	auto wrapper = static_cast<Element *>(prop->value)->Add(path, type, pathToElements);
 	static_cast<LinkedPropertyWrapper &>(wrapper).prev = std::make_unique<LinkedPropertyWrapper>(*this);
