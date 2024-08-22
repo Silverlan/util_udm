@@ -570,7 +570,11 @@ namespace udm {
 	};
 
 	struct DLLUDM ArrayLz4 : public Array {
-		enum class State : uint8_t { Compressed = 0, Uncompressed };
+		enum class Flags : uint8_t {
+			None = 0u,
+			Compressed = 1u,
+			PersistentUncompressedData = Compressed << 1u,
+		};
 
 		ArrayLz4() = default;
 		virtual ArrayLz4 &operator=(Array &&other) override;
@@ -583,6 +587,7 @@ namespace udm {
 		virtual void SetValueType(Type valueType) override;
 		virtual ArrayType GetArrayType() const { return ArrayType::Compressed; }
 		void ClearUncompressedMemory();
+		void SetUncompressedMemoryPersistent(bool persistent);
 		using Array::GetStructuredDataInfo;
 
 		static constexpr bool IsValueTypeSupported(Type type);
@@ -596,7 +601,7 @@ namespace udm {
 		void Compress();
 		virtual void Clear() override;
 		std::unique_ptr<StructDescription> m_structuredDataInfo = nullptr;
-		State m_state = State::Uncompressed;
+		Flags m_flags = Flags::None;
 		BlobLz4 m_compressedBlob {};
 	};
 
@@ -642,5 +647,6 @@ namespace udm {
 		void EraseValue(const Element &child);
 	};
 };
+REGISTER_BASIC_BITWISE_OPERATORS(udm::ArrayLz4::Flags)
 
 #endif

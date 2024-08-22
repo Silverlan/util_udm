@@ -354,6 +354,14 @@ udm::StructDescription *udm::ArrayLz4::GetStructuredDataInfo()
 	return Array::GetStructuredDataInfo();
 }
 void udm::ArrayLz4::ClearUncompressedMemory() { Compress(); }
+void udm::ArrayLz4::SetUncompressedMemoryPersistent(bool persistent)
+{
+	umath::set_flag(m_flags, Flags::PersistentUncompressedData, persistent);
+	if(persistent)
+		Decompress();
+	else
+		ReleaseValues();
+}
 
 struct StreamData : public udm::IFile {
 	StreamData() = default;
@@ -395,9 +403,9 @@ struct CompressedStringArrayHeader {
 #pragma pack(pop)
 void udm::ArrayLz4::Compress()
 {
-	if(m_state == State::Compressed)
+	if(umath::is_flag_set(m_flags, Flags::Compressed))
 		return;
-	util::ScopeGuard sgState {[this]() { m_state = State::Compressed; }};
+	util::ScopeGuard sgState {[this]() { umath::set_flag(m_flags, Flags::Compressed); }};
 	auto *p = GetValuePtr();
 	if(!p) {
 		auto *pStrct = Array::GetStructuredDataInfo();
@@ -417,7 +425,8 @@ void udm::ArrayLz4::Compress()
 		}
 		auto &ds = f.GetDataStream();
 		m_compressedBlob = udm::compress_lz4_blob(ds->GetData(), ds->GetInternalSize());
-		ReleaseValues();
+		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+			ReleaseValues();
 		return;
 	}
 
@@ -441,7 +450,8 @@ void udm::ArrayLz4::Compress()
 			++p;
 		}
 		m_compressedBlob = udm::compress_lz4_blob(memFile.GetData(), memFile.GetDataSize());
-		ReleaseValues();
+		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+			ReleaseValues();
 		return;
 	}
 
@@ -451,15 +461,20 @@ void udm::ArrayLz4::Compress()
 		m_structuredDataInfo = std::make_unique<StructDescription>();
 		*m_structuredDataInfo = std::move(*pStrct);
 	}
-	ReleaseValues();
+	if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+		ReleaseValues();
 }
 void udm::ArrayLz4::Decompress()
 {
-	if(m_state == State::Uncompressed)
+	if(!umath::is_flag_set(m_flags, Flags::Compressed))
 		return;
-	if(GetValuePtr())
-		throw ImplementationError {"Attempted to decompress array which has a valid data pointer!"}; // Unreachable
-	m_state = State::Uncompressed;
+	if(GetValuePtr()) {
+		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+			throw ImplementationError {"Attempted to decompress array which has a valid data pointer!"}; // Unreachable
+		// Uncompressed data is already available
+		return;
+	}
+	umath::set_flag(m_flags, Flags::Compressed, false);
 
 	if(m_valueType == Type::Element) {
 		StreamData f {};
@@ -554,9 +569,10 @@ void *udm::ArrayLz4::GetValues()
 void udm::ArrayLz4::Clear()
 {
 	m_structuredDataInfo = nullptr;
-	if(m_state == State::Compressed) {
+	if(umath::is_flag_set(m_flags, Flags::Compressed)) {
 		m_compressedBlob = {};
-		return;
+		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+			return;
 	}
 	Array::Clear();
 }
