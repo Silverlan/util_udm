@@ -556,6 +556,14 @@ std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(std::unique_ptr<IFile> &&
 		elRoot[Data::KEY_ASSET_TYPE] = "nil";
 	}
 	udmData->m_rootProperty = rootProp;
+	std::string assetType;
+	if((*rootProp)[Data::KEY_ASSET_TYPE] >> assetType) {
+		for(auto &c : udmData->m_header.identifier)
+			c = '\0';
+		for(size_t i = 0; i < std::min(assetType.size(), udmData->m_header.identifier.size()); ++i)
+			udmData->m_header.identifier[i] = assetType[i];
+	}
+	(*rootProp)[Data::KEY_ASSET_VERSION] >> udmData->m_header.version;
 	return udmData->ValidateHeaderProperties() ? udmData : nullptr;
 }
 
