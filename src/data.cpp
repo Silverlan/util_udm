@@ -38,9 +38,10 @@ std::optional<udm::FormatType> udm::Data::GetFormatType(std::unique_ptr<IFile> &
 
 std::shared_ptr<udm::Data> udm::Data::Load(const std::string &fileName)
 {
-	auto f = filemanager::open_file(fileName, filemanager::FileMode::Read | filemanager::FileMode::Binary);
+	std::string err;
+	auto f = filemanager::open_file(fileName, filemanager::FileMode::Read | filemanager::FileMode::Binary, &err);
 	if(f == nullptr) {
-		throw FileError {"Unable to open file!"};
+		throw FileError {"Unable to open file: " + (!err.empty() ? err : "Unknown error")};
 		return nullptr;
 	}
 	return Load(f);
@@ -48,9 +49,10 @@ std::shared_ptr<udm::Data> udm::Data::Load(const std::string &fileName)
 
 bool udm::Data::Save(const std::string &fileName) const
 {
-	auto f = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName, filemanager::FileMode::Write | filemanager::FileMode::Binary));
+	std::string err;
+	auto f = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName, filemanager::FileMode::Write | filemanager::FileMode::Binary, &err));
 	if(f == nullptr) {
-		throw FileError {"Unable to open file!"};
+		throw FileError {"Unable to open file: " + (!err.empty() ? err : "Unknown error")};
 		return false;
 	}
 	fsys::File fp {f};
