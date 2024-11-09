@@ -633,7 +633,8 @@ void udm::Data::ToAscii(std::stringstream &ss, AsciiSaveFlags flags) const
 
 bool udm::Data::Save(IFile &f) const
 {
-	f.Write<Header>(m_header);
+	Header header {};
+	f.Write<Header>(header);
 	WriteProperty(f, *m_rootProperty);
 	return true;
 }
