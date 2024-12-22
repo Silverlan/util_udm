@@ -102,6 +102,10 @@ namespace udm {
 #endif
 					return v1;
 				}
+				else if constexpr(std::is_enum_v<T1>) {
+					auto v1 = static_cast<typename std::underlying_type<T1>::type>(v0);
+					return static_cast<T1>(v1);
+				}
 				else if constexpr(is_vector_type<T1>) {
 					T1 v1;
 					parse_value_list<T1, typename T1::value_type, T1::length()>(v0, v1);
