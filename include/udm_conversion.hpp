@@ -103,7 +103,7 @@ namespace udm {
 					return v1;
 				}
 				else if constexpr(std::is_enum_v<T1>) {
-					auto v1 = static_cast<typename std::underlying_type<T1>::type>(v0);
+					auto v1 = static_cast<typename std::underlying_type<T1>::type>(convert(v0));
 					return static_cast<T1>(v1);
 				}
 				else if constexpr(is_vector_type<T1>) {
