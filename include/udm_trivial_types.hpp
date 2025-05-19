@@ -18,6 +18,7 @@
 #ifdef __linux__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wreturn-type"
+#pragma GCC diagnostic ignored "-Wswitch"
 #elif _WIN32
 #pragma warning( push )
 #pragma warning( disable : 4715 )

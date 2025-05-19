@@ -29,9 +29,14 @@
 #include "udm_enums.hpp"
 #undef VERSION
 
-#ifdef __linux__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreturn-type"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type"
+#pragma clang diagnostic ignored "-Wundefined-bool-conversion"
+#elif defined(__GNUC__)
+#pragma GCC   diagnostic push
+#pragma GCC   diagnostic ignored "-Wreturn-type"
+#pragma GCC   diagnostic ignored "-Wundefined-bool-conversion"
 #elif _WIN32
 #pragma warning(push)
 #pragma warning(disable : 4715)
@@ -133,6 +138,8 @@ namespace udm {
 			return "half";
 		case Type::Struct:
 			return "struct";
+		default:
+			break;
 		}
 		static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 	}
@@ -1303,8 +1310,10 @@ udm::Struct &udm::Struct::operator=(const T &other)
 	memcpy(data.data(), &other, sizeof(T));
 	return *this;
 }
-#ifdef __linux__
-#pragma GCC diagnostic pop
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC   diagnostic pop
 #elif _WIN32
 #pragma warning(pop)
 #endif

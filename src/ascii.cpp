@@ -189,6 +189,8 @@ constexpr bool is_float_based_type(udm::Type type)
 	case udm::Type::Mat4:
 	case udm::Type::Mat3x4:
 		return true;
+	default:
+		break;
 	}
 	static_assert(umath::to_integral(udm::Type::Count) == 36, "Update this list when new types are added!");
 	return false;
@@ -460,6 +462,8 @@ void udm::AsciiReader::ReadValue(Type type, void *outData)
 			ReadStructValue(*strct, strct.data.data());
 			break;
 		}
+	default:
+		break;
 	};
 	static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 }

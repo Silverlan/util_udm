@@ -271,6 +271,8 @@ uint64_t udm::Array::GetHeaderSize() const
 	switch(GetValueType()) {
 	case Type::Struct:
 		return sizeof(StructDescription **);
+	default:
+		break;
 	}
 	return 0;
 }

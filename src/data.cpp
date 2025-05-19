@@ -495,6 +495,8 @@ void udm::Data::SkipProperty(IFile &f, Type type)
 			f.Seek(f.Tell() + size);
 			break;
 		}
+	default:
+		break;
 	}
 	static_assert(NON_TRIVIAL_TYPES.size() == 9);
 }

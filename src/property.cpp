@@ -101,6 +101,8 @@ void udm::Property::SetAppropriatePrecision(std::stringstream &ss, Type type)
 		ss << std::fixed;
 		ss.precision(8);
 		break;
+	default:
+		break;
 	}
 	static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 }
@@ -529,6 +531,8 @@ bool udm::Property::Compress()
 			value = newBlob;
 			return true;
 		}
+	default:
+		break;
 	}
 	return false;
 }
@@ -617,6 +621,8 @@ udm::BlobResult udm::Property::GetBlobData(void *outBuffer, size_t bufferSize, u
 				memcpy(outBuffer, a.GetValues(), bufferSize);
 			return BlobResult::Success;
 		}
+	default:
+		break;
 	}
 	return BlobResult::NotABlobType;
 }

@@ -187,6 +187,8 @@ udm::BlobResult udm::PropertyWrapper::GetBlobData(void *outBuffer, size_t buffer
 					*optOutRequiredSize = blob.uncompressedSize;
 				return Property::GetBlobData(blob, outBuffer, bufferSize);
 			}
+		default:
+			break;
 		}
 		return BlobResult::NotABlobType;
 	}

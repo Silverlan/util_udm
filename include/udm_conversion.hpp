@@ -13,7 +13,11 @@
 #ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable : 4715)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch"
 #endif
+
 namespace udm {
 	template<typename T>
 	using base_type = typename std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
@@ -343,6 +347,8 @@ constexpr bool udm::is_convertible(Type tFrom, Type tTo)
 }
 #ifdef _WIN32
 #pragma warning(pop)
+#elif defined(__clang__)
+  #pragma clang diagnostic pop
 #endif
 
 #endif

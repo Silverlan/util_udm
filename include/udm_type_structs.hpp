@@ -585,7 +585,7 @@ namespace udm {
 		BlobLz4 &GetCompressedBlob();
 		virtual void *GetValues() override;
 		virtual void SetValueType(Type valueType) override;
-		virtual ArrayType GetArrayType() const { return ArrayType::Compressed; }
+		virtual ArrayType GetArrayType() const override { return ArrayType::Compressed; }
 		void ClearUncompressedMemory();
 		void SetUncompressedMemoryPersistent(bool persistent);
 		using Array::GetStructuredDataInfo;
