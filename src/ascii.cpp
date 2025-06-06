@@ -417,7 +417,7 @@ void udm::AsciiReader::ReadValue(Type type, void *outData)
 			}
 
 			if(!size.has_value())
-				*size = 10;
+				size = 10;
 			auto szValue = a.GetValueSize();
 			a.Resize(*size);
 
