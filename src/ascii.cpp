@@ -549,7 +549,6 @@ std::shared_ptr<udm::Data> udm::AsciiReader::LoadAscii(std::unique_ptr<IFile> &&
 	if(res != BlockResult::EndOfFile)
 		throw reader.BuildException<SyntaxError>("Block has been terminated improperly");
 
-	auto assetData = udmData->GetAssetData();
 	auto udmAssetData = (*rootProp)[Data::KEY_ASSET_DATA];
 	if(!udmAssetData) {
 		auto assetDataProp = rootProp;
