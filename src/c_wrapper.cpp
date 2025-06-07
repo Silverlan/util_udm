@@ -807,7 +807,7 @@ void udm::detail::test_c_wrapper()
 		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 1 /* memberIndex */, umath::to_integral(udm::Type::Vector3), n.data(), n.size());
 		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 2 /* memberIndex */, umath::to_integral(udm::Type::Vector2), uv.data(), uv.size());
 
-		auto path = util::get_program_path();
+		auto path = filemanager::get_program_write_path();
 
 		// Save ascii version
 		udm_save_ascii(udmData, (path + "/udm_example_file.pmdl").c_str(), umath::to_integral(udm::AsciiSaveFlags::IncludeHeader | udm::AsciiSaveFlags::DontCompressLz4Arrays));
@@ -823,7 +823,7 @@ void udm::detail::test_c_wrapper()
 		udm_destroy(udmData);
 	}
 
-	auto path = util::get_program_path();
+	auto path = filemanager::get_program_write_path();
 	// Load binary file
 	udmData = udm_load((path + "/udm_example_file.pmdl").c_str(), true /* clearDataOnDestruction */);
 	if(udmData != nullptr) {
