@@ -185,6 +185,8 @@ namespace udm {
 		void Copy(const Property &other, bool deepCopy);
 		PProperty Copy(bool deepCopy = false) const;
 
+		Hash CalcHash() const;
+
 		Type type = Type::Nil;
 		DataValue value = nullptr;
 

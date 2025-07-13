@@ -121,6 +121,7 @@ namespace udm {
 		bool IsArrayItem() const;
 		bool IsType(Type type) const;
 		Type GetType() const;
+		Hash CalcHash() const;
 		void Merge(const PropertyWrapper &other, MergeFlags mergeFlags = MergeFlags::OverwriteExisting) const;
 
 		Array *GetOwningArray() const;

@@ -6,6 +6,7 @@
 
 #include <cinttypes>
 #include <memory>
+#include <array>
 
 namespace udm {
 	struct Half;
@@ -54,6 +55,7 @@ namespace udm {
 	enum class FormatType : uint8_t;
 	enum class AsciiSaveFlags : uint32_t;
 	class Data;
+	using Hash = std::array<uint8_t, sizeof(uint32_t) * 4>;
 };
 
 #endif
