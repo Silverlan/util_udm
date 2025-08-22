@@ -537,4 +537,3 @@ bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
 bool udm::PropertyWrapper::operator!=(const PropertyWrapper &other) const { return !operator==(other); }
 
 udm::LinkedPropertyWrapper *udm::PropertyWrapper::GetLinked() { return linked ? static_cast<LinkedPropertyWrapper *>(this) : nullptr; }
-#pragma optimize("", on)
