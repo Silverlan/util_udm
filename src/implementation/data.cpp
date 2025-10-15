@@ -1,10 +1,19 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
+#include "udm_definitions.hpp"
+#include "mathutil/glmutil.h"
 #include <sharedutils/magic_enum.hpp>
-#include <sharedutils/util_string.h>
-#include <fsys/ifile.hpp>
+#include <string>
+#include <memory>
+#include <vector>
+#include <iostream>
+
+module pragma.udm;
+
+import :core;
 
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName, std::string &outErr)
 {

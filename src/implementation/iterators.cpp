@@ -1,8 +1,14 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
 #include <lz4.h>
+#include <string>
+
+module pragma.udm;
+
+import :core;
 
 udm::ElementIteratorPair::ElementIteratorPair(std::unordered_map<std::string, PProperty>::iterator &it) : key {it->first}, property {*it->second} {}
 udm::ElementIteratorPair::ElementIteratorPair() = default;

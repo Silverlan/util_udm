@@ -1,9 +1,16 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
+#include "mathutil/glmutil.h"
 #include <lz4.h>
-#include <sharedutils/util_string.h>
+#include <string>
+#include <memory>
+
+module pragma.udm;
+
+import :core;
 
 udm::LinkedPropertyWrapper::LinkedPropertyWrapper(const LinkedPropertyWrapper &other) : PropertyWrapper {other}, propName {other.propName}, prev {other.prev ? std::make_unique<LinkedPropertyWrapper>(*other.prev) : nullptr} { linked = true; }
 

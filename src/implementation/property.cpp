@@ -1,9 +1,15 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
-#include <sharedutils/base64.hpp>
+module;
+
+#include "udm_definitions.hpp"
 #include <sstream>
+#include <cassert>
+
+module pragma.udm;
+
+import :core;
 
 void udm::Property::Construct(Property &prop, Type type)
 {

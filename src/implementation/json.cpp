@@ -1,8 +1,16 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
-#include <sharedutils/base64.hpp>
+module;
+
+#include <sstream>
+#include <string>
+#include <iostream>
+#include <cassert>
+
+module pragma.udm;
+
+import :core;
 
 static void to_json(udm::LinkedPropertyWrapperArg prop, std::stringstream &ss, const std::string &t)
 {

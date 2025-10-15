@@ -1,8 +1,14 @@
 // SPDX-FileCopyrightText: © 2025 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
-#include <sharedutils/util_hash.hpp>
+module;
+
+#include <string>
+#include <algorithm>
+
+module pragma.udm;
+
+import :core;
 
 inline void hash_combine(util::MurmurHash3 &seed, util::MurmurHash3 const &h)
 {

@@ -1,10 +1,19 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
+#include "udm_definitions.hpp"
+#include "mathutil/glmutil.h"
+#include <memory>
+#include <cassert>
+#include <string>
+#include <variant>
 #include <lz4.h>
-#include <sharedutils/datastream.h>
-#include <sharedutils/scope_guard.h>
+
+module pragma.udm;
+
+import :core;
 
 udm::Array::~Array() { Clear(); }
 

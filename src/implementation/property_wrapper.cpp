@@ -1,7 +1,15 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
+#include "udm_definitions.hpp"
+#include <memory>
+#include <string>
+
+module pragma.udm;
+
+import :core;
 
 udm::PropertyWrapper::PropertyWrapper(Property &o) : prop {&o} {}
 
@@ -370,7 +378,8 @@ void udm::Element::AddChild(const std::string &key, const PProperty &o)
 	AddChild(std::move(cpy), o);
 }
 
-udm::Property *udm::PropertyWrapper::operator*() const { return prop; }
+udm::Property &udm::PropertyWrapper::operator*() const { return *prop; }
+udm::Property *udm::PropertyWrapper::operator->() const { return prop; }
 
 udm::LinkedPropertyWrapper udm::PropertyWrapper::GetFromPath(const std::string_view &key) const
 {

@@ -1,8 +1,19 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
+#include "mathutil/glmutil.h"
 #include <lz4.h>
+#include <variant>
+#include <string>
+#include <vector>
+#include <iostream>
+#include <cassert>
+
+module pragma.udm;
+
+import :core;
 
 bool udm::does_key_require_quotes(const std::string_view &key) { return key.find_first_of(udm::CONTROL_CHARACTERS.c_str()) != std::string::npos || key.find_first_of(udm::WHITESPACE_CHARACTERS.c_str()) != std::string::npos || key.find(PATH_SEPARATOR) != std::string::npos; }
 

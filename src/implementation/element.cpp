@@ -1,8 +1,18 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
+#include "udm_definitions.hpp"
 #include <sstream>
+#include <string>
+#include <cassert>
+#include <optional>
+#include <algorithm>
+
+module pragma.udm;
+
+import :core;
 
 udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path, std::optional<uint32_t> size, Type type, ArrayType arrayType, bool pathToElements)
 {
@@ -133,3 +143,13 @@ void udm::Element::Merge(const Element &other, MergeFlags mergeFlags)
 
 udm::ElementIterator udm::Element::begin() { return ElementIterator {*this, children, children.begin()}; }
 udm::ElementIterator udm::Element::end() { return ElementIterator {*this, children, children.end()}; }
+
+void udm::Element::EraseValue(const Element &child)
+{
+	auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) {
+		return get_property_type(*pair.second) == udm::Type::Element && get_property_value(*pair.second) == &child;
+	});
+	if(it == children.end())
+		return;
+	children.erase(it);
+}

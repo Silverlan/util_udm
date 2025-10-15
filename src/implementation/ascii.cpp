@@ -1,11 +1,15 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
-#include <sharedutils/base64.hpp>
-#include <sharedutils/util_string.h>
-#include <fsys/ifile.hpp>
+module;
+
 #include <sstream>
+#include <cassert>
+#include <functional>
+
+module pragma.udm;
+
+import :core;
 
 namespace udm {
 	class AsciiReader {
