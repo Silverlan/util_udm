@@ -7,6 +7,7 @@ module;
 #include <lz4.h>
 #include <string>
 #include <memory>
+#include <cassert>
 
 module pragma.udm;
 
