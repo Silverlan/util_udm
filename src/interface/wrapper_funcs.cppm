@@ -28,8 +28,15 @@ export namespace udm {
 		T *get_property_value_ptr(Property &prop);
 	template<typename T>
 		std::optional<T> to_property_value(Property &prop);
+
 	template<typename T>
 		void set_property_value(Property &prop, T &&value);
+	template<std::size_t N>
+	void set_property_value(Property &prop, const char (&v)[N])
+	{
+		set_property_value(prop, std::string_view(v));
+	}
+
 	template<class T>
 		BlobResult get_property_blob_data(Property &prop, T &v);
 
@@ -38,8 +45,15 @@ export namespace udm {
 		T &get_array_value(Array &a, uint32_t idx);
 	template<typename T>
 		T *get_array_value_ptr(Array &a, uint32_t idx);
+
 	template<typename T>
 		void set_array_value(Array &a, uint32_t idx, T &&v);
+	template<std::size_t N>
+	void set_array_value(Array &a, uint32_t idx, const char (&v)[N])
+	{
+		set_array_value(a, idx, std::string_view(v));
+	}
+
 	uint32_t get_array_value_size(const Array &a);
 	uint32_t get_array_size(const Array &a);
 	void *get_array_values(Array &a);
@@ -56,10 +70,16 @@ export namespace udm {
 	void remove_element_child(Element &e, const std::string_view &key);
 	void erase_element_child(Element &e, Element &child);
 	void set_element_child_value(Element &e, const std::string_view &key, const PProperty &prop);
-	template<typename T>
-		void set_element_value(Element &child, T &&v);
-	PropertyWrapper &get_element_parent_property(Element &e);
 
 	template<typename T>
-		void set_struct_value(Struct &strct, T &&value);
+		void set_element_value(Element &child, T &&v);
+	template<std::size_t N>
+	void set_element_value(Element &child, const char (&v)[N])
+	{
+		set_element_value(child, std::string_view(v));
+	}
+
+	PropertyWrapper &get_element_parent_property(Element &e);
+
+	void set_struct_value(Struct &strct, const void *inData, size_t inSize);
 }

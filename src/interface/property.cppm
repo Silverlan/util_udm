@@ -238,7 +238,7 @@ export {
 	template<typename T>
 	void udm::Property::operator=(T &&v)
 	{
-		Assign<true, T>(v);
+		Assign<true, T>(std::forward<T>(v));
 	}
 
 	template<typename T>

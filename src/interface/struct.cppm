@@ -88,6 +88,14 @@ export {
 			Struct &operator=(Struct &&) = default;
 			template<class T>
 			Struct &operator=(const T &other);
+			void Assign(const void *inData, size_t inSize) {
+				auto sz = description.GetDataSizeRequirement();
+				if (inSize != sz)
+					throw LogicError {"Attempted to assign data of size " + std::to_string(inSize) + " to struct of size " + std::to_string(sz) + "!"};
+				if(data.size() != sz)
+					throw ImplementationError {"Size of struct data does not match its types!"};
+				memcpy(data.data(), inData, inSize);
+			}
 			// TODO: Use these once C++20 is available
 			// bool operator==(const Struct&) const=default;
 			// bool operator!=(const Struct&) const=default;
@@ -111,12 +119,7 @@ export {
 	template<class T>
 	udm::Struct &udm::Struct::operator=(const T &other)
 	{
-		auto sz = description.GetDataSizeRequirement();
-		if(sizeof(T) != sz)
-			throw LogicError {"Attempted to assign data of size " + std::to_string(sizeof(T)) + " to struct of size " + std::to_string(sz) + "!"};
-		if(data.size() != sz)
-			throw ImplementationError {"Size of struct data does not match its types!"};
-		memcpy(data.data(), &other, sizeof(T));
+		Assign(&other, sizeof(T));
 		return *this;
 	}
 }

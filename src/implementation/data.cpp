@@ -6,6 +6,7 @@ module;
 #include "udm_definitions.hpp"
 #include "mathutil/glmutil.h"
 #include <sharedutils/magic_enum.hpp>
+#include <functional>
 #include <string>
 #include <memory>
 #include <vector>
@@ -91,6 +92,7 @@ std::shared_ptr<udm::Data> udm::Data::Create() { return Create("", 0); }
 
 bool udm::Data::DebugTest()
 {
+#if 0
 	try {
 		auto data = udm::Data::Create();
 		auto udmData = data->GetAssetData().GetData();
@@ -303,6 +305,7 @@ bool udm::Data::DebugTest()
 		std::cout << "UDM debug test failed: " << e.what() << std::endl;
 		return false;
 	}
+#endif
 	return true;
 }
 

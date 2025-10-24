@@ -391,7 +391,7 @@ export {
 						if(!child || is_property_type(**child, Type::Struct) == false)
 							throw LogicError {"Cannot assign custom type to non-struct property!"};
 						auto &strct = get_property_value<Struct>(**child);
-						set_struct_value(strct, std::move(v));
+						set_struct_value(strct, &v, sizeof(T));
 					}
 				}
 				else
