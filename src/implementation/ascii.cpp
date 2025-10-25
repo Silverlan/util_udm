@@ -3,9 +3,14 @@
 
 module;
 
+#include <cinttypes>
+#include <memory>
+#include <cstring>
 #include <sstream>
 #include <cassert>
 #include <functional>
+#include <optional>
+#include <variant>
 
 module pragma.udm;
 

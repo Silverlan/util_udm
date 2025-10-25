@@ -3,9 +3,16 @@
 
 module;
 
+#include <cinttypes>
+
 #include "udm_definitions.hpp"
 #include <sstream>
 #include <cassert>
+#include <memory>
+#include <optional>
+#include <cstring>
+#include <variant>
+#include <vector>
 
 module pragma.udm;
 

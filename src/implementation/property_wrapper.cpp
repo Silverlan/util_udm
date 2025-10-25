@@ -3,9 +3,13 @@
 
 module;
 
+#include <cinttypes>
+#include "sharedutils/magic_enum.hpp"
 #include "udm_definitions.hpp"
 #include <memory>
 #include <string>
+#include <optional>
+#include <vector>
 
 module pragma.udm;
 

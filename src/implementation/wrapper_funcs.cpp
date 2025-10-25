@@ -3,12 +3,17 @@
 
 module;
 
+#include <cinttypes>
+
 #include "mathutil/glmutil.h"
 #include <utility>
 #include <string_view>
+#include <vector>
 #include <string>
 #include <unordered_map>
 #include <typeinfo>
+#include <optional>
+#include <memory>
 
 module pragma.udm;
 
@@ -20,6 +25,7 @@ template<typename T>
 	udm::PProperty udm::create_property(T &&value) {
 	return Property::Create<T>(std::forward<T>(value));
 }
+udm::PProperty udm::copy_property(const Property &prop) {return std::make_shared<Property>(prop);}
 udm::Type udm::get_property_type(const Property &prop) {return prop.type;}
 
 udm::Type udm::get_property_type(const PropertyWrapper &prop) {return prop->type;}
@@ -90,7 +96,12 @@ void udm::set_struct_value(Struct &strct, const void *inData, size_t inSize) {
 // The code below will force-instantiate the template functions for all UDM types
 namespace udm::impl {
 	// export to prevent the function from being optimized away
-	__declspec(dllexport) void instantiate()
+#ifdef __linux__
+__attribute__((visibility("default")))
+#else
+__declspec(dllexport)
+#endif
+	void instantiate()
 	{
 		udm::visit(udm::Type{}, [](auto tag) {
 			using T = typename decltype(tag)::type;

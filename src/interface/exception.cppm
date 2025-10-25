@@ -7,6 +7,7 @@ module;
 #include <exception>
 #include <stdexcept>
 #include <string>
+#include <cinttypes>
 
 export module pragma.udm:exception;
 

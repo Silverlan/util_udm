@@ -5,6 +5,7 @@ module;
 
 #include <string_view>
 #include <optional>
+#include <cinttypes>
 
 export module pragma.udm:wrapper_funcs;
 
@@ -15,6 +16,7 @@ export namespace udm {
 	// Utility functions to prevent circular dependencies
 	template<typename T>
 		PProperty create_property(T &&value);
+	PProperty copy_property(const Property &prop);
 	Type get_property_type(const Property &prop);
 	Type get_property_type(const PropertyWrapper &prop);
 	bool is_property_type(const Property &prop, Type type);

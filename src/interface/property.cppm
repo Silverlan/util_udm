@@ -6,6 +6,7 @@ module;
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
 #include <string>
+#include <cstring>
 #include <vector>
 #include <unordered_map>
 #include <map>
@@ -57,7 +58,7 @@ export {
 			bool operator==(const Property &other) const;
 			bool operator!=(const Property &other) const { return !operator==(other); }
 
-			// operator udm::LinkedPropertyWrapper();
+			// operator LinkedPropertyWrapper();
 
 			bool Compress();
 			bool Decompress(const std::optional<Type> arrayValueType = {});
@@ -163,273 +164,273 @@ export {
 			template<typename T>
 			T &GetValue(Type type);
 		};
-	}
 
-	template<bool ENABLE_EXCEPTIONS, typename T>
-	bool udm::Property::Assign(T &&v)
-	{
-		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-		if constexpr(util::is_specialization<TBase, std::vector>::value) {
-			using TValueType = typename TBase::value_type;
-			if(!is_array_type(type)) {
-				if constexpr(ENABLE_EXCEPTIONS)
-					throw InvalidUsageError {"Attempted to assign vector to non-array property (of type " + std::string {magic_enum::enum_name(type)} + "), this is not allowed!"};
-				else
-					return false;
-			}
-			auto valueType = type_to_enum<TValueType>();
-			auto size = v.size();
-			auto &a = *static_cast<Array *>(value);
-			a.Clear();
-			a.SetValueType(valueType);
-			a.Resize(size);
+		template<bool ENABLE_EXCEPTIONS, typename T>
+		bool Property::Assign(T &&v)
+		{
+			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+			if constexpr(util::is_specialization<TBase, std::vector>::value) {
+				using TValueType = typename TBase::value_type;
+				if(!is_array_type(type)) {
+					if constexpr(ENABLE_EXCEPTIONS)
+						throw InvalidUsageError {"Attempted to assign vector to non-array property (of type " + std::string {magic_enum::enum_name(type)} + "), this is not allowed!"};
+					else
+						return false;
+				}
+				auto valueType = type_to_enum<TValueType>();
+				auto size = v.size();
+				auto &a = *static_cast<Array *>(value);
+				a.Clear();
+				a.SetValueType(valueType);
+				a.Resize(size);
 
-			if(size_of_base_type(valueType) != sizeof(typename TBase::value_type)) {
-				if constexpr(ENABLE_EXCEPTIONS)
-					throw InvalidUsageError {"Type size mismatch!"};
+				if(size_of_base_type(valueType) != sizeof(typename TBase::value_type)) {
+					if constexpr(ENABLE_EXCEPTIONS)
+						throw InvalidUsageError {"Type size mismatch!"};
+					else
+						return false;
+				}
+				auto vs = [this, &a, &v](auto tag) {
+					using TTag = typename decltype(tag)::type;
+					memcpy(a.GetValues(), v.data(), v.size() * sizeof(v[0]));
+				};
+				if(is_ng_type(valueType))
+					visit_ng(valueType, vs);
+				else if(is_non_trivial_type(valueType)) {
+					// Elements have to be copied explicitly
+					for(auto i = decltype(size) {0u}; i < size; ++i)
+						a[i] = v[i];
+				}
 				else
 					return false;
-			}
-			auto vs = [this, &a, &v](auto tag) {
-				using TTag = typename decltype(tag)::type;
-				memcpy(a.GetValues(), v.data(), v.size() * sizeof(v[0]));
-			};
-			if(is_ng_type(valueType))
-				visit_ng(valueType, vs);
-			else if(is_non_trivial_type(valueType)) {
-				// Elements have to be copied explicitly
-				for(auto i = decltype(size) {0u}; i < size; ++i)
-					a[i] = v[i];
-			}
-			else
-				return false;
-			return true;
-		}
-		else if constexpr(util::is_specialization<TBase, std::unordered_map>::value || util::is_specialization<TBase, std::map>::value) {
-			if(type != Type::Element) {
-				if constexpr(ENABLE_EXCEPTIONS)
-					throw InvalidUsageError {"Attempted to assign map to non-element property (of type " + std::string {magic_enum::enum_name(type)} + "), this is not allowed!"};
-				else
-					return false;
-			}
-			for(auto &pair : v)
-				(*this)[pair.first] = pair.second;
-			return true;
-		}
-		auto vType = type_to_enum_s<TBase>();
-		if(vType == Type::Invalid) {
-			if constexpr(ENABLE_EXCEPTIONS)
-				throw LogicError {"Attempted to assign value of type '" + std::string {typeid(T).name()} + "', which is not a recognized type!"};
-			else
-				return false;
-		}
-		auto vs = [this, &v](auto tag) {
-			using TTag = typename decltype(tag)::type;
-			if constexpr(is_convertible<TBase, TTag>()) {
-				*static_cast<TTag *>(value) = convert<TBase, TTag>(v);
 				return true;
 			}
-			else
-				return false;
-		};
-		return visit(vType, vs);
-	}
-
-	template<typename T>
-	void udm::Property::operator=(T &&v)
-	{
-		Assign<true, T>(std::forward<T>(v));
-	}
-
-	template<typename T>
-	udm::PProperty udm::Property::Create(T &&value)
-	{
-		auto prop = Create<T>();
-		*prop = value;
-		return prop;
-	}
-
-	template<typename T>
-	void udm::Property::Construct(Property &prop, T &&value)
-	{
-		prop = value;
-	}
-
-	template<typename T>
-	udm::PProperty udm::Property::Create()
-	{
-		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-		return Create(type_to_enum<TBase>());
-	}
-
-	template<typename T>
-	void udm::Property::Construct(Property &prop)
-	{
-		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-		Construct(prop, type_to_enum<TBase>());
-	}
-
-	template<typename T>
-	uint64_t udm::Property::WriteBlockSize(IFile &f)
-	{
-		auto offsetToSize = f.Tell();
-		f.Write<T>(0);
-		return offsetToSize;
-	}
-	template<typename T>
-	void udm::Property::WriteBlockSize(IFile &f, uint64_t offset)
-	{
-		auto startOffset = offset + sizeof(T);
-		auto curOffset = f.Tell();
-		f.Seek(offset);
-		f.Write<T>(curOffset - startOffset);
-		f.Seek(curOffset);
-	}
-
-	template<typename T>
-	void udm::Property::NumericTypeToString(T value, std::stringstream &ss)
-	{
-		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-		if constexpr(std::is_same_v<TBase, Half>) {
-			NumericTypeToString<float>(value, ss);
-			return;
+			else if constexpr(util::is_specialization<TBase, std::unordered_map>::value || util::is_specialization<TBase, std::map>::value) {
+				if(type != Type::Element) {
+					if constexpr(ENABLE_EXCEPTIONS)
+						throw InvalidUsageError {"Attempted to assign map to non-element property (of type " + std::string {magic_enum::enum_name(type)} + "), this is not allowed!"};
+					else
+						return false;
+				}
+				for(auto &pair : v)
+					(*this)[pair.first] = pair.second;
+				return true;
+			}
+			auto vType = type_to_enum_s<TBase>();
+			if(vType == Type::Invalid) {
+				if constexpr(ENABLE_EXCEPTIONS)
+					throw LogicError {"Attempted to assign value of type '" + std::string {typeid(T).name()} + "', which is not a recognized type!"};
+				else
+					return false;
+			}
+			auto vs = [this, &v](auto tag) {
+				using TTag = typename decltype(tag)::type;
+				if constexpr(is_convertible<TBase, TTag>()) {
+					*static_cast<TTag *>(value) = convert<TBase, TTag>(v);
+					return true;
+				}
+				else
+					return false;
+			};
+			return visit(vType, vs);
 		}
-		if constexpr(!std::is_floating_point_v<T>) {
+
+		template<typename T>
+		void Property::operator=(T &&v)
+		{
+			Assign<true, T>(std::forward<T>(v));
+		}
+
+		template<typename T>
+		PProperty Property::Create(T &&value)
+		{
+			auto prop = Create<T>();
+			*prop = value;
+			return prop;
+		}
+
+		template<typename T>
+		void Property::Construct(Property &prop, T &&value)
+		{
+			prop = value;
+		}
+
+		template<typename T>
+		PProperty Property::Create()
+		{
+			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+			return Create(type_to_enum<TBase>());
+		}
+
+		template<typename T>
+		void Property::Construct(Property &prop)
+		{
+			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+			Construct(prop, type_to_enum<TBase>());
+		}
+
+		template<typename T>
+		uint64_t Property::WriteBlockSize(IFile &f)
+		{
+			auto offsetToSize = f.Tell();
+			f.Write<T>(0);
+			return offsetToSize;
+		}
+		template<typename T>
+		void Property::WriteBlockSize(IFile &f, uint64_t offset)
+		{
+			auto startOffset = offset + sizeof(T);
+			auto curOffset = f.Tell();
+			f.Seek(offset);
+			f.Write<T>(curOffset - startOffset);
+			f.Seek(curOffset);
+		}
+
+		template<typename T>
+		void Property::NumericTypeToString(T value, std::stringstream &ss)
+		{
+			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+			if constexpr(std::is_same_v<TBase, Half>) {
+				NumericTypeToString<float>(value, ss);
+				return;
+			}
+			if constexpr(!std::is_floating_point_v<T>) {
+				if constexpr(std::is_same_v<T, Int8> || std::is_same_v<T, UInt8>)
+					ss << +value;
+				else
+					ss << value;
+				return;
+			}
+			// SetAppropriatePrecision(ss,type_to_enum<T>());
+			ss << NumericTypeToString(value);
+		}
+		template<typename T>
+		std::string Property::NumericTypeToString(T value)
+		{
+			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
+			if constexpr(std::is_same_v<TBase, Half>)
+				return NumericTypeToString<float>(value);
+			if constexpr(!std::is_floating_point_v<T>) {
+				if constexpr(std::is_same_v<T, Int8> || std::is_same_v<T, UInt8>)
+					return std::to_string(+value);
+				return std::to_string(value);
+			}
+			// TODO: This is not very efficient...
+			// (We need a temporary stringstream because we want to
+			// remove trailing zeroes)
+			std::stringstream tmp;
+			SetAppropriatePrecision(tmp, type_to_enum<T>());
 			if constexpr(std::is_same_v<T, Int8> || std::is_same_v<T, UInt8>)
-				ss << +value;
+				tmp << +value;
 			else
-				ss << value;
-			return;
+				tmp << value;
+			auto str = tmp.str();
+			RemoveTrailingZeroes(str);
+			return str;
 		}
-		// SetAppropriatePrecision(ss,type_to_enum<T>());
-		ss << NumericTypeToString(value);
-	}
-	template<typename T>
-	std::string udm::Property::NumericTypeToString(T value)
-	{
-		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-		if constexpr(std::is_same_v<TBase, Half>)
-			return NumericTypeToString<float>(value);
-		if constexpr(!std::is_floating_point_v<T>) {
-			if constexpr(std::is_same_v<T, Int8> || std::is_same_v<T, UInt8>)
-				return std::to_string(+value);
-			return std::to_string(value);
-		}
-		// TODO: This is not very efficient...
-		// (We need a temporary stringstream because we want to
-		// remove trailing zeroes)
-		std::stringstream tmp;
-		SetAppropriatePrecision(tmp, type_to_enum<T>());
-		if constexpr(std::is_same_v<T, Int8> || std::is_same_v<T, UInt8>)
-			tmp << +value;
-		else
-			tmp << value;
-		auto str = tmp.str();
-		RemoveTrailingZeroes(str);
-		return str;
-	}
 
-	template<typename T>
-	T &udm::Property::GetValue()
-	{
-		return GetValue<T>(type_to_enum<T>());
-	}
-
-	template<typename T>
-	const T &udm::Property::GetValue() const
-	{
-		return const_cast<Property *>(this)->GetValue<T>();
-	}
-	template<typename T>
-	T udm::Property::ToValue(const T &defaultValue) const
-	{
-		if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
-			return defaultValue;
-		auto val = ToValue<T>();
-		return val.has_value() ? *val : defaultValue;
-	}
-	template<typename T>
-	std::optional<T> udm::Property::ToValue() const
-	{
-		if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
-			return {};
-		if constexpr(util::is_specialization<T, std::vector>::value) {
-			T v {};
-			auto res = GetBlobData(v);
-			return (res == BlobResult::Success) ? v : std::optional<T> {};
+		template<typename T>
+		T &Property::GetValue()
+		{
+			return GetValue<T>(type_to_enum<T>());
 		}
-		else if constexpr(util::is_specialization<T, std::unordered_map>::value || util::is_specialization<T, std::map>::value) {
-			if(type != Type::Element)
+
+		template<typename T>
+		const T &Property::GetValue() const
+		{
+			return const_cast<Property *>(this)->GetValue<T>();
+		}
+		template<typename T>
+		T Property::ToValue(const T &defaultValue) const
+		{
+			if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+				return defaultValue;
+			auto val = ToValue<T>();
+			return val.has_value() ? *val : defaultValue;
+		}
+		template<typename T>
+		std::optional<T> Property::ToValue() const
+		{
+			if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 				return {};
-			using TValue = decltype(T::value_type::second);
-			auto &e = GetValue<Element>();
-			T result {};
-			for(auto &pair : e.children) {
-				auto val = pair.second->ToValue<TValue>();
-				if(val.has_value() == false)
-					continue;
-				result[pair.first] = std::move(val.value());
+			if constexpr(util::is_specialization<T, std::vector>::value) {
+				T v {};
+				auto res = GetBlobData(v);
+				return (res == BlobResult::Success) ? v : std::optional<T> {};
 			}
-			return result;
-		}
-		auto vs = [&](auto tag) -> std::optional<T> {
-			if constexpr(is_convertible<typename decltype(tag)::type, T>())
-				return convert<typename decltype(tag)::type, T>(const_cast<udm::Property *>(this)->GetValue<typename decltype(tag)::type>());
+			else if constexpr(util::is_specialization<T, std::unordered_map>::value || util::is_specialization<T, std::map>::value) {
+				if(type != Type::Element)
+					return {};
+				using TValue = decltype(T::value_type::second);
+				auto &e = GetValue<Element>();
+				T result {};
+				for(auto &pair : e.children) {
+					auto val = pair.second->ToValue<TValue>();
+					if(val.has_value() == false)
+						continue;
+					result[pair.first] = std::move(val.value());
+				}
+				return result;
+			}
+			auto vs = [&](auto tag) -> std::optional<T> {
+				if constexpr(is_convertible<typename decltype(tag)::type, T>())
+					return convert<typename decltype(tag)::type, T>(const_cast<Property *>(this)->GetValue<typename decltype(tag)::type>());
+				return {};
+			};
+			return visit(type, vs);
+			static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 			return {};
-		};
-		return visit(type, vs);
-		static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
-		return {};
-	}
-
-	template<typename T>
-	T &udm::Property::GetValue(Type type)
-	{
-		assert(value && this->type == type);
-		if(this->type != type && !(this->type == Type::ArrayLz4 && type == Type::Array))
-			throw LogicError {"Type mismatch, requested type is " + std::string {magic_enum::enum_name(type)} + ", but actual type is " + std::string {magic_enum::enum_name(this->type)} + "!"};
-		return *GetValuePtr<T>();
-	}
-
-	template<typename T>
-	T *udm::Property::GetValuePtr()
-	{
-		// TODO: this should never be null, but there are certain cases where it seems to happen
-		if(!this)
-			return nullptr;
-		if constexpr(std::is_same_v<T, udm::Array>)
-			return is_array_type(this->type) ? reinterpret_cast<T *>(value) : nullptr;
-		return (this->type == type_to_enum<T>()) ? reinterpret_cast<T *>(value) : nullptr;
-	}
-
-	template<class T>
-	udm::BlobResult udm::Property::GetBlobData(T &v) const
-	{
-		if(!*this)
-			return BlobResult::InvalidProperty;
-		uint64_t reqBufferSize = 0;
-		auto result = GetBlobData(v.data(), v.size() * sizeof(v[0]), &reqBufferSize);
-		if(result == BlobResult::InsufficientSize) {
-			if(v.size() * sizeof(v[0]) != reqBufferSize) {
-				if((reqBufferSize % sizeof(v[0])) > 0)
-					return BlobResult::ValueTypeMismatch;
-				v.resize(reqBufferSize / sizeof(v[0]));
-				return GetBlobData<T>(v);
-			}
-			return result;
 		}
-		if(result != BlobResult::NotABlobType)
-			return result;
-		if constexpr(is_trivial_type(type_to_enum_s<typename T::value_type>())) {
-			if(is_array_type(this->type)) {
-				auto &a = GetValue<Array>();
-				if(a.GetValueType() == type_to_enum<typename T::value_type>()) {
-					v.resize(a.GetSize());
-					memcpy(v.data(), a.GetValues(), v.size() * sizeof(v[0]));
-					return BlobResult::Success;
+
+		template<typename T>
+		T &Property::GetValue(Type type)
+		{
+			assert(value && this->type == type);
+			if(this->type != type && !(this->type == Type::ArrayLz4 && type == Type::Array))
+				throw LogicError {"Type mismatch, requested type is " + std::string {magic_enum::enum_name(type)} + ", but actual type is " + std::string {magic_enum::enum_name(this->type)} + "!"};
+			return *GetValuePtr<T>();
+		}
+
+		template<typename T>
+		T *Property::GetValuePtr()
+		{
+			// TODO: this should never be null, but there are certain cases where it seems to happen
+			if(!this)
+				return nullptr;
+			if constexpr(std::is_same_v<T, Array>)
+				return is_array_type(this->type) ? reinterpret_cast<T *>(value) : nullptr;
+			return (this->type == type_to_enum<T>()) ? reinterpret_cast<T *>(value) : nullptr;
+		}
+
+		template<class T>
+		BlobResult Property::GetBlobData(T &v) const
+		{
+			if(!*this)
+				return BlobResult::InvalidProperty;
+			uint64_t reqBufferSize = 0;
+			auto result = GetBlobData(v.data(), v.size() * sizeof(v[0]), &reqBufferSize);
+			if(result == BlobResult::InsufficientSize) {
+				if(v.size() * sizeof(v[0]) != reqBufferSize) {
+					if((reqBufferSize % sizeof(v[0])) > 0)
+						return BlobResult::ValueTypeMismatch;
+					v.resize(reqBufferSize / sizeof(v[0]));
+					return GetBlobData<T>(v);
+				}
+				return result;
+			}
+			if(result != BlobResult::NotABlobType)
+				return result;
+			if constexpr(is_trivial_type(type_to_enum_s<typename T::value_type>())) {
+				if(is_array_type(this->type)) {
+					auto &a = GetValue<Array>();
+					if(a.GetValueType() == type_to_enum<typename T::value_type>()) {
+						v.resize(a.GetSize());
+						memcpy(v.data(), a.GetValues(), v.size() * sizeof(v[0]));
+						return BlobResult::Success;
+					}
 				}
 			}
+			return BlobResult::NotABlobType;
 		}
-		return BlobResult::NotABlobType;
 	}
 }

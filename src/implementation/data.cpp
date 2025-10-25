@@ -3,11 +3,14 @@
 
 module;
 
+#include <cinttypes>
+
 #include "udm_definitions.hpp"
 #include "mathutil/glmutil.h"
 #include <sharedutils/magic_enum.hpp>
 #include <functional>
 #include <string>
+#include <cstring>
 #include <memory>
 #include <vector>
 #include <iostream>

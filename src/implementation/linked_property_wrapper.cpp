@@ -3,11 +3,15 @@
 
 module;
 
+#include <cinttypes>
+
 #include "mathutil/glmutil.h"
 #include <lz4.h>
 #include <string>
 #include <memory>
 #include <cassert>
+#include <algorithm>
+#include <vector>
 
 module pragma.udm;
 

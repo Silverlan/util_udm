@@ -6,6 +6,7 @@ module;
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
 #include <string>
+#include <algorithm>
 
 export module pragma.udm:types.element;
 
@@ -90,16 +91,16 @@ export {
 			void SetValue(Element &child, T &&v);
 			void EraseValue(const Element &child);
 		};
-	}
 
-	template<typename T>
-	void udm::Element::SetValue(Element &child, T &&v)
-	{
-		auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) {
-			return get_property_type(*pair.second) == udm::Type::Element && get_property_value(*pair.second) == &child;
-		});
-		if(it == children.end())
-			return;
-		children[it->first] = create_property<T>(std::forward<T>(v));
+		template<typename T>
+		void Element::SetValue(Element &child, T &&v)
+		{
+			auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) {
+				return get_property_type(*pair.second) == Type::Element && get_property_value(*pair.second) == &child;
+			});
+			if(it == children.end())
+				return;
+			children[it->first] = create_property<T>(std::forward<T>(v));
+		}
 	}
 }

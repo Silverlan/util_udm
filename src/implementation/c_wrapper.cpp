@@ -3,10 +3,13 @@
 
 module;
 
+#include <cinttypes>
+
 #include "udm_definitions.hpp"
 #include "mathutil/glmutil.h"
 #include <functional>
 #include <string>
+#include <cstring>
 #include <memory>
 #include <iostream>
 #include <cassert>

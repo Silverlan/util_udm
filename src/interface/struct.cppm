@@ -7,6 +7,7 @@ module;
 #include "sharedutils/magic_enum.hpp"
 #include <string>
 #include <vector>
+#include <cstring>
 
 export module pragma.udm:structure;
 
@@ -114,12 +115,11 @@ export {
 			StructDescription description;
 			std::vector<uint8_t> data;
 		};
-	}
-
-	template<class T>
-	udm::Struct &udm::Struct::operator=(const T &other)
-	{
-		Assign(&other, sizeof(T));
-		return *this;
+		template<class T>
+		Struct &Struct::operator=(const T &other)
+		{
+			Assign(&other, sizeof(T));
+			return *this;
+		}
 	}
 }

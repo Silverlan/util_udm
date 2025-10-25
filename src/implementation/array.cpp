@@ -3,10 +3,13 @@
 
 module;
 
+#include <cinttypes>
+#include "sharedutils/magic_enum.hpp"
 #include "udm_definitions.hpp"
 #include "mathutil/glmutil.h"
 #include <memory>
 #include <cassert>
+#include <cstring>
 #include <string>
 #include <variant>
 #include <lz4.h>
@@ -375,7 +378,7 @@ void udm::ArrayLz4::SetUncompressedMemoryPersistent(bool persistent)
 
 struct StreamData : public udm::IFile {
 	StreamData() = default;
-	DataStream &GetDataStream() { return m_ds; }
+	util::DataStream &GetDataStream() { return m_ds; }
 	virtual size_t Read(void *data, size_t size) override
 	{
 		m_ds->Read(data, size);
@@ -403,7 +406,7 @@ struct StreamData : public udm::IFile {
 	}
 	virtual int32_t ReadChar() override { return m_ds->Read<char>(); }
   private:
-	DataStream m_ds;
+	util::DataStream m_ds;
 };
 
 #pragma pack(push, 1)

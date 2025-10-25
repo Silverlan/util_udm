@@ -3,6 +3,8 @@
 
 module;
 
+#include <cinttypes>
+#include <unordered_map>
 #include <lz4.h>
 #include <string>
 

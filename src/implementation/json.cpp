@@ -3,6 +3,8 @@
 
 module;
 
+#include <cinttypes>
+#include <vector>
 #include <sstream>
 #include <string>
 #include <iostream>
