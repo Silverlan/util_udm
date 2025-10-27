@@ -14,6 +14,7 @@ export module pragma.udm:structure;
 export import :basic_types;
 export import :enums;
 import :exception;
+import :trivial_types;
 
 export {
 	namespace udm {
