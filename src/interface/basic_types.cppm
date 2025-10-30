@@ -3,9 +3,6 @@
 
 module;
 
-#include <string>
-#include <cinttypes>
-#include <variant>
 
 export module pragma.udm:basic_types;
 

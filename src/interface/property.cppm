@@ -5,11 +5,6 @@ module;
 
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
-#include <string>
-#include <cstring>
-#include <vector>
-#include <unordered_map>
-#include <map>
 
 export module pragma.udm:property;
 

@@ -3,17 +3,8 @@
 
 module;
 
-#include <cinttypes>
 
 #include "mathutil/glmutil.h"
-#include <utility>
-#include <string_view>
-#include <vector>
-#include <string>
-#include <unordered_map>
-#include <typeinfo>
-#include <optional>
-#include <memory>
 
 module pragma.udm;
 

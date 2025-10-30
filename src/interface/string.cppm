@@ -5,8 +5,6 @@ module;
 
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
-#include <string>
-#include <vector>
 
 export module pragma.udm:types.string;
 
@@ -15,6 +13,8 @@ import :exception;
 export {
 	namespace udm {
 		struct DLLUDM Utf8String {
+			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
+
 			Utf8String() = default;
 			Utf8String(std::vector<uint8_t> &&data) : data {data} {}
 			Utf8String(const Utf8String &str) : data {str.data} {}

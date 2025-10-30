@@ -3,11 +3,10 @@
 
 module;
 
-#include <cinttypes>
-#include <memory>
-#include <array>
 
 export module pragma.udm:types;
+
+export import std.compat;
 
 export {
 	namespace udm {

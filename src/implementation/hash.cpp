@@ -3,10 +3,6 @@
 
 module;
 
-#include <cinttypes>
-#include <vector>
-#include <string>
-#include <algorithm>
 
 module pragma.udm;
 

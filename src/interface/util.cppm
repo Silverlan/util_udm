@@ -4,8 +4,6 @@
 module;
 
 #include "udm_definitions.hpp"
-#include <string>
-#include <variant>
 
 export module pragma.udm:util;
 

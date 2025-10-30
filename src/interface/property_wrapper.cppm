@@ -5,12 +5,6 @@ module;
 
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
-#include <string>
-#include <cstring>
-#include <vector>
-#include <memory>
-#include <unordered_map>
-#include <map>
 
 export module pragma.udm:property_wrapper;
 
@@ -26,6 +20,8 @@ export {
 		template<typename T>
 		class ArrayIterator;
 		struct DLLUDM PropertyWrapper {
+			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
+			
 			PropertyWrapper() = default;
 			explicit PropertyWrapper(Property &o);
 			PropertyWrapper(const PropertyWrapper &other);
@@ -191,6 +187,8 @@ export {
 		};
 
 		struct DLLUDM LinkedPropertyWrapper : public PropertyWrapper {
+			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
+
 			LinkedPropertyWrapper() : PropertyWrapper {} { linked = true; }
 			LinkedPropertyWrapper(const LinkedPropertyWrapper &other);
 			LinkedPropertyWrapper(const PropertyWrapper &other) : PropertyWrapper {other} { linked = true; }

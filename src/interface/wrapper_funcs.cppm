@@ -3,9 +3,6 @@
 
 module;
 
-#include <string_view>
-#include <optional>
-#include <cinttypes>
 
 export module pragma.udm:wrapper_funcs;
 

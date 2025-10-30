@@ -3,14 +3,9 @@
 
 module;
 
-#include <cinttypes>
 #include "sharedutils/magic_enum.hpp"
 #include "mathutil/glmutil.h"
 #include <lz4.h>
-#include <variant>
-#include <string>
-#include <vector>
-#include <iostream>
 #include <cassert>
 
 module pragma.udm;
@@ -147,7 +142,7 @@ udm::Reference &udm::Reference::operator=(Reference &&other)
 		return *this;
 	property = other.property;
 	path = std::move(other.path);
-	static_assert(sizeof(*this) == 40, "Update this function when the struct has changed!");
+	static_assert(Reference::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 udm::Reference &udm::Reference::operator=(const Reference &other)
@@ -156,7 +151,7 @@ udm::Reference &udm::Reference::operator=(const Reference &other)
 		return *this;
 	property = other.property;
 	path = other.path;
-	static_assert(sizeof(*this) == 40, "Update this function when the struct has changed!");
+	static_assert(Reference::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 void udm::Reference::InitializeProperty(const LinkedPropertyWrapper &root) { property = root.GetFromPath(path).prop; }
@@ -168,7 +163,7 @@ udm::Utf8String &udm::Utf8String::operator=(Utf8String &&other)
 	if(this == &other)
 		return *this;
 	data = std::move(other.data);
-	static_assert(sizeof(*this) == 24, "Update this function when the struct has changed!");
+	static_assert(Utf8String::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 udm::Utf8String &udm::Utf8String::operator=(const Utf8String &other)
@@ -176,7 +171,7 @@ udm::Utf8String &udm::Utf8String::operator=(const Utf8String &other)
 	if(this == &other)
 		return *this;
 	data = other.data;
-	static_assert(sizeof(*this) == 24, "Update this function when the struct has changed!");
+	static_assert(Utf8String::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 
@@ -187,7 +182,7 @@ udm::Blob &udm::Blob::operator=(Blob &&other)
 	if(this == &other)
 		return *this;
 	data = std::move(other.data);
-	static_assert(sizeof(*this) == 24, "Update this function when the struct has changed!");
+	static_assert(Blob::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 udm::Blob &udm::Blob::operator=(const Blob &other)
@@ -195,7 +190,7 @@ udm::Blob &udm::Blob::operator=(const Blob &other)
 	if(this == &other)
 		return *this;
 	data = other.data;
-	static_assert(sizeof(*this) == 24, "Update this function when the struct has changed!");
+	static_assert(Blob::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 
@@ -207,7 +202,7 @@ udm::BlobLz4 &udm::BlobLz4::operator=(BlobLz4 &&other)
 		return *this;
 	uncompressedSize = other.uncompressedSize;
 	compressedData = std::move(other.compressedData);
-	static_assert(sizeof(*this) == 32, "Update this function when the struct has changed!");
+	static_assert(BlobLz4::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 udm::BlobLz4 &udm::BlobLz4::operator=(const BlobLz4 &other)
@@ -216,7 +211,7 @@ udm::BlobLz4 &udm::BlobLz4::operator=(const BlobLz4 &other)
 		return *this;
 	uncompressedSize = other.uncompressedSize;
 	compressedData = other.compressedData;
-	static_assert(sizeof(*this) == 32, "Update this function when the struct has changed!");
+	static_assert(BlobLz4::layout_version == 1, "Update this function when the struct has changed!");
 	return *this;
 }
 

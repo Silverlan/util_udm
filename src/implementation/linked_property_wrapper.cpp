@@ -3,15 +3,10 @@
 
 module;
 
-#include <cinttypes>
 
 #include "mathutil/glmutil.h"
 #include <lz4.h>
-#include <string>
-#include <memory>
 #include <cassert>
-#include <algorithm>
-#include <vector>
 
 module pragma.udm;
 
@@ -36,7 +31,7 @@ void udm::LinkedPropertyWrapper::operator=(LinkedPropertyWrapper &&v)
 	PropertyWrapper::operator=(v);
 	prev = std::move(v.prev);
 	propName = std::move(v.propName);
-	static_assert(sizeof(LinkedPropertyWrapper) == 56, "Update this function when the struct has changed!");
+	static_assert(LinkedPropertyWrapper::layout_version == 1, "Update this function when the struct has changed!");
 }
 
 void udm::LinkedPropertyWrapper::operator=(const PropertyWrapper &v)
@@ -55,7 +50,7 @@ void udm::LinkedPropertyWrapper::operator=(const LinkedPropertyWrapper &v)
 	PropertyWrapper::operator=(v);
 	prev = v.prev ? std::make_unique<LinkedPropertyWrapper>(*v.prev) : nullptr;
 	propName = v.propName;
-	static_assert(sizeof(LinkedPropertyWrapper) == 56, "Update this function when the struct has changed!");
+	static_assert(LinkedPropertyWrapper::layout_version == 1, "Update this function when the struct has changed!");
 }
 
 std::string udm::LinkedPropertyWrapper::GetPath() const

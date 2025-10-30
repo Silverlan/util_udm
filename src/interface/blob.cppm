@@ -5,8 +5,6 @@ module;
 
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
-#include <string>
-#include <vector>
 
 export module pragma.udm:types.blob;
 
@@ -15,6 +13,8 @@ import :exception;
 export {
 	namespace udm {
 		struct DLLUDM Blob {
+			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
+
 			Blob() = default;
 			Blob(const Blob &) = default;
 			Blob(Blob &&) = default;
@@ -34,6 +34,8 @@ export {
 		};
 
 		struct DLLUDM BlobLz4 {
+			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
+			
 			BlobLz4() = default;
 			BlobLz4(const BlobLz4 &) = default;
 			BlobLz4(BlobLz4 &&) = default;

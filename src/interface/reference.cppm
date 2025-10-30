@@ -5,7 +5,6 @@ module;
 
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
-#include <string>
 
 export module pragma.udm:reference;
 
@@ -15,6 +14,8 @@ export import :types;
 export {
 	namespace udm {
 		struct DLLUDM Reference {
+			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
+			
 			Reference() = default;
 			Reference(const std::string &path) : path {path} {}
 			Reference(const Reference &other) : property {other.property}, path {other.path} {}

@@ -4,12 +4,10 @@
 module;
 
 #include "udm_definitions.hpp"
-#include <exception>
-#include <stdexcept>
-#include <string>
-#include <cinttypes>
 
 export module pragma.udm:exception;
+
+export import std.compat;
 
 export {
 	namespace udm {

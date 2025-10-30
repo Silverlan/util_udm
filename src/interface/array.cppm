@@ -5,9 +5,6 @@ module;
 
 #include "udm_definitions.hpp"
 #include "sharedutils/magic_enum.hpp"
-#include <string>
-#include <memory>
-#include <typeinfo>
 
 export module pragma.udm:array;
 

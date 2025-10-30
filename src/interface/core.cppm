@@ -4,16 +4,7 @@
 module;
 
 #include "udm_definitions.hpp"
-#include <array>
-#include <cinttypes>
-#include <vector>
-#include <memory>
-#include <string>
 #include <cassert>
-#include <optional>
-#include <variant>
-#include <map>
-#include <sstream>
 #include <sharedutils/magic_enum.hpp>
 
 export module pragma.udm:core;

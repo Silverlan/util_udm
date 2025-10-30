@@ -3,12 +3,6 @@
 
 module;
 
-#include <string>
-#include <variant>
-#include <map>
-#include <array>
-#include <unordered_map>
-#include <vector>
 #include "sharedutils/magic_enum.hpp"
 
 export module pragma.udm:trivial_types;
