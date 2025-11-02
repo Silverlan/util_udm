@@ -13,6 +13,11 @@ export namespace udm {
 	// Utility functions to prevent circular dependencies
 	template<typename T>
 		PProperty create_property(T &&value);
+	template<std::size_t N>
+	PProperty create_property(const char (&v)[N])
+	{
+		return create_property(std::string_view(v));
+	}
 	PProperty copy_property(const Property &prop);
 	Type get_property_type(const Property &prop);
 	Type get_property_type(const PropertyWrapper &prop);
