@@ -45,14 +45,14 @@ export {
 			std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T, Quaternion>, float,
 				std::conditional_t<std::is_same_v<T, Srgba>, uint8_t, std::conditional_t<std::is_same_v<T, HdrColor>, uint16_t, std::conditional_t<std::is_same_v<T, EulerAngles>, float, void>>>>>>>;
 
-		template<typename T, bool includeUdmWrapperTypes = false>
+		template<typename T>
 		constexpr Type type_to_enum();
-		template<typename T, bool includeUdmWrapperTypes = false>
+		template<typename T>
 		constexpr Type type_to_enum_s();
-		template<typename T, bool includeUdmWrapperTypes = false>
+		template<typename T>
 		constexpr bool is_udm_type()
 		{
-			return type_to_enum_s<T, includeUdmWrapperTypes>() != Type::Invalid;
+			return type_to_enum_s<T>() != Type::Invalid;
 		}
 
 		constexpr size_t size_of(Type t);
@@ -409,36 +409,22 @@ export {
 		}
 	};
 
-	template<typename T, bool includeUdmWrapperTypes>
+	template<typename T>
 	constexpr udm::Type udm::type_to_enum()
 	{
-		constexpr auto type = type_to_enum_s<T, includeUdmWrapperTypes>();
+		constexpr auto type = type_to_enum_s<T>();
 		if constexpr(umath::to_integral(type) > umath::to_integral(Type::Last))
 			[]<bool flag = false>() { static_assert(flag, "Unsupported type!"); }
 		();
 		return type;
 	}
 
-	template<typename TT, bool includeWrapperTypes>
+	template<typename TT>
 	constexpr udm::Type udm::type_to_enum_s()
 	{
 		using T = std::remove_cv_t<std::remove_reference_t<TT>>;
 		if constexpr(std::is_enum_v<T>)
-			return type_to_enum_s<std::underlying_type_t<T>, includeWrapperTypes>();
-
-		if constexpr(includeWrapperTypes) {
-			if constexpr(std::is_same_v<T, Array>)
-				return Type::Array;
-			if constexpr(std::is_same_v<T, ArrayLz4>)
-				return Type::ArrayLz4;
-			if constexpr(std::is_same_v<T, Element>)
-				return Type::Element;
-			if constexpr(std::is_same_v<T, Struct>)
-				return Type::Struct;
-			if constexpr(std::is_same_v<T, Reference>)
-				return Type::Reference;
-		}
-
+			return type_to_enum_s<std::underlying_type_t<T>>();
 		if constexpr(util::is_specialization<T, std::vector>::value)
 			return Type::Array;
 		else if constexpr(util::is_specialization<T, std::unordered_map>::value || util::is_specialization<T, std::map>::value)

@@ -31,17 +31,21 @@ template<typename T>
 	T *udm::get_property_value_ptr(Property &prop) {return prop.GetValuePtr<T>();}
 template<typename T>
 	std::optional<T> udm::to_property_value(Property &prop) {return prop.ToValue<T>();}
-template<typename T>
+template<typename T> requires(!is_struct_type<T>)
 	void udm::set_property_value(Property &prop, T &&value) {prop = std::forward<T>(value);}
 template<class T>
 	udm::BlobResult udm::get_property_blob_data(Property &prop, T &v) {return prop.GetBlobData<T>(v);}
 
 udm::Type udm::get_array_value_type(const Array &a) {return a.GetValueType();}
+uint16_t udm::get_array_structured_data_info_data_size_requirement(Array &a)
+{
+	return a.GetStructuredDataInfo()->GetDataSizeRequirement();
+}
 template<typename T>
 	T &udm::get_array_value(Array &a, uint32_t idx) {return a.GetValue<T>(idx);}
 template<typename T>
 	T *udm::get_array_value_ptr(Array &a, uint32_t idx) {return a.GetValuePtr<T>(idx);}
-template<typename T>
+template<typename T> requires(!is_struct_type<T>)
 	void udm::set_array_value(Array &a, uint32_t idx, T &&v) {a.SetValue<T>(idx, std::forward<T>(v));}
 uint32_t udm::get_array_value_size(const Array &a) {return a.GetValueSize();}
 uint32_t udm::get_array_size(const Array &a) {return a.GetSize();}
@@ -104,16 +108,48 @@ __declspec(dllexport)
 
 			udm::create_property<T>(std::forward<T>(v));
 
+			if constexpr(
+				!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Blob> && !std::is_same_v<T, udm::BlobLz4> &&
+				!std::is_same_v<T, udm::UInt8>
+			) {
+				std::vector<T> &vec = *static_cast<std::vector<T>*>(nullptr);
+				udm::create_property<std::vector<T>>({});
+				udm::create_property<std::vector<T>&>(vec);
+				udm::create_property<const std::vector<T>&>(vec);
+
+				udm::set_property_value<std::vector<T>>(*static_cast<udm::Property*>(nullptr), {});
+				udm::set_property_value<std::vector<T>&>(*static_cast<udm::Property*>(nullptr), vec);
+				udm::set_property_value<const std::vector<T>&>(*static_cast<udm::Property*>(nullptr), vec);
+			}
+
+			if constexpr(
+				!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>
+			) {
+				udm::to_property_value<std::vector<T>>(*static_cast<udm::Property*>(nullptr));
+
+				std::vector<T> blobData;
+				udm::get_property_blob_data(*static_cast<udm::Property*>(nullptr), blobData);
+			}
+
+			if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::UInt8>) {
+				std::vector<T> &vec = *static_cast<std::vector<T>*>(nullptr);
+				udm::set_element_value<std::vector<T>>(*static_cast<udm::Element*>(nullptr), {});
+				udm::set_element_value<std::vector<T>&>(*static_cast<udm::Element*>(nullptr), vec);
+				udm::set_element_value<const std::vector<T>&>(*static_cast<udm::Element*>(nullptr), vec);
+			}
+
+			if constexpr(!std::is_same_v<T, udm::UInt8> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>) {
+				std::vector<T> &vec = *static_cast<std::vector<T>*>(nullptr);
+				udm::set_array_value<std::vector<T>>(*static_cast<udm::Array*>(nullptr), 0u, {});
+				udm::set_array_value<std::vector<T>&>(*static_cast<udm::Array*>(nullptr), 0u, vec);
+				udm::set_array_value<const std::vector<T>&>(*static_cast<udm::Array*>(nullptr), 0u, vec);
+			}
+
 			udm::get_property_value<T>(*static_cast<udm::Property*>(nullptr));
 			udm::get_property_value<T>(*static_cast<udm::PropertyWrapper*>(nullptr));
 			udm::get_property_value_ptr<T>(*static_cast<udm::Property*>(nullptr));
 			udm::to_property_value<T>(*static_cast<udm::Property*>(nullptr));
 			udm::set_property_value(*static_cast<udm::Property*>(nullptr), v);
-
-			if constexpr((udm::is_numeric_type(udm::type_to_enum<T>()) || udm::is_generic_type(udm::type_to_enum<T>())) && !std::is_same_v<T, udm::Boolean>) {
-				std::vector<T> blobData;
-				udm::get_property_blob_data(*static_cast<udm::Property*>(nullptr), blobData);
-			}
 
 			udm::get_array_value<T>(*static_cast<udm::Array*>(nullptr), 0u);
 			udm::get_array_value_ptr<T>(*static_cast<udm::Array*>(nullptr), 0u);
@@ -130,8 +166,14 @@ __declspec(dllexport)
 		udm::get_array_begin_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array*>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper>*>(nullptr));
 		udm::get_array_end_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array*>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper>*>(nullptr));
 
+		udm::create_property<std::string_view>({});
 		udm::set_property_value<std::string_view>(*static_cast<udm::Property*>(nullptr), {});
 		udm::set_array_value<std::string_view>(*static_cast<udm::Array*>(nullptr), 0u,{});
 		udm::set_element_value<std::string_view>(*static_cast<udm::Element*>(nullptr), {});
+
+		auto &prop = *static_cast<udm::PProperty*>(nullptr);
+		udm::set_property_value<udm::PProperty>(*static_cast<udm::Property*>(nullptr), {});
+		udm::set_property_value<udm::PProperty&>(*static_cast<udm::Property*>(nullptr), prop);
+		udm::set_property_value<const udm::PProperty&>(*static_cast<udm::Property*>(nullptr), prop);
 	}
 }
