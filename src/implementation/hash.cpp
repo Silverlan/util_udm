@@ -6,7 +6,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 inline void hash_combine(util::MurmurHash3 &seed, util::MurmurHash3 const &h)
 {

@@ -10,7 +10,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 udm::LinkedPropertyWrapper::LinkedPropertyWrapper(const LinkedPropertyWrapper &other) : PropertyWrapper {other}, propName {other.propName}, prev {other.prev ? std::make_unique<LinkedPropertyWrapper>(*other.prev) : nullptr} { linked = true; }
 

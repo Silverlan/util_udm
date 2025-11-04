@@ -10,7 +10,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 struct BaseUdmData {
 	BaseUdmData(const std::shared_ptr<udm::Data> &udmData, bool clearDataOnDestruction) : data {udmData}, clearDataOnDestruction {clearDataOnDestruction} {}

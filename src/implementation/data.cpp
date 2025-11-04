@@ -10,7 +10,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName, std::string &outErr)
 {

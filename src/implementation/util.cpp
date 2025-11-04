@@ -10,7 +10,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 bool udm::does_key_require_quotes(const std::string_view &key) { return key.find_first_of(udm::CONTROL_CHARACTERS.c_str()) != std::string::npos || key.find_first_of(udm::WHITESPACE_CHARACTERS.c_str()) != std::string::npos || key.find(PATH_SEPARATOR) != std::string::npos; }
 

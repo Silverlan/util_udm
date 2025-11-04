@@ -7,7 +7,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 static void to_json(udm::LinkedPropertyWrapperArg prop, std::stringstream &ss, const std::string &t)
 {

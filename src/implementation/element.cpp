@@ -9,7 +9,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path, std::optional<uint32_t> size, Type type, ArrayType arrayType, bool pathToElements)
 {

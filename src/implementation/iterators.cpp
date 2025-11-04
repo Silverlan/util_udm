@@ -7,7 +7,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 udm::ElementIteratorPair::ElementIteratorPair(std::unordered_map<std::string, PProperty>::iterator &it) : key {it->first}, property {*it->second} {}
 udm::ElementIteratorPair::ElementIteratorPair() = default;

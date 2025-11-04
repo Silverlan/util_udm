@@ -7,7 +7,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 namespace udm {
 	class AsciiReader {

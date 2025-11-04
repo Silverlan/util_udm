@@ -9,7 +9,9 @@ module;
 
 module pragma.udm;
 
+#ifndef UDM_SINGLE_MODULE_INTERFACE
 import :core;
+#endif
 
 void udm::Property::Construct(Property &prop, Type type)
 {
