@@ -135,7 +135,7 @@ export {
 			static Blob GetBlobData(const BlobLz4 &blob);
 			static uint32_t GetStringPrefixSizeRequirement(const String &str);
 			static uint32_t GetStringSizeRequirement(const String &str);
-		private:
+		  private:
 			friend PropertyWrapper;
 			bool ReadStructHeader(IFile &f, StructDescription &strct);
 			static void WriteStructHeader(IFile &f, const StructDescription &strct);

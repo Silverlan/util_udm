@@ -20,9 +20,9 @@ export {
 		DLLUDM bool is_whitespace_character(char c);
 		DLLUDM bool is_control_character(char c);
 		DLLUDM bool does_key_require_quotes(const std::string_view &key);
-		
+
 		DLLUDM void sanitize_key_name(std::string &key);
-		
+
 		constexpr size_t size_of_base_type(Type t)
 		{
 			if(is_non_trivial_type(t)) {

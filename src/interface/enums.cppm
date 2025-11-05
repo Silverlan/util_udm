@@ -95,80 +95,80 @@ export {
 		{
 			// Note: These have to match ascii_type_to_enum
 			switch(t) {
-				case Type::Nil:
-					return "nil";
-				case Type::String:
-					return "string";
-				case Type::Utf8String:
-					return "utf8";
-				case Type::Int8:
-					return "int8";
-				case Type::UInt8:
-					return "uint8";
-				case Type::Int16:
-					return "int16";
-				case Type::UInt16:
-					return "uint16";
-				case Type::Int32:
-					return "int32";
-				case Type::UInt32:
-					return "uint32";
-				case Type::Int64:
-					return "int64";
-				case Type::UInt64:
-					return "uint64";
-				case Type::Float:
-					return "float";
-				case Type::Double:
-					return "double";
-				case Type::Boolean:
-					return "bool";
-				case Type::Vector2:
-					return "vec2";
-				case Type::Vector2i:
-					return "vec2i";
-				case Type::Vector3:
-					return "vec3";
-				case Type::Vector3i:
-					return "vec3i";
-				case Type::Vector4:
-					return "vec4";
-				case Type::Vector4i:
-					return "vec4i";
-				case Type::Quaternion:
-					return "quat";
-				case Type::EulerAngles:
-					return "ang";
-				case Type::Srgba:
-					return "srgba";
-				case Type::HdrColor:
-					return "hdr";
-				case Type::Transform:
-					return "transform";
-				case Type::ScaledTransform:
-					return "stransform";
-				case Type::Mat4:
-					return "mat4";
-				case Type::Mat3x4:
-					return "mat3x4";
-				case Type::Blob:
-					return "blob";
-				case Type::BlobLz4:
-					return "lz4";
-				case Type::Array:
-					return "array";
-				case Type::ArrayLz4:
-					return "arrayLz4";
-				case Type::Element:
-					return "element";
-				case Type::Reference:
-					return "ref";
-				case Type::Half:
-					return "half";
-				case Type::Struct:
-					return "struct";
-				default:
-					break;
+			case Type::Nil:
+				return "nil";
+			case Type::String:
+				return "string";
+			case Type::Utf8String:
+				return "utf8";
+			case Type::Int8:
+				return "int8";
+			case Type::UInt8:
+				return "uint8";
+			case Type::Int16:
+				return "int16";
+			case Type::UInt16:
+				return "uint16";
+			case Type::Int32:
+				return "int32";
+			case Type::UInt32:
+				return "uint32";
+			case Type::Int64:
+				return "int64";
+			case Type::UInt64:
+				return "uint64";
+			case Type::Float:
+				return "float";
+			case Type::Double:
+				return "double";
+			case Type::Boolean:
+				return "bool";
+			case Type::Vector2:
+				return "vec2";
+			case Type::Vector2i:
+				return "vec2i";
+			case Type::Vector3:
+				return "vec3";
+			case Type::Vector3i:
+				return "vec3i";
+			case Type::Vector4:
+				return "vec4";
+			case Type::Vector4i:
+				return "vec4i";
+			case Type::Quaternion:
+				return "quat";
+			case Type::EulerAngles:
+				return "ang";
+			case Type::Srgba:
+				return "srgba";
+			case Type::HdrColor:
+				return "hdr";
+			case Type::Transform:
+				return "transform";
+			case Type::ScaledTransform:
+				return "stransform";
+			case Type::Mat4:
+				return "mat4";
+			case Type::Mat3x4:
+				return "mat3x4";
+			case Type::Blob:
+				return "blob";
+			case Type::BlobLz4:
+				return "lz4";
+			case Type::Array:
+				return "array";
+			case Type::ArrayLz4:
+				return "arrayLz4";
+			case Type::Element:
+				return "element";
+			case Type::Reference:
+				return "ref";
+			case Type::Half:
+				return "half";
+			case Type::Struct:
+				return "struct";
+			default:
+				break;
 			}
 			static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 			return nullptr;
@@ -176,7 +176,7 @@ export {
 		DLLUDM Type ascii_type_to_enum(const std::string_view &type);
 
 		template<typename TEnum>
-constexpr std::string_view enum_to_string(TEnum e)
+		constexpr std::string_view enum_to_string(TEnum e)
 		{
 			return magic_enum::enum_name(e);
 		}

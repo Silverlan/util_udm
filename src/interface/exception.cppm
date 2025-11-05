@@ -13,7 +13,7 @@ export {
 	namespace udm {
 		struct DLLUDM Exception : public std::runtime_error {
 			Exception(const std::string &msg) : std::runtime_error {msg.c_str()}, m_msg {msg} {}
-		private:
+		  private:
 			std::string m_msg;
 		};
 

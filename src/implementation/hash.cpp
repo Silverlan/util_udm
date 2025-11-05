@@ -3,7 +3,6 @@
 
 module;
 
-
 module pragma.udm;
 
 #ifndef UDM_SINGLE_MODULE_INTERFACE

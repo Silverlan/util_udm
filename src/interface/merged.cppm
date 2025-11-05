@@ -91,13 +91,13 @@ export {
 		*/
 		constexpr Version VERSION = 2;
 		constexpr auto *HEADER_IDENTIFIER = "UDMB";
-	#pragma pack(push, 1)
+#pragma pack(push, 1)
 		struct DLLUDM Header {
 			Header() = default;
 			std::array<char, 4> identifier = {HEADER_IDENTIFIER[0], HEADER_IDENTIFIER[1], HEADER_IDENTIFIER[2], HEADER_IDENTIFIER[3]};
 			Version version = VERSION;
 		};
-	#pragma pack(pop)
+#pragma pack(pop)
 
 		namespace detail {
 			DLLUDM void test_c_wrapper();
@@ -209,80 +209,80 @@ export {
 		{
 			// Note: These have to match ascii_type_to_enum
 			switch(t) {
-				case Type::Nil:
-					return "nil";
-				case Type::String:
-					return "string";
-				case Type::Utf8String:
-					return "utf8";
-				case Type::Int8:
-					return "int8";
-				case Type::UInt8:
-					return "uint8";
-				case Type::Int16:
-					return "int16";
-				case Type::UInt16:
-					return "uint16";
-				case Type::Int32:
-					return "int32";
-				case Type::UInt32:
-					return "uint32";
-				case Type::Int64:
-					return "int64";
-				case Type::UInt64:
-					return "uint64";
-				case Type::Float:
-					return "float";
-				case Type::Double:
-					return "double";
-				case Type::Boolean:
-					return "bool";
-				case Type::Vector2:
-					return "vec2";
-				case Type::Vector2i:
-					return "vec2i";
-				case Type::Vector3:
-					return "vec3";
-				case Type::Vector3i:
-					return "vec3i";
-				case Type::Vector4:
-					return "vec4";
-				case Type::Vector4i:
-					return "vec4i";
-				case Type::Quaternion:
-					return "quat";
-				case Type::EulerAngles:
-					return "ang";
-				case Type::Srgba:
-					return "srgba";
-				case Type::HdrColor:
-					return "hdr";
-				case Type::Transform:
-					return "transform";
-				case Type::ScaledTransform:
-					return "stransform";
-				case Type::Mat4:
-					return "mat4";
-				case Type::Mat3x4:
-					return "mat3x4";
-				case Type::Blob:
-					return "blob";
-				case Type::BlobLz4:
-					return "lz4";
-				case Type::Array:
-					return "array";
-				case Type::ArrayLz4:
-					return "arrayLz4";
-				case Type::Element:
-					return "element";
-				case Type::Reference:
-					return "ref";
-				case Type::Half:
-					return "half";
-				case Type::Struct:
-					return "struct";
-				default:
-					break;
+			case Type::Nil:
+				return "nil";
+			case Type::String:
+				return "string";
+			case Type::Utf8String:
+				return "utf8";
+			case Type::Int8:
+				return "int8";
+			case Type::UInt8:
+				return "uint8";
+			case Type::Int16:
+				return "int16";
+			case Type::UInt16:
+				return "uint16";
+			case Type::Int32:
+				return "int32";
+			case Type::UInt32:
+				return "uint32";
+			case Type::Int64:
+				return "int64";
+			case Type::UInt64:
+				return "uint64";
+			case Type::Float:
+				return "float";
+			case Type::Double:
+				return "double";
+			case Type::Boolean:
+				return "bool";
+			case Type::Vector2:
+				return "vec2";
+			case Type::Vector2i:
+				return "vec2i";
+			case Type::Vector3:
+				return "vec3";
+			case Type::Vector3i:
+				return "vec3i";
+			case Type::Vector4:
+				return "vec4";
+			case Type::Vector4i:
+				return "vec4i";
+			case Type::Quaternion:
+				return "quat";
+			case Type::EulerAngles:
+				return "ang";
+			case Type::Srgba:
+				return "srgba";
+			case Type::HdrColor:
+				return "hdr";
+			case Type::Transform:
+				return "transform";
+			case Type::ScaledTransform:
+				return "stransform";
+			case Type::Mat4:
+				return "mat4";
+			case Type::Mat3x4:
+				return "mat3x4";
+			case Type::Blob:
+				return "blob";
+			case Type::BlobLz4:
+				return "lz4";
+			case Type::Array:
+				return "array";
+			case Type::ArrayLz4:
+				return "arrayLz4";
+			case Type::Element:
+				return "element";
+			case Type::Reference:
+				return "ref";
+			case Type::Half:
+				return "half";
+			case Type::Struct:
+				return "struct";
+			default:
+				break;
 			}
 			static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 			return nullptr;
@@ -290,7 +290,7 @@ export {
 		DLLUDM Type ascii_type_to_enum(const std::string_view &type);
 
 		template<typename TEnum>
-constexpr std::string_view enum_to_string(TEnum e)
+		constexpr std::string_view enum_to_string(TEnum e)
 		{
 			return magic_enum::enum_name(e);
 		}
@@ -335,7 +335,7 @@ export {
 	namespace udm {
 		struct DLLUDM Exception : public std::runtime_error {
 			Exception(const std::string &msg) : std::runtime_error {msg.c_str()}, m_msg {msg} {}
-		private:
+		  private:
 			std::string m_msg;
 		};
 
@@ -426,7 +426,7 @@ export import std.compat;
 
 export {
 	namespace udm {
-	#pragma pack(push, 1)
+#pragma pack(push, 1)
 		struct DLLUDM Half {
 			Half() = default;
 			Half(uint16_t value) : value {value} {}
@@ -438,7 +438,7 @@ export {
 			Half &operator=(const Half &other) = default;
 			uint16_t value;
 		};
-	#pragma pack(pop)
+#pragma pack(pop)
 		static_assert(sizeof(Half) == sizeof(uint16_t));
 	};
 }
@@ -555,7 +555,7 @@ export {
 
 		struct DLLUDM BlobLz4 {
 			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
-			
+
 			BlobLz4() = default;
 			BlobLz4(const BlobLz4 &) = default;
 			BlobLz4(BlobLz4 &&) = default;
@@ -611,7 +611,7 @@ export {
 	namespace udm {
 		struct DLLUDM Reference {
 			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
-			
+
 			Reference() = default;
 			Reference(const std::string &path) : path {path} {}
 			Reference(const Reference &other) : property {other.property}, path {other.path} {}
@@ -629,7 +629,7 @@ export {
 				return res;
 			}
 			bool operator!=(const Reference &other) const { return !operator==(other); }
-		private:
+		  private:
 			friend Data;
 			void InitializeProperty(const LinkedPropertyWrapper &root);
 		};
@@ -700,18 +700,18 @@ import pragma.util;
 // --- START BODY: E:/projects/pragma_cxxmodules/external_libs/util_udm/src/interface/trivial_types.cppm ---
 
 export {
-	#ifdef __linux__
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wreturn-type"
-	#pragma GCC diagnostic ignored "-Wswitch"
-	#elif _WIN32
-	#pragma warning( push )
-	#pragma warning( disable : 4715 )
-	#endif
+#ifdef __linux__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
+#pragma GCC diagnostic ignored "-Wswitch"
+#elif _WIN32
+#pragma warning(push)
+#pragma warning(disable : 4715)
+#endif
 	namespace udm {
 		constexpr std::array<Type, 12> NUMERIC_TYPES = {Type::Int8, Type::UInt8, Type::Int16, Type::UInt16, Type::Int32, Type::UInt32, Type::Int64, Type::UInt64, Type::Float, Type::Double, Type::Boolean, Type::Half};
 		constexpr std::array<Type, 15> GENERIC_TYPES
-		= {Type::Vector2, Type::Vector3, Type::Vector4, Type::Vector2i, Type::Vector3i, Type::Vector4i, Type::Quaternion, Type::EulerAngles, Type::Srgba, Type::HdrColor, Type::Transform, Type::ScaledTransform, Type::Mat4, Type::Mat3x4, Type::Nil};
+		  = {Type::Vector2, Type::Vector3, Type::Vector4, Type::Vector2i, Type::Vector3i, Type::Vector4i, Type::Quaternion, Type::EulerAngles, Type::Srgba, Type::HdrColor, Type::Transform, Type::ScaledTransform, Type::Mat4, Type::Mat3x4, Type::Nil};
 		constexpr std::array<Type, 9> NON_TRIVIAL_TYPES = {Type::String, Type::Utf8String, Type::Blob, Type::BlobLz4, Type::Element, Type::Array, Type::ArrayLz4, Type::Reference, Type::Struct};
 
 		template<typename T>
@@ -725,10 +725,10 @@ export {
 
 		template<typename T>
 		using underlying_numeric_type = std::conditional_t<std::is_same_v<T, Half>, uint16_t,
-		std::conditional_t<is_arithmetic<T>, T,
-			std::conditional_t<is_integral_vector_type<T>, Vector3i::value_type,
-			std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T, Quaternion>, float,
-				std::conditional_t<std::is_same_v<T, Srgba>, uint8_t, std::conditional_t<std::is_same_v<T, HdrColor>, uint16_t, std::conditional_t<std::is_same_v<T, EulerAngles>, float, void>>>>>>>;
+		  std::conditional_t<is_arithmetic<T>, T,
+		    std::conditional_t<is_integral_vector_type<T>, Vector3i::value_type,
+		      std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T, Quaternion>, float,
+		        std::conditional_t<std::is_same_v<T, Srgba>, uint8_t, std::conditional_t<std::is_same_v<T, HdrColor>, uint16_t, std::conditional_t<std::is_same_v<T, EulerAngles>, float, void>>>>>>>;
 
 		template<typename T>
 		constexpr Type type_to_enum();
@@ -918,7 +918,6 @@ export {
 
 		constexpr bool is_trivial_type(Type t) { return !is_non_trivial_type(t) && t != Type::Invalid; }
 
-
 		template<class T>
 		struct tag_t {
 			using type = T;
@@ -1030,7 +1029,7 @@ export {
 			static_assert(NON_TRIVIAL_TYPES.size() == 9, "Update this list when new non-trivial types have been added!");
 		}
 		template<bool ENABLE_NUMERIC = true, bool ENABLE_GENERIC = true, bool ENABLE_NON_TRIVIAL = true, bool ENABLE_DEFAULT_RETURN = true, typename T>
-			requires(ENABLE_NUMERIC || ENABLE_GENERIC || ENABLE_NON_TRIVIAL)
+		    requires(ENABLE_NUMERIC || ENABLE_GENERIC || ENABLE_NON_TRIVIAL)
 		constexpr decltype(auto) visit(Type type, T vs)
 		{
 			if constexpr(ENABLE_NUMERIC) {
@@ -1099,8 +1098,7 @@ export {
 	{
 		constexpr auto type = type_to_enum_s<T>();
 		if constexpr(umath::to_integral(type) > umath::to_integral(Type::Last))
-			[]<bool flag = false>() { static_assert(flag, "Unsupported type!"); }
-		();
+			[]<bool flag = false>() { static_assert(flag, "Unsupported type!"); }();
 		return type;
 	}
 
@@ -1200,12 +1198,12 @@ export {
 		if(is_generic_type(t)) {
 			auto tag = get_generic_tag(t);
 			return std::visit(
-			[&](auto tag) {
-				if constexpr(std::is_same_v<typename decltype(tag)::type, std::monostate>)
-					return static_cast<uint64_t>(0);
-				return sizeof(typename decltype(tag)::type);
-			},
-			tag);
+			  [&](auto tag) {
+				  if constexpr(std::is_same_v<typename decltype(tag)::type, std::monostate>)
+					  return static_cast<uint64_t>(0);
+				  return sizeof(typename decltype(tag)::type);
+			  },
+			  tag);
 		}
 		throw InvalidUsageError {std::string {"UDM type "} + std::string {magic_enum::enum_name(t)} + " has non-constant size!"};
 		static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
@@ -1219,11 +1217,11 @@ export {
 		return udm::type_to_enum<T::value_type>();
 	}
 
-	#ifdef __linux__
-	#pragma GCC diagnostic pop
-	#elif _WIN32
-	#pragma warning( pop )
-	#endif
+#ifdef __linux__
+#pragma GCC diagnostic pop
+#elif _WIN32
+#pragma warning(pop)
+#endif
 }
 
 // --- END PARTITION: E:/projects/pragma_cxxmodules/external_libs/util_udm/src/interface/trivial_types.cppm ---
@@ -1266,7 +1264,7 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires((!std::is_same_v<T0, String> || std::is_same_v<T1, String> || std::is_same_v<T1, Reference>) && std::is_constructible_v<T1, T0> && !std::is_same_v<T1, Srgba> && !std::is_same_v<T1, HdrColor>)
+			    requires((!std::is_same_v<T0, String> || std::is_same_v<T1, String> || std::is_same_v<T1, Reference>) && std::is_constructible_v<T1, T0> && !std::is_same_v<T1, Srgba> && !std::is_same_v<T1, HdrColor>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -1279,7 +1277,7 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, String> && (is_numeric_type(type_to_enum<T1>()) || is_generic_type(type_to_enum<T1>()) || std::is_same_v<T1, Utf8String>) && !std::is_same_v<T1, Nil>)
+			    requires(std::is_same_v<T0, String> && (is_numeric_type(type_to_enum<T1>()) || is_generic_type(type_to_enum<T1>()) || std::is_same_v<T1, Utf8String>) && !std::is_same_v<T1, Nil>)
 			struct TypeConverter<T0, T1> {
 				template<typename T, typename TValue, uint32_t TCount, uint32_t (*TTranslateIdx)(uint32_t) = nullptr>
 				static void parse_value_list(const String &s, T &out)
@@ -1321,24 +1319,24 @@ export {
 					}
 					else if constexpr(std::is_same_v<T1, Half>) {
 						float v1 {};
-	#ifdef _LIBCPP_VERSION
+#ifdef _LIBCPP_VERSION
 						v1 = atof(v0.data());
-	#else
+#else
 						std::from_chars(v0.data(), v0.data() + v0.size(), v1);
-	#endif
+#endif
 						return Half {v1};
 					}
 					else if constexpr(is_arithmetic<T1>) {
 						T1 v1 {};
 
-	#if defined(_LIBCPP_VERSION) //checking if we use clang's stl
+#if defined(_LIBCPP_VERSION) //checking if we use clang's stl
 						if constexpr(std::is_integral_v<T1>)
 							v1 = atoi(v0.data());
 						else
 							v1 = atof(v0.data());
-	#else
+#else
 						std::from_chars(v0.data(), v0.data() + v0.size(), v1);
-	#endif
+#endif
 						return v1;
 					}
 					else if constexpr(std::is_enum_v<T1>) {
@@ -1395,28 +1393,28 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires(std::derived_from<T0, Transform> && (std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
+			    requires(std::derived_from<T0, Transform> && (std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return v0.ToMatrix(); }
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, Srgba> && std::is_same_v<T1, HdrColor>)
+			    requires(std::is_same_v<T0, Srgba> && std::is_same_v<T1, HdrColor>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return T1 {v0[0], v0[1], v0[2]}; }
 			};
 
 			template<typename T0, typename T1>
-				requires(std::derived_from<T0, Quat> && std::is_same_v<T1, Mat3x4>)
+			    requires(std::derived_from<T0, Quat> && std::is_same_v<T1, Mat3x4>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return umat::create(v0); }
 			};
 
 			template<typename T0, typename T1>
-				requires(std::derived_from<T0, EulerAngles> && (std::derived_from<T1, Transform> || std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
+			    requires(std::derived_from<T0, EulerAngles> && (std::derived_from<T1, Transform> || std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -1429,39 +1427,39 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, Vector3> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
+			    requires(std::is_same_v<T0, Vector3> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
 				{
 					return T1 {static_cast<typename T1::value_type>(std::clamp<float>(v0.x * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-					static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-					static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
+					  static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+					  static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
 				}
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, Vector4> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
+			    requires(std::is_same_v<T0, Vector4> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
 				{
 					if constexpr(std::is_same_v<T1, Srgba>) {
 						return T1 {static_cast<typename T1::value_type>(std::clamp<float>(v0.x * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.w * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.w * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
 					}
 					else {
 						return T1 {static_cast<typename T1::value_type>(std::clamp<float>(v0.x * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
 					}
 				}
 			};
 
 			template<typename T0, typename T1>
-				requires((std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>) && (std::is_same_v<T1, Vector3> || std::is_same_v<T1, Vector4>))
+			    requires((std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>) && (std::is_same_v<T1, Vector3> || std::is_same_v<T1, Vector4>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -1475,23 +1473,23 @@ export {
 						}
 						else {
 							return T1 {v0[0] / static_cast<float>(std::numeric_limits<uint8_t>::max()), v0[1] / static_cast<float>(std::numeric_limits<uint8_t>::max()), v0[2] / static_cast<float>(std::numeric_limits<uint8_t>::max()),
-							v0[3] / static_cast<float>(std::numeric_limits<uint8_t>::max())};
+							  v0[3] / static_cast<float>(std::numeric_limits<uint8_t>::max())};
 						}
 					}
 				}
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, T1> && (std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>))
+			    requires(std::is_same_v<T0, T1> && (std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return v0; }
 			};
 
 			template<typename T0, typename T1>
-				requires((std::is_arithmetic_v<T0> || umath::is_vector_type<T0> || umath::is_matrix_type<T0> || std::is_same_v<T0, Quat> || std::is_same_v<T0, EulerAngles> || std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor> || std::is_same_v<T0, Transform>
-						|| std::is_same_v<T0, ScaledTransform> || std::is_same_v<T0, Reference> || std::is_same_v<T0, Half> || std::is_same_v<T0, Nil>)
-				&& std::is_same_v<T1, String>)
+			    requires((std::is_arithmetic_v<T0> || umath::is_vector_type<T0> || umath::is_matrix_type<T0> || std::is_same_v<T0, Quat> || std::is_same_v<T0, EulerAngles> || std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor> || std::is_same_v<T0, Transform>
+			               || std::is_same_v<T0, ScaledTransform> || std::is_same_v<T0, Reference> || std::is_same_v<T0, Half> || std::is_same_v<T0, Nil>)
+			      && std::is_same_v<T1, String>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -1529,7 +1527,7 @@ export {
 			return detail::TypeConverter<TFrom, TTo>::is_convertible;
 		}
 		template<typename TFrom, typename TTo>
-			requires(is_convertible<TFrom, TTo>())
+		    requires(is_convertible<TFrom, TTo>())
 		constexpr TTo convert(const TFrom &from)
 		{
 			return detail::TypeConverter<TFrom, TTo>::convert(from);
@@ -1580,11 +1578,11 @@ export {
 		}
 		return false;
 	}
-	#ifdef _WIN32
-	#pragma warning(pop)
-	#elif defined(__clang__)
-	#pragma clang diagnostic pop
-	#endif
+#ifdef _WIN32
+#pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }
 
 // --- END PARTITION: E:/projects/pragma_cxxmodules/external_libs/util_udm/src/interface/conversion.cppm ---
@@ -1650,7 +1648,7 @@ export {
 			}
 			std::vector<Type> types;
 			std::vector<String> names;
-		private:
+		  private:
 			template<typename T1, typename T2, typename... T>
 			void DefineTypes(std::initializer_list<std::string>::iterator it);
 			template<typename T>
@@ -1682,9 +1680,10 @@ export {
 			Struct &operator=(Struct &&) = default;
 			template<class T>
 			Struct &operator=(const T &other);
-			void Assign(const void *inData, size_t inSize) {
+			void Assign(const void *inData, size_t inSize)
+			{
 				auto sz = description.GetDataSizeRequirement();
-				if (inSize != sz)
+				if(inSize != sz)
 					throw LogicError {"Attempted to assign data of size " + std::to_string(inSize) + " to struct of size " + std::to_string(sz) + "!"};
 				if(data.size() != sz)
 					throw ImplementationError {"Size of struct data does not match its types!"};
@@ -1745,8 +1744,8 @@ export namespace udm {
 	// TODO: Once the msvc compiler issues are fixed, these functions can be removed and replaced with the
 	// underlying function calls.
 	template<typename T>
-		PProperty create_property(T &&value);
-	template<const char*>
+	PProperty create_property(T &&value);
+	template<const char *>
 	PProperty create_property(const char *v)
 	{
 		return create_property(std::string_view(v));
@@ -1763,25 +1762,28 @@ export namespace udm {
 	DataValue get_property_value(Property &prop);
 	DataValue get_property_value(PropertyWrapper &prop);
 	template<typename T>
-		T &get_property_value(Property &prop);
+	T &get_property_value(Property &prop);
 	template<typename T>
-		T &get_property_value(PropertyWrapper &prop);
+	T &get_property_value(PropertyWrapper &prop);
 	template<typename T>
-		T *get_property_value_ptr(Property &prop);
+	T *get_property_value_ptr(Property &prop);
 	template<typename T>
-		std::optional<T> to_property_value(Property &prop);
+	std::optional<T> to_property_value(Property &prop);
 
 	// Any struct or class that isn't a UDM type is assumed to be a struct type
 	template<typename T>
-		concept is_struct_type = std::is_class_v<T> && type_to_enum_s<T>() == udm::Type::Invalid && !util::is_specialization<T, std::vector>::value && !util::is_specialization<T, std::shared_ptr>::value && !util::is_specialization_array<T>::value;
-	
-	template<typename T> requires(!is_struct_type<T>)
-		void set_property_value(Property &prop, T &&value);
-	template<typename T> requires(is_struct_type<T>)
-		void set_property_value(Property &prop, T &value) {
-			// Not supported(?)
-		}
-	template<const char*>
+	concept is_struct_type = std::is_class_v<T> && type_to_enum_s<T>() == udm::Type::Invalid && !util::is_specialization<T, std::vector>::value && !util::is_specialization<T, std::shared_ptr>::value && !util::is_specialization_array<T>::value;
+
+	template<typename T>
+	    requires(!is_struct_type<T>)
+	void set_property_value(Property &prop, T &&value);
+	template<typename T>
+	    requires(is_struct_type<T>)
+	void set_property_value(Property &prop, T &value)
+	{
+		// Not supported(?)
+	}
+	template<const char *>
 	void set_property_value(Property &prop, const char *v)
 	{
 		set_property_value(prop, std::string_view(v));
@@ -1793,19 +1795,20 @@ export namespace udm {
 	}
 
 	template<class T>
-		BlobResult get_property_blob_data(Property &prop, T &v);
+	BlobResult get_property_blob_data(Property &prop, T &v);
 
 	Type get_array_value_type(const Array &a);
 	template<typename T>
-		T &get_array_value(Array &a, uint32_t idx);
+	T &get_array_value(Array &a, uint32_t idx);
 	template<typename T>
-		T *get_array_value_ptr(Array &a, uint32_t idx);
+	T *get_array_value_ptr(Array &a, uint32_t idx);
 
 	uint16_t get_array_structured_data_info_data_size_requirement(Array &a);
 	// Since we can't know all struct types ahead of time, we handle them separately
-	template<typename T> requires(!is_struct_type<T>)
-		void set_array_value(Array &a, uint32_t idx, T &&v);
-	template<const char*>
+	template<typename T>
+	    requires(!is_struct_type<T>)
+	void set_array_value(Array &a, uint32_t idx, T &&v);
+	template<const char *>
 	void set_array_value(Array &a, uint32_t idx, const char *v)
 	{
 		set_array_value(a, idx, std::string_view(v));
@@ -1824,9 +1827,9 @@ export namespace udm {
 	template<typename T>
 	class ArrayIterator;
 	template<typename T>
-		void get_array_begin_iterator(Array &a, ArrayIterator<T> &outIt);
+	void get_array_begin_iterator(Array &a, ArrayIterator<T> &outIt);
 	template<typename T>
-		void get_array_end_iterator(Array &a, ArrayIterator<T> &outIt);
+	void get_array_end_iterator(Array &a, ArrayIterator<T> &outIt);
 
 	PProperty *find_element_child(Element &e, const std::string_view &key);
 	void remove_element_child(Element &e, const std::string_view &key);
@@ -1834,8 +1837,8 @@ export namespace udm {
 	void set_element_child_value(Element &e, const std::string_view &key, const PProperty &prop);
 
 	template<typename T>
-		void set_element_value(Element &child, T &&v);
-	template<const char*>
+	void set_element_value(Element &child, T &&v);
+	template<const char *>
 	void set_element_value(Element &child, const char *v)
 	{
 		set_element_value(child, std::string_view(v));
@@ -1850,7 +1853,8 @@ export namespace udm {
 
 	void set_struct_value(Struct &strct, const void *inData, size_t inSize);
 
-	template<typename T> requires(is_struct_type<T>)
+	template<typename T>
+	    requires(is_struct_type<T>)
 	void set_array_value(Array &a, uint32_t idx, T &v)
 	{
 		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -1901,7 +1905,7 @@ export {
 		class ArrayIterator;
 		struct DLLUDM PropertyWrapper {
 			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
-			
+
 			PropertyWrapper() = default;
 			explicit PropertyWrapper(Property &o);
 			PropertyWrapper(const PropertyWrapper &other);
@@ -2061,7 +2065,7 @@ export {
 
 			LinkedPropertyWrapper *GetLinked();
 			const LinkedPropertyWrapper *GetLinked() const { return const_cast<PropertyWrapper *>(this)->GetLinked(); };
-		protected:
+		  protected:
 			bool IsArrayItem(bool includeIfElementOfArrayItem) const;
 			bool linked = false;
 		};
@@ -2232,7 +2236,7 @@ export {
 						auto &parent = wpParent;
 						switch(get_property_type(parent)) {
 						case Type::Element:
-								erase_element_child(*static_cast<Element *>(get_property_value(parent)), el);
+							erase_element_child(*static_cast<Element *>(get_property_value(parent)), el);
 							break;
 						/*case Type::Array:
 						if(arrayIndex == std::numeric_limits<uint32_t>::max())
@@ -2240,7 +2244,8 @@ export {
 						(*static_cast<Array*>(parent->value))[arrayIndex] = v;
 						break;*/
 						default:
-							throw InvalidUsageError {"Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
+							throw InvalidUsageError {
+							  "Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
 						}
 					}
 					else
@@ -2301,18 +2306,20 @@ export {
 						throw InvalidUsageError {"Attempted to change value of element property without a valid parent, this is not allowed!"};
 					auto &parent = wpParent;
 					switch(get_property_type(parent)) {
-					case Type::Element: {
-						auto *valParent = static_cast<Element *>(get_property_value(parent));
-						set_element_value(*valParent, v);
-						break;
-					}
+					case Type::Element:
+						{
+							auto *valParent = static_cast<Element *>(get_property_value(parent));
+							set_element_value(*valParent, v);
+							break;
+						}
 					/*case Type::Array:
 						if(arrayIndex == std::numeric_limits<uint32_t>::max())
 							throw std::runtime_error{"Element has parent of type " +std::string{magic_enum::enum_name(parent->type)} +", but is not indexed!"};
 						(*static_cast<Array*>(parent->value))[arrayIndex] = v;
 						break;*/
 					default:
-						throw InvalidUsageError {"Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
+						throw InvalidUsageError {
+						  "Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
 					}
 				}
 				else
@@ -2388,7 +2395,7 @@ export {
 					auto *el = get_array_value_ptr<Element>(a, arrayIndex);
 					if(!el)
 						return BlobResult::InvalidProperty;
-					auto *child = find_element_child(*el,static_cast<const LinkedPropertyWrapper &>(*this).propName);
+					auto *child = find_element_child(*el, static_cast<const LinkedPropertyWrapper &>(*this).propName);
 					if(child)
 						return get_property_blob_data<T>(**child, v);
 					return BlobResult::InvalidProperty;
@@ -2555,7 +2562,7 @@ export {
 	namespace udm {
 		template<typename T>
 		class ArrayIterator {
-		public:
+		  public:
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = T &;
 			using difference_type = std::ptrdiff_t;
@@ -2575,7 +2582,7 @@ export {
 			bool operator!=(const ArrayIterator &other) const;
 
 			udm::LinkedPropertyWrapper &GetProperty() { return m_curProperty; }
-		private:
+		  private:
 			udm::LinkedPropertyWrapper m_curProperty;
 		};
 
@@ -2722,7 +2729,7 @@ export {
 		};
 
 		class DLLUDM ElementIterator {
-		public:
+		  public:
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = ElementIteratorPair &;
 			using difference_type = std::ptrdiff_t;
@@ -2739,7 +2746,7 @@ export {
 			pointer operator->();
 			bool operator==(const ElementIterator &other) const;
 			bool operator!=(const ElementIterator &other) const;
-		private:
+		  private:
 			util::StringMap<PProperty> *m_propertyMap = nullptr;
 			util::StringMap<PProperty>::iterator m_iterator {};
 			ElementIteratorPair m_pair;
@@ -2749,7 +2756,7 @@ export {
 			ElementIteratorWrapper(LinkedPropertyWrapper &prop);
 			ElementIterator begin();
 			ElementIterator end();
-		private:
+		  private:
 			LinkedPropertyWrapper m_prop;
 		};
 
@@ -2779,10 +2786,10 @@ export {
 
 			ElementIterator begin();
 			ElementIterator end();
-		private:
+		  private:
 			friend void erase_element_child(Element &e, Element &child);
 			template<typename T>
-				friend void set_element_value(Element &child, T &&v);
+			friend void set_element_value(Element &child, T &&v);
 
 			template<typename T>
 			void SetValue(Element &child, T &&v);
@@ -2792,9 +2799,7 @@ export {
 		template<typename T>
 		void Element::SetValue(Element &child, T &&v)
 		{
-			auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) {
-				return get_property_type(*pair.second) == Type::Element && get_property_value(*pair.second) == &child;
-			});
+			auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) { return get_property_type(*pair.second) == Type::Element && get_property_value(*pair.second) == &child; });
 			if(it == children.end())
 				return;
 			children[it->first] = create_property<T>(std::forward<T>(v));
@@ -2912,7 +2917,7 @@ export {
 
 			using Range = std::tuple<uint32_t, uint32_t, uint32_t>;
 			void Resize(uint32_t newSize, Range r0, Range r1, bool defaultInitializeNewValues);
-		protected:
+		  protected:
 			friend Property;
 			friend PropertyWrapper;
 			virtual void Clear();
@@ -2952,7 +2957,7 @@ export {
 			using Array::GetStructuredDataInfo;
 
 			static constexpr bool IsValueTypeSupported(Type type);
-		private:
+		  private:
 			friend Property;
 			friend PropertyWrapper;
 			friend AsciiReader;
@@ -3202,7 +3207,7 @@ export {
 			static Blob GetBlobData(const BlobLz4 &blob);
 			static uint32_t GetStringPrefixSizeRequirement(const String &str);
 			static uint32_t GetStringSizeRequirement(const String &str);
-		private:
+		  private:
 			friend PropertyWrapper;
 			bool ReadStructHeader(IFile &f, StructDescription &strct);
 			static void WriteStructHeader(IFile &f, const StructDescription &strct);
@@ -3525,9 +3530,9 @@ export {
 		DLLUDM bool is_whitespace_character(char c);
 		DLLUDM bool is_control_character(char c);
 		DLLUDM bool does_key_require_quotes(const std::string_view &key);
-		
+
 		DLLUDM void sanitize_key_name(std::string &key);
-		
+
 		constexpr size_t size_of_base_type(Type t)
 		{
 			if(is_non_trivial_type(t)) {
@@ -3606,7 +3611,7 @@ export import :types;
 export {
 	namespace udm {
 		class DLLUDM Data {
-		public:
+		  public:
 			static constexpr auto KEY_ASSET_TYPE = "assetType";
 			static constexpr auto KEY_ASSET_VERSION = "assetVersion";
 			static constexpr auto KEY_ASSET_DATA = "assetData";
@@ -3656,7 +3661,7 @@ export {
 
 			static std::string ReadKey(IFile &f);
 			static void WriteKey(IFile &f, const std::string &key);
-		private:
+		  private:
 			friend AsciiReader;
 			friend ArrayLz4;
 			bool ValidateHeaderProperties();
@@ -3692,168 +3697,191 @@ import :wrapper_funcs;
 export {
 	// Utility functions to prevent circular dependencies
 	template<typename T>
-		udm::PProperty udm::create_property(T &&value) {
+	udm::PProperty udm::create_property(T &&value)
+	{
 		return Property::Create<T>(std::forward<T>(value));
 	}
-	udm::PProperty udm::copy_property(const Property &prop) {return std::make_shared<Property>(prop);}
-	udm::Type udm::get_property_type(const Property &prop) {return prop.type;}
+	udm::PProperty udm::copy_property(const Property &prop) { return std::make_shared<Property>(prop); }
+	udm::Type udm::get_property_type(const Property &prop) { return prop.type; }
 
-	udm::Type udm::get_property_type(const PropertyWrapper &prop) {return prop->type;}
-	bool udm::is_property_type(const Property &prop, Type type) {return prop.IsType(type);}
-	udm::DataValue udm::get_property_value(Property &prop) {return prop.value;}
-	udm::DataValue udm::get_property_value(PropertyWrapper &prop) {return prop->value;}
+	udm::Type udm::get_property_type(const PropertyWrapper &prop) { return prop->type; }
+	bool udm::is_property_type(const Property &prop, Type type) { return prop.IsType(type); }
+	udm::DataValue udm::get_property_value(Property &prop) { return prop.value; }
+	udm::DataValue udm::get_property_value(PropertyWrapper &prop) { return prop->value; }
 	template<typename T>
-		T &udm::get_property_value(Property &prop) {return prop.GetValue<T>();}
-	template<typename T>
-		T &udm::get_property_value(PropertyWrapper &prop) {return prop->GetValue<T>();}
-	template<typename T>
-		T *udm::get_property_value_ptr(Property &prop) {return prop.GetValuePtr<T>();}
-	template<typename T>
-		std::optional<T> udm::to_property_value(Property &prop) {return prop.ToValue<T>();}
-	template<typename T> requires(!is_struct_type<T>)
-		void udm::set_property_value(Property &prop, T &&value) {prop = std::forward<T>(value);}
-	template<class T>
-		udm::BlobResult udm::get_property_blob_data(Property &prop, T &v) {return prop.GetBlobData<T>(v);}
-
-	udm::Type udm::get_array_value_type(const Array &a) {return a.GetValueType();}
-	uint16_t udm::get_array_structured_data_info_data_size_requirement(Array &a)
+	T &udm::get_property_value(Property &prop)
 	{
-		return a.GetStructuredDataInfo()->GetDataSizeRequirement();
+		return prop.GetValue<T>();
 	}
 	template<typename T>
-		T &udm::get_array_value(Array &a, uint32_t idx) {return a.GetValue<T>(idx);}
+	T &udm::get_property_value(PropertyWrapper &prop)
+	{
+		return prop->GetValue<T>();
+	}
 	template<typename T>
-		T *udm::get_array_value_ptr(Array &a, uint32_t idx) {return a.GetValuePtr<T>(idx);}
-	template<typename T> requires(!is_struct_type<T>)
-		void udm::set_array_value(Array &a, uint32_t idx, T &&v) {a.SetValue<T>(idx, std::forward<T>(v));}
-	uint32_t udm::get_array_value_size(const Array &a) {return a.GetValueSize();}
-	uint32_t udm::get_array_size(const Array &a) {return a.GetSize();}
-	void *udm::get_array_values(Array &a) {return a.GetValues();}
-	bool udm::is_array_value_type(const Array &a, Type pvalueType) {return a.IsValueType(pvalueType);}
+	T *udm::get_property_value_ptr(Property &prop)
+	{
+		return prop.GetValuePtr<T>();
+	}
+	template<typename T>
+	std::optional<T> udm::to_property_value(Property &prop)
+	{
+		return prop.ToValue<T>();
+	}
+	template<typename T>
+	    requires(!is_struct_type<T>)
+	void udm::set_property_value(Property &prop, T &&value)
+	{
+		prop = std::forward<T>(value);
+	}
+	template<class T>
+	udm::BlobResult udm::get_property_blob_data(Property &prop, T &v)
+	{
+		return prop.GetBlobData<T>(v);
+	}
+
+	udm::Type udm::get_array_value_type(const Array &a) { return a.GetValueType(); }
+	uint16_t udm::get_array_structured_data_info_data_size_requirement(Array &a) { return a.GetStructuredDataInfo()->GetDataSizeRequirement(); }
+	template<typename T>
+	T &udm::get_array_value(Array &a, uint32_t idx)
+	{
+		return a.GetValue<T>(idx);
+	}
+	template<typename T>
+	T *udm::get_array_value_ptr(Array &a, uint32_t idx)
+	{
+		return a.GetValuePtr<T>(idx);
+	}
+	template<typename T>
+	    requires(!is_struct_type<T>)
+	void udm::set_array_value(Array &a, uint32_t idx, T &&v)
+	{
+		a.SetValue<T>(idx, std::forward<T>(v));
+	}
+	uint32_t udm::get_array_value_size(const Array &a) { return a.GetValueSize(); }
+	uint32_t udm::get_array_size(const Array &a) { return a.GetSize(); }
+	void *udm::get_array_values(Array &a) { return a.GetValues(); }
+	bool udm::is_array_value_type(const Array &a, Type pvalueType) { return a.IsValueType(pvalueType); }
 
 	template<typename T>
-		void udm::get_array_begin_iterator(Array &a, ArrayIterator<T> &outIt) {outIt = a.begin<T>();}
+	void udm::get_array_begin_iterator(Array &a, ArrayIterator<T> &outIt)
+	{
+		outIt = a.begin<T>();
+	}
 	template<typename T>
-		void udm::get_array_end_iterator(Array &a, ArrayIterator<T> &outIt) {outIt = a.end<T>();}
+	void udm::get_array_end_iterator(Array &a, ArrayIterator<T> &outIt)
+	{
+		outIt = a.end<T>();
+	}
 
-	udm::PProperty *udm::find_element_child(Element &e, const std::string_view &key) {
+	udm::PProperty *udm::find_element_child(Element &e, const std::string_view &key)
+	{
 		auto it = e.children.find(key);
-		if (it == e.children.end())
+		if(it == e.children.end())
 			return nullptr;
 		return &it->second;
 	}
-	void udm::remove_element_child(Element &e, const std::string_view &key) {
+	void udm::remove_element_child(Element &e, const std::string_view &key)
+	{
 		auto it = e.children.find(key);
-		if (it == e.children.end())
+		if(it == e.children.end())
 			return;
 		e.children.erase(it);
 	}
-	void udm::erase_element_child(Element &e, Element &child) {
-		e.EraseValue(child);
-	}
-	void udm::set_element_child_value(Element &e, const std::string_view &key, const PProperty &prop)
-	{
-		e.children[std::string{key}] = prop;
-	}
+	void udm::erase_element_child(Element &e, Element &child) { e.EraseValue(child); }
+	void udm::set_element_child_value(Element &e, const std::string_view &key, const PProperty &prop) { e.children[std::string {key}] = prop; }
 	template<typename T>
-		void udm::set_element_value(Element &child, T &&v) {
+	void udm::set_element_value(Element &child, T &&v)
+	{
 		child.SetValue(child, std::forward<T>(v));
 	}
-	udm::PropertyWrapper &udm::get_element_parent_property(Element &e) {
-		return e.parentProperty;
-	}
+	udm::PropertyWrapper &udm::get_element_parent_property(Element &e) { return e.parentProperty; }
 
-	void udm::set_struct_value(Struct &strct, const void *inData, size_t inSize) {
-		strct.Assign(inData, inSize);
-	}
+	void udm::set_struct_value(Struct &strct, const void *inData, size_t inSize) { strct.Assign(inData, inSize); }
 
 	// The code below will force-instantiate the template functions for all UDM types
 	namespace udm::impl {
 		// export to prevent the function from being optimized away
-	#ifdef __linux__
-	__attribute__((visibility("default")))
-	#else
-	__declspec(dllexport)
-	#endif
-		void instantiate()
+#ifdef __linux__
+		__attribute__((visibility("default")))
+#else
+		__declspec(dllexport)
+#endif
+		void
+		instantiate()
 		{
-			udm::visit(udm::Type{}, [](auto tag) {
+			udm::visit(udm::Type {}, [](auto tag) {
 				using T = typename decltype(tag)::type;
-				auto &v = *static_cast<T*>(nullptr);
+				auto &v = *static_cast<T *>(nullptr);
 
-				udm::set_array_value<T>(*static_cast<udm::Array*>(nullptr), 0, std::forward<T>(v));
-				udm::set_array_value<T &>(*static_cast<udm::Array*>(nullptr), 0, std::forward<T &>(v));
-				udm::set_array_value<const T &>(*static_cast<udm::Array*>(nullptr), 0, std::forward<const T &>(v));
+				udm::set_array_value<T>(*static_cast<udm::Array *>(nullptr), 0, std::forward<T>(v));
+				udm::set_array_value<T &>(*static_cast<udm::Array *>(nullptr), 0, std::forward<T &>(v));
+				udm::set_array_value<const T &>(*static_cast<udm::Array *>(nullptr), 0, std::forward<const T &>(v));
 
 				udm::create_property<T>(std::forward<T>(v));
 
-				if constexpr(
-					!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Blob> && !std::is_same_v<T, udm::BlobLz4> &&
-					!std::is_same_v<T, udm::UInt8>
-				) {
-					std::vector<T> &vec = *static_cast<std::vector<T>*>(nullptr);
+				if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Blob> && !std::is_same_v<T, udm::BlobLz4> && !std::is_same_v<T, udm::UInt8>) {
+					std::vector<T> &vec = *static_cast<std::vector<T> *>(nullptr);
 					udm::create_property<std::vector<T>>({});
-					udm::create_property<std::vector<T>&>(vec);
-					udm::create_property<const std::vector<T>&>(vec);
+					udm::create_property<std::vector<T> &>(vec);
+					udm::create_property<const std::vector<T> &>(vec);
 
-					udm::set_property_value<std::vector<T>>(*static_cast<udm::Property*>(nullptr), {});
-					udm::set_property_value<std::vector<T>&>(*static_cast<udm::Property*>(nullptr), vec);
-					udm::set_property_value<const std::vector<T>&>(*static_cast<udm::Property*>(nullptr), vec);
+					udm::set_property_value<std::vector<T>>(*static_cast<udm::Property *>(nullptr), {});
+					udm::set_property_value<std::vector<T> &>(*static_cast<udm::Property *>(nullptr), vec);
+					udm::set_property_value<const std::vector<T> &>(*static_cast<udm::Property *>(nullptr), vec);
 				}
 
-				if constexpr(
-					!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>
-				) {
-					udm::to_property_value<std::vector<T>>(*static_cast<udm::Property*>(nullptr));
+				if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>) {
+					udm::to_property_value<std::vector<T>>(*static_cast<udm::Property *>(nullptr));
 
 					std::vector<T> blobData;
-					udm::get_property_blob_data(*static_cast<udm::Property*>(nullptr), blobData);
+					udm::get_property_blob_data(*static_cast<udm::Property *>(nullptr), blobData);
 				}
 
 				if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::UInt8>) {
-					std::vector<T> &vec = *static_cast<std::vector<T>*>(nullptr);
-					udm::set_element_value<std::vector<T>>(*static_cast<udm::Element*>(nullptr), {});
-					udm::set_element_value<std::vector<T>&>(*static_cast<udm::Element*>(nullptr), vec);
-					udm::set_element_value<const std::vector<T>&>(*static_cast<udm::Element*>(nullptr), vec);
+					std::vector<T> &vec = *static_cast<std::vector<T> *>(nullptr);
+					udm::set_element_value<std::vector<T>>(*static_cast<udm::Element *>(nullptr), {});
+					udm::set_element_value<std::vector<T> &>(*static_cast<udm::Element *>(nullptr), vec);
+					udm::set_element_value<const std::vector<T> &>(*static_cast<udm::Element *>(nullptr), vec);
 				}
 
 				if constexpr(!std::is_same_v<T, udm::UInt8> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>) {
-					std::vector<T> &vec = *static_cast<std::vector<T>*>(nullptr);
-					udm::set_array_value<std::vector<T>>(*static_cast<udm::Array*>(nullptr), 0u, {});
-					udm::set_array_value<std::vector<T>&>(*static_cast<udm::Array*>(nullptr), 0u, vec);
-					udm::set_array_value<const std::vector<T>&>(*static_cast<udm::Array*>(nullptr), 0u, vec);
+					std::vector<T> &vec = *static_cast<std::vector<T> *>(nullptr);
+					udm::set_array_value<std::vector<T>>(*static_cast<udm::Array *>(nullptr), 0u, {});
+					udm::set_array_value<std::vector<T> &>(*static_cast<udm::Array *>(nullptr), 0u, vec);
+					udm::set_array_value<const std::vector<T> &>(*static_cast<udm::Array *>(nullptr), 0u, vec);
 				}
 
-				udm::get_property_value<T>(*static_cast<udm::Property*>(nullptr));
-				udm::get_property_value<T>(*static_cast<udm::PropertyWrapper*>(nullptr));
-				udm::get_property_value_ptr<T>(*static_cast<udm::Property*>(nullptr));
-				udm::to_property_value<T>(*static_cast<udm::Property*>(nullptr));
-				udm::set_property_value(*static_cast<udm::Property*>(nullptr), v);
+				udm::get_property_value<T>(*static_cast<udm::Property *>(nullptr));
+				udm::get_property_value<T>(*static_cast<udm::PropertyWrapper *>(nullptr));
+				udm::get_property_value_ptr<T>(*static_cast<udm::Property *>(nullptr));
+				udm::to_property_value<T>(*static_cast<udm::Property *>(nullptr));
+				udm::set_property_value(*static_cast<udm::Property *>(nullptr), v);
 
-				udm::get_array_value<T>(*static_cast<udm::Array*>(nullptr), 0u);
-				udm::get_array_value_ptr<T>(*static_cast<udm::Array*>(nullptr), 0u);
-				udm::set_array_value<T>(*static_cast<udm::Array*>(nullptr), 0u, std::forward<T>(v));
-				udm::get_array_begin_iterator<T>(*static_cast<udm::Array*>(nullptr), *static_cast<udm::ArrayIterator<T>*>(nullptr));
-				udm::get_array_end_iterator<T>(*static_cast<udm::Array*>(nullptr), *static_cast<udm::ArrayIterator<T>*>(nullptr));
+				udm::get_array_value<T>(*static_cast<udm::Array *>(nullptr), 0u);
+				udm::get_array_value_ptr<T>(*static_cast<udm::Array *>(nullptr), 0u);
+				udm::set_array_value<T>(*static_cast<udm::Array *>(nullptr), 0u, std::forward<T>(v));
+				udm::get_array_begin_iterator<T>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<T> *>(nullptr));
+				udm::get_array_end_iterator<T>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<T> *>(nullptr));
 
-				udm::set_element_value<T>(*static_cast<udm::Element*>(nullptr), std::forward<T>(v));
+				udm::set_element_value<T>(*static_cast<udm::Element *>(nullptr), std::forward<T>(v));
 
-				udm::set_element_value<const T &>(*static_cast<udm::Element*>(nullptr), std::forward<const T &>(v));
-				udm::set_element_value<T &>(*static_cast<udm::Element*>(nullptr), std::forward<T &>(v));
-				udm::set_property_value<const T &>(*static_cast<udm::Property*>(nullptr), std::forward<const T &>(v));
+				udm::set_element_value<const T &>(*static_cast<udm::Element *>(nullptr), std::forward<const T &>(v));
+				udm::set_element_value<T &>(*static_cast<udm::Element *>(nullptr), std::forward<T &>(v));
+				udm::set_property_value<const T &>(*static_cast<udm::Property *>(nullptr), std::forward<const T &>(v));
 			});
-			udm::get_array_begin_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array*>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper>*>(nullptr));
-			udm::get_array_end_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array*>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper>*>(nullptr));
+			udm::get_array_begin_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper> *>(nullptr));
+			udm::get_array_end_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper> *>(nullptr));
 
 			udm::create_property<std::string_view>({});
-			udm::set_property_value<std::string_view>(*static_cast<udm::Property*>(nullptr), {});
-			udm::set_array_value<std::string_view>(*static_cast<udm::Array*>(nullptr), 0u,{});
-			udm::set_element_value<std::string_view>(*static_cast<udm::Element*>(nullptr), {});
+			udm::set_property_value<std::string_view>(*static_cast<udm::Property *>(nullptr), {});
+			udm::set_array_value<std::string_view>(*static_cast<udm::Array *>(nullptr), 0u, {});
+			udm::set_element_value<std::string_view>(*static_cast<udm::Element *>(nullptr), {});
 
-			auto &prop = *static_cast<udm::PProperty*>(nullptr);
-			udm::set_property_value<udm::PProperty>(*static_cast<udm::Property*>(nullptr), {});
-			udm::set_property_value<udm::PProperty&>(*static_cast<udm::Property*>(nullptr), prop);
-			udm::set_property_value<const udm::PProperty&>(*static_cast<udm::Property*>(nullptr), prop);
+			auto &prop = *static_cast<udm::PProperty *>(nullptr);
+			udm::set_property_value<udm::PProperty>(*static_cast<udm::Property *>(nullptr), {});
+			udm::set_property_value<udm::PProperty &>(*static_cast<udm::Property *>(nullptr), prop);
+			udm::set_property_value<const udm::PProperty &>(*static_cast<udm::Property *>(nullptr), prop);
 		}
 	}
 }
@@ -3895,4 +3923,3 @@ export import :util;
 // (no body found in original file)
 
 // --- END PARTITION: E:/projects/pragma_cxxmodules/external_libs/util_udm/src/interface/udm.cppm ---
-

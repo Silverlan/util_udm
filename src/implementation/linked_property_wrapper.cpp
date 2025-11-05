@@ -3,7 +3,6 @@
 
 module;
 
-
 #include <lz4.h>
 #include <cassert>
 

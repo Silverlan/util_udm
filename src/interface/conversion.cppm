@@ -3,7 +3,6 @@
 
 module;
 
-
 export module pragma.udm:conversion;
 
 import :reference;
@@ -31,7 +30,7 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires((!std::is_same_v<T0, String> || std::is_same_v<T1, String> || std::is_same_v<T1, Reference>) && std::is_constructible_v<T1, T0> && !std::is_same_v<T1, Srgba> && !std::is_same_v<T1, HdrColor>)
+			    requires((!std::is_same_v<T0, String> || std::is_same_v<T1, String> || std::is_same_v<T1, Reference>) && std::is_constructible_v<T1, T0> && !std::is_same_v<T1, Srgba> && !std::is_same_v<T1, HdrColor>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -44,7 +43,7 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, String> && (is_numeric_type(type_to_enum<T1>()) || is_generic_type(type_to_enum<T1>()) || std::is_same_v<T1, Utf8String>) && !std::is_same_v<T1, Nil>)
+			    requires(std::is_same_v<T0, String> && (is_numeric_type(type_to_enum<T1>()) || is_generic_type(type_to_enum<T1>()) || std::is_same_v<T1, Utf8String>) && !std::is_same_v<T1, Nil>)
 			struct TypeConverter<T0, T1> {
 				template<typename T, typename TValue, uint32_t TCount, uint32_t (*TTranslateIdx)(uint32_t) = nullptr>
 				static void parse_value_list(const String &s, T &out)
@@ -86,24 +85,24 @@ export {
 					}
 					else if constexpr(std::is_same_v<T1, Half>) {
 						float v1 {};
-	#ifdef _LIBCPP_VERSION
+#ifdef _LIBCPP_VERSION
 						v1 = atof(v0.data());
-	#else
+#else
 						std::from_chars(v0.data(), v0.data() + v0.size(), v1);
-	#endif
+#endif
 						return Half {v1};
 					}
 					else if constexpr(is_arithmetic<T1>) {
 						T1 v1 {};
 
-	#if defined(_LIBCPP_VERSION) //checking if we use clang's stl
+#if defined(_LIBCPP_VERSION) //checking if we use clang's stl
 						if constexpr(std::is_integral_v<T1>)
 							v1 = atoi(v0.data());
 						else
 							v1 = atof(v0.data());
-	#else
+#else
 						std::from_chars(v0.data(), v0.data() + v0.size(), v1);
-	#endif
+#endif
 						return v1;
 					}
 					else if constexpr(std::is_enum_v<T1>) {
@@ -160,28 +159,28 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires(std::derived_from<T0, Transform> && (std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
+			    requires(std::derived_from<T0, Transform> && (std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return v0.ToMatrix(); }
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, Srgba> && std::is_same_v<T1, HdrColor>)
+			    requires(std::is_same_v<T0, Srgba> && std::is_same_v<T1, HdrColor>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return T1 {v0[0], v0[1], v0[2]}; }
 			};
 
 			template<typename T0, typename T1>
-				requires(std::derived_from<T0, Quat> && std::is_same_v<T1, Mat3x4>)
+			    requires(std::derived_from<T0, Quat> && std::is_same_v<T1, Mat3x4>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return umat::create(v0); }
 			};
 
 			template<typename T0, typename T1>
-				requires(std::derived_from<T0, EulerAngles> && (std::derived_from<T1, Transform> || std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
+			    requires(std::derived_from<T0, EulerAngles> && (std::derived_from<T1, Transform> || std::is_same_v<T1, Mat4> || std::is_same_v<T1, Mat3x4>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -194,39 +193,39 @@ export {
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, Vector3> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
+			    requires(std::is_same_v<T0, Vector3> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
 				{
 					return T1 {static_cast<typename T1::value_type>(std::clamp<float>(v0.x * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-					static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-					static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
+					  static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+					  static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
 				}
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, Vector4> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
+			    requires(std::is_same_v<T0, Vector4> && (std::is_same_v<T1, Srgba> || std::is_same_v<T1, HdrColor>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
 				{
 					if constexpr(std::is_same_v<T1, Srgba>) {
 						return T1 {static_cast<typename T1::value_type>(std::clamp<float>(v0.x * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.w * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.w * std::numeric_limits<typename T1::value_type>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
 					}
 					else {
 						return T1 {static_cast<typename T1::value_type>(std::clamp<float>(v0.x * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
-						static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.y * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max())),
+						  static_cast<typename T1::value_type>(std::clamp<float>(v0.z * std::numeric_limits<uint8_t>::max(), 0, std::numeric_limits<typename T1::value_type>::max()))};
 					}
 				}
 			};
 
 			template<typename T0, typename T1>
-				requires((std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>) && (std::is_same_v<T1, Vector3> || std::is_same_v<T1, Vector4>))
+			    requires((std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>) && (std::is_same_v<T1, Vector3> || std::is_same_v<T1, Vector4>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -240,23 +239,23 @@ export {
 						}
 						else {
 							return T1 {v0[0] / static_cast<float>(std::numeric_limits<uint8_t>::max()), v0[1] / static_cast<float>(std::numeric_limits<uint8_t>::max()), v0[2] / static_cast<float>(std::numeric_limits<uint8_t>::max()),
-							v0[3] / static_cast<float>(std::numeric_limits<uint8_t>::max())};
+							  v0[3] / static_cast<float>(std::numeric_limits<uint8_t>::max())};
 						}
 					}
 				}
 			};
 
 			template<typename T0, typename T1>
-				requires(std::is_same_v<T0, T1> && (std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>))
+			    requires(std::is_same_v<T0, T1> && (std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor>))
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0) { return v0; }
 			};
 
 			template<typename T0, typename T1>
-				requires((std::is_arithmetic_v<T0> || umath::is_vector_type<T0> || umath::is_matrix_type<T0> || std::is_same_v<T0, Quat> || std::is_same_v<T0, EulerAngles> || std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor> || std::is_same_v<T0, Transform>
-						|| std::is_same_v<T0, ScaledTransform> || std::is_same_v<T0, Reference> || std::is_same_v<T0, Half> || std::is_same_v<T0, Nil>)
-				&& std::is_same_v<T1, String>)
+			    requires((std::is_arithmetic_v<T0> || umath::is_vector_type<T0> || umath::is_matrix_type<T0> || std::is_same_v<T0, Quat> || std::is_same_v<T0, EulerAngles> || std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor> || std::is_same_v<T0, Transform>
+			               || std::is_same_v<T0, ScaledTransform> || std::is_same_v<T0, Reference> || std::is_same_v<T0, Half> || std::is_same_v<T0, Nil>)
+			      && std::is_same_v<T1, String>)
 			struct TypeConverter<T0, T1> {
 				static constexpr auto is_convertible = true;
 				static T1 convert(const T0 &v0)
@@ -294,7 +293,7 @@ export {
 			return detail::TypeConverter<TFrom, TTo>::is_convertible;
 		}
 		template<typename TFrom, typename TTo>
-			requires(is_convertible<TFrom, TTo>())
+		    requires(is_convertible<TFrom, TTo>())
 		constexpr TTo convert(const TFrom &from)
 		{
 			return detail::TypeConverter<TFrom, TTo>::convert(from);
@@ -345,9 +344,9 @@ export {
 		}
 		return false;
 	}
-	#ifdef _WIN32
-	#pragma warning(pop)
-	#elif defined(__clang__)
-	#pragma clang diagnostic pop
-	#endif
+#ifdef _WIN32
+#pragma warning(pop)
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }

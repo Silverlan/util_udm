@@ -11,7 +11,7 @@ export import std.compat;
 
 export {
 	namespace udm {
-	#pragma pack(push, 1)
+#pragma pack(push, 1)
 		struct DLLUDM Half {
 			Half() = default;
 			Half(uint16_t value) : value {value} {}
@@ -23,7 +23,7 @@ export {
 			Half &operator=(const Half &other) = default;
 			uint16_t value;
 		};
-	#pragma pack(pop)
+#pragma pack(pop)
 		static_assert(sizeof(Half) == sizeof(uint16_t));
 	};
 }

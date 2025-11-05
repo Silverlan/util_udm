@@ -34,7 +34,7 @@ export {
 
 		struct DLLUDM BlobLz4 {
 			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
-			
+
 			BlobLz4() = default;
 			BlobLz4(const BlobLz4 &) = default;
 			BlobLz4(BlobLz4 &&) = default;

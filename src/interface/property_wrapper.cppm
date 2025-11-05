@@ -20,7 +20,7 @@ export {
 		class ArrayIterator;
 		struct DLLUDM PropertyWrapper {
 			static constexpr std::uint32_t layout_version = 1; // Increment this whenever members of this class are changed
-			
+
 			PropertyWrapper() = default;
 			explicit PropertyWrapper(Property &o);
 			PropertyWrapper(const PropertyWrapper &other);
@@ -180,7 +180,7 @@ export {
 
 			LinkedPropertyWrapper *GetLinked();
 			const LinkedPropertyWrapper *GetLinked() const { return const_cast<PropertyWrapper *>(this)->GetLinked(); };
-		protected:
+		  protected:
 			bool IsArrayItem(bool includeIfElementOfArrayItem) const;
 			bool linked = false;
 		};
@@ -351,7 +351,7 @@ export {
 						auto &parent = wpParent;
 						switch(get_property_type(parent)) {
 						case Type::Element:
-								erase_element_child(*static_cast<Element *>(get_property_value(parent)), el);
+							erase_element_child(*static_cast<Element *>(get_property_value(parent)), el);
 							break;
 						/*case Type::Array:
 						if(arrayIndex == std::numeric_limits<uint32_t>::max())
@@ -359,7 +359,8 @@ export {
 						(*static_cast<Array*>(parent->value))[arrayIndex] = v;
 						break;*/
 						default:
-							throw InvalidUsageError {"Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
+							throw InvalidUsageError {
+							  "Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
 						}
 					}
 					else
@@ -420,18 +421,20 @@ export {
 						throw InvalidUsageError {"Attempted to change value of element property without a valid parent, this is not allowed!"};
 					auto &parent = wpParent;
 					switch(get_property_type(parent)) {
-					case Type::Element: {
-						auto *valParent = static_cast<Element *>(get_property_value(parent));
-						set_element_value(*valParent, v);
-						break;
-					}
+					case Type::Element:
+						{
+							auto *valParent = static_cast<Element *>(get_property_value(parent));
+							set_element_value(*valParent, v);
+							break;
+						}
 					/*case Type::Array:
 						if(arrayIndex == std::numeric_limits<uint32_t>::max())
 							throw std::runtime_error{"Element has parent of type " +std::string{magic_enum::enum_name(parent->type)} +", but is not indexed!"};
 						(*static_cast<Array*>(parent->value))[arrayIndex] = v;
 						break;*/
 					default:
-						throw InvalidUsageError {"Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
+						throw InvalidUsageError {
+						  "Element has parent of type " + std::string {magic_enum::enum_name(get_property_type(parent))} + ", but only " + std::string {magic_enum::enum_name(Type::Element)} /* +" and " +std::string{magic_enum::enum_name(Type::Array)}*/ + " types are allowed!"};
 					}
 				}
 				else
@@ -507,7 +510,7 @@ export {
 					auto *el = get_array_value_ptr<Element>(a, arrayIndex);
 					if(!el)
 						return BlobResult::InvalidProperty;
-					auto *child = find_element_child(*el,static_cast<const LinkedPropertyWrapper &>(*this).propName);
+					auto *child = find_element_child(*el, static_cast<const LinkedPropertyWrapper &>(*this).propName);
 					if(child)
 						return get_property_blob_data<T>(**child, v);
 					return BlobResult::InvalidProperty;

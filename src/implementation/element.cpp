@@ -3,7 +3,6 @@
 
 module;
 
-
 #include "definitions.hpp"
 #include <cassert>
 
@@ -145,9 +144,7 @@ udm::ElementIterator udm::Element::end() { return ElementIterator {*this, childr
 
 void udm::Element::EraseValue(const Element &child)
 {
-	auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) {
-		return get_property_type(*pair.second) == udm::Type::Element && get_property_value(*pair.second) == &child;
-	});
+	auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) { return get_property_type(*pair.second) == udm::Type::Element && get_property_value(*pair.second) == &child; });
 	if(it == children.end())
 		return;
 	children.erase(it);

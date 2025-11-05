@@ -13,18 +13,18 @@ export import :types;
 import pragma.util;
 
 export {
-	#ifdef __linux__
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wreturn-type"
-	#pragma GCC diagnostic ignored "-Wswitch"
-	#elif _WIN32
-	#pragma warning( push )
-	#pragma warning( disable : 4715 )
-	#endif
+#ifdef __linux__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
+#pragma GCC diagnostic ignored "-Wswitch"
+#elif _WIN32
+#pragma warning(push)
+#pragma warning(disable : 4715)
+#endif
 	namespace udm {
 		constexpr std::array<Type, 12> NUMERIC_TYPES = {Type::Int8, Type::UInt8, Type::Int16, Type::UInt16, Type::Int32, Type::UInt32, Type::Int64, Type::UInt64, Type::Float, Type::Double, Type::Boolean, Type::Half};
 		constexpr std::array<Type, 15> GENERIC_TYPES
-		= {Type::Vector2, Type::Vector3, Type::Vector4, Type::Vector2i, Type::Vector3i, Type::Vector4i, Type::Quaternion, Type::EulerAngles, Type::Srgba, Type::HdrColor, Type::Transform, Type::ScaledTransform, Type::Mat4, Type::Mat3x4, Type::Nil};
+		  = {Type::Vector2, Type::Vector3, Type::Vector4, Type::Vector2i, Type::Vector3i, Type::Vector4i, Type::Quaternion, Type::EulerAngles, Type::Srgba, Type::HdrColor, Type::Transform, Type::ScaledTransform, Type::Mat4, Type::Mat3x4, Type::Nil};
 		constexpr std::array<Type, 9> NON_TRIVIAL_TYPES = {Type::String, Type::Utf8String, Type::Blob, Type::BlobLz4, Type::Element, Type::Array, Type::ArrayLz4, Type::Reference, Type::Struct};
 
 		template<typename T>
@@ -38,10 +38,10 @@ export {
 
 		template<typename T>
 		using underlying_numeric_type = std::conditional_t<std::is_same_v<T, Half>, uint16_t,
-		std::conditional_t<is_arithmetic<T>, T,
-			std::conditional_t<is_integral_vector_type<T>, Vector3i::value_type,
-			std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T, Quaternion>, float,
-				std::conditional_t<std::is_same_v<T, Srgba>, uint8_t, std::conditional_t<std::is_same_v<T, HdrColor>, uint16_t, std::conditional_t<std::is_same_v<T, EulerAngles>, float, void>>>>>>>;
+		  std::conditional_t<is_arithmetic<T>, T,
+		    std::conditional_t<is_integral_vector_type<T>, Vector3i::value_type,
+		      std::conditional_t<is_vector_type<T> || is_matrix_type<T> || std::is_same_v<T, Quaternion>, float,
+		        std::conditional_t<std::is_same_v<T, Srgba>, uint8_t, std::conditional_t<std::is_same_v<T, HdrColor>, uint16_t, std::conditional_t<std::is_same_v<T, EulerAngles>, float, void>>>>>>>;
 
 		template<typename T>
 		constexpr Type type_to_enum();
@@ -231,7 +231,6 @@ export {
 
 		constexpr bool is_trivial_type(Type t) { return !is_non_trivial_type(t) && t != Type::Invalid; }
 
-
 		template<class T>
 		struct tag_t {
 			using type = T;
@@ -343,7 +342,7 @@ export {
 			static_assert(NON_TRIVIAL_TYPES.size() == 9, "Update this list when new non-trivial types have been added!");
 		}
 		template<bool ENABLE_NUMERIC = true, bool ENABLE_GENERIC = true, bool ENABLE_NON_TRIVIAL = true, bool ENABLE_DEFAULT_RETURN = true, typename T>
-			requires(ENABLE_NUMERIC || ENABLE_GENERIC || ENABLE_NON_TRIVIAL)
+		    requires(ENABLE_NUMERIC || ENABLE_GENERIC || ENABLE_NON_TRIVIAL)
 		constexpr decltype(auto) visit(Type type, T vs)
 		{
 			if constexpr(ENABLE_NUMERIC) {
@@ -412,8 +411,7 @@ export {
 	{
 		constexpr auto type = type_to_enum_s<T>();
 		if constexpr(umath::to_integral(type) > umath::to_integral(Type::Last))
-			[]<bool flag = false>() { static_assert(flag, "Unsupported type!"); }
-		();
+			[]<bool flag = false>() { static_assert(flag, "Unsupported type!"); }();
 		return type;
 	}
 
@@ -513,12 +511,12 @@ export {
 		if(is_generic_type(t)) {
 			auto tag = get_generic_tag(t);
 			return std::visit(
-			[&](auto tag) {
-				if constexpr(std::is_same_v<typename decltype(tag)::type, std::monostate>)
-					return static_cast<uint64_t>(0);
-				return sizeof(typename decltype(tag)::type);
-			},
-			tag);
+			  [&](auto tag) {
+				  if constexpr(std::is_same_v<typename decltype(tag)::type, std::monostate>)
+					  return static_cast<uint64_t>(0);
+				  return sizeof(typename decltype(tag)::type);
+			  },
+			  tag);
 		}
 		throw InvalidUsageError {std::string {"UDM type "} + std::string {magic_enum::enum_name(t)} + " has non-constant size!"};
 		static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
@@ -532,9 +530,9 @@ export {
 		return udm::type_to_enum<T::value_type>();
 	}
 
-	#ifdef __linux__
-	#pragma GCC diagnostic pop
-	#elif _WIN32
-	#pragma warning( pop )
-	#endif
+#ifdef __linux__
+#pragma GCC diagnostic pop
+#elif _WIN32
+#pragma warning(pop)
+#endif
 }

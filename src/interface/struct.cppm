@@ -54,7 +54,7 @@ export {
 			}
 			std::vector<Type> types;
 			std::vector<String> names;
-		private:
+		  private:
 			template<typename T1, typename T2, typename... T>
 			void DefineTypes(std::initializer_list<std::string>::iterator it);
 			template<typename T>
@@ -86,9 +86,10 @@ export {
 			Struct &operator=(Struct &&) = default;
 			template<class T>
 			Struct &operator=(const T &other);
-			void Assign(const void *inData, size_t inSize) {
+			void Assign(const void *inData, size_t inSize)
+			{
 				auto sz = description.GetDataSizeRequirement();
-				if (inSize != sz)
+				if(inSize != sz)
 					throw LogicError {"Attempted to assign data of size " + std::to_string(inSize) + " to struct of size " + std::to_string(sz) + "!"};
 				if(data.size() != sz)
 					throw ImplementationError {"Size of struct data does not match its types!"};

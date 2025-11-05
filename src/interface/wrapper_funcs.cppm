@@ -3,7 +3,6 @@
 
 module;
 
-
 export module pragma.udm:wrapper_funcs;
 
 export import :basic_types;
@@ -19,8 +18,8 @@ export namespace udm {
 	// TODO: Once the msvc compiler issues are fixed, these functions can be removed and replaced with the
 	// underlying function calls.
 	template<typename T>
-		PProperty create_property(T &&value);
-	template<const char*>
+	PProperty create_property(T &&value);
+	template<const char *>
 	PProperty create_property(const char *v)
 	{
 		return create_property(std::string_view(v));
@@ -37,25 +36,28 @@ export namespace udm {
 	DataValue get_property_value(Property &prop);
 	DataValue get_property_value(PropertyWrapper &prop);
 	template<typename T>
-		T &get_property_value(Property &prop);
+	T &get_property_value(Property &prop);
 	template<typename T>
-		T &get_property_value(PropertyWrapper &prop);
+	T &get_property_value(PropertyWrapper &prop);
 	template<typename T>
-		T *get_property_value_ptr(Property &prop);
+	T *get_property_value_ptr(Property &prop);
 	template<typename T>
-		std::optional<T> to_property_value(Property &prop);
+	std::optional<T> to_property_value(Property &prop);
 
 	// Any struct or class that isn't a UDM type is assumed to be a struct type
 	template<typename T>
-		concept is_struct_type = std::is_class_v<T> && type_to_enum_s<T>() == udm::Type::Invalid && !util::is_specialization<T, std::vector>::value && !util::is_specialization<T, std::shared_ptr>::value && !util::is_specialization_array<T>::value;
-	
-	template<typename T> requires(!is_struct_type<T>)
-		void set_property_value(Property &prop, T &&value);
-	template<typename T> requires(is_struct_type<T>)
-		void set_property_value(Property &prop, T &value) {
-			// Not supported(?)
-		}
-	template<const char*>
+	concept is_struct_type = std::is_class_v<T> && type_to_enum_s<T>() == udm::Type::Invalid && !util::is_specialization<T, std::vector>::value && !util::is_specialization<T, std::shared_ptr>::value && !util::is_specialization_array<T>::value;
+
+	template<typename T>
+	    requires(!is_struct_type<T>)
+	void set_property_value(Property &prop, T &&value);
+	template<typename T>
+	    requires(is_struct_type<T>)
+	void set_property_value(Property &prop, T &value)
+	{
+		// Not supported(?)
+	}
+	template<const char *>
 	void set_property_value(Property &prop, const char *v)
 	{
 		set_property_value(prop, std::string_view(v));
@@ -67,19 +69,20 @@ export namespace udm {
 	}
 
 	template<class T>
-		BlobResult get_property_blob_data(Property &prop, T &v);
+	BlobResult get_property_blob_data(Property &prop, T &v);
 
 	Type get_array_value_type(const Array &a);
 	template<typename T>
-		T &get_array_value(Array &a, uint32_t idx);
+	T &get_array_value(Array &a, uint32_t idx);
 	template<typename T>
-		T *get_array_value_ptr(Array &a, uint32_t idx);
+	T *get_array_value_ptr(Array &a, uint32_t idx);
 
 	uint16_t get_array_structured_data_info_data_size_requirement(Array &a);
 	// Since we can't know all struct types ahead of time, we handle them separately
-	template<typename T> requires(!is_struct_type<T>)
-		void set_array_value(Array &a, uint32_t idx, T &&v);
-	template<const char*>
+	template<typename T>
+	    requires(!is_struct_type<T>)
+	void set_array_value(Array &a, uint32_t idx, T &&v);
+	template<const char *>
 	void set_array_value(Array &a, uint32_t idx, const char *v)
 	{
 		set_array_value(a, idx, std::string_view(v));
@@ -98,9 +101,9 @@ export namespace udm {
 	template<typename T>
 	class ArrayIterator;
 	template<typename T>
-		void get_array_begin_iterator(Array &a, ArrayIterator<T> &outIt);
+	void get_array_begin_iterator(Array &a, ArrayIterator<T> &outIt);
 	template<typename T>
-		void get_array_end_iterator(Array &a, ArrayIterator<T> &outIt);
+	void get_array_end_iterator(Array &a, ArrayIterator<T> &outIt);
 
 	PProperty *find_element_child(Element &e, const std::string_view &key);
 	void remove_element_child(Element &e, const std::string_view &key);
@@ -108,8 +111,8 @@ export namespace udm {
 	void set_element_child_value(Element &e, const std::string_view &key, const PProperty &prop);
 
 	template<typename T>
-		void set_element_value(Element &child, T &&v);
-	template<const char*>
+	void set_element_value(Element &child, T &&v);
+	template<const char *>
 	void set_element_value(Element &child, const char *v)
 	{
 		set_element_value(child, std::string_view(v));
@@ -124,7 +127,8 @@ export namespace udm {
 
 	void set_struct_value(Struct &strct, const void *inData, size_t inSize);
 
-	template<typename T> requires(is_struct_type<T>)
+	template<typename T>
+	    requires(is_struct_type<T>)
 	void set_array_value(Array &a, uint32_t idx, T &v)
 	{
 		using TBase = std::remove_cv_t<std::remove_reference_t<T>>;

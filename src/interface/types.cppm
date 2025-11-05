@@ -3,7 +3,6 @@
 
 module;
 
-
 export module pragma.udm:types;
 
 export import std.compat;

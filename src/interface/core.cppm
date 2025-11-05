@@ -19,13 +19,13 @@ export {
 		*/
 		constexpr Version VERSION = 2;
 		constexpr auto *HEADER_IDENTIFIER = "UDMB";
-	#pragma pack(push, 1)
+#pragma pack(push, 1)
 		struct DLLUDM Header {
 			Header() = default;
 			std::array<char, 4> identifier = {HEADER_IDENTIFIER[0], HEADER_IDENTIFIER[1], HEADER_IDENTIFIER[2], HEADER_IDENTIFIER[3]};
 			Version version = VERSION;
 		};
-	#pragma pack(pop)
+#pragma pack(pop)
 
 		namespace detail {
 			DLLUDM void test_c_wrapper();

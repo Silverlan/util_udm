@@ -15,7 +15,7 @@ export {
 	namespace udm {
 		template<typename T>
 		class ArrayIterator {
-		public:
+		  public:
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = T &;
 			using difference_type = std::ptrdiff_t;
@@ -35,7 +35,7 @@ export {
 			bool operator!=(const ArrayIterator &other) const;
 
 			udm::LinkedPropertyWrapper &GetProperty() { return m_curProperty; }
-		private:
+		  private:
 			udm::LinkedPropertyWrapper m_curProperty;
 		};
 

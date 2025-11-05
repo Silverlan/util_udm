@@ -101,7 +101,7 @@ export {
 
 			using Range = std::tuple<uint32_t, uint32_t, uint32_t>;
 			void Resize(uint32_t newSize, Range r0, Range r1, bool defaultInitializeNewValues);
-		protected:
+		  protected:
 			friend Property;
 			friend PropertyWrapper;
 			virtual void Clear();
@@ -141,7 +141,7 @@ export {
 			using Array::GetStructuredDataInfo;
 
 			static constexpr bool IsValueTypeSupported(Type type);
-		private:
+		  private:
 			friend Property;
 			friend PropertyWrapper;
 			friend AsciiReader;

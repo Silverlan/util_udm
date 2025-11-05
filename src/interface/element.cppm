@@ -22,7 +22,7 @@ export {
 		};
 
 		class DLLUDM ElementIterator {
-		public:
+		  public:
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = ElementIteratorPair &;
 			using difference_type = std::ptrdiff_t;
@@ -39,7 +39,7 @@ export {
 			pointer operator->();
 			bool operator==(const ElementIterator &other) const;
 			bool operator!=(const ElementIterator &other) const;
-		private:
+		  private:
 			util::StringMap<PProperty> *m_propertyMap = nullptr;
 			util::StringMap<PProperty>::iterator m_iterator {};
 			ElementIteratorPair m_pair;
@@ -49,7 +49,7 @@ export {
 			ElementIteratorWrapper(LinkedPropertyWrapper &prop);
 			ElementIterator begin();
 			ElementIterator end();
-		private:
+		  private:
 			LinkedPropertyWrapper m_prop;
 		};
 
@@ -79,10 +79,10 @@ export {
 
 			ElementIterator begin();
 			ElementIterator end();
-		private:
+		  private:
 			friend void erase_element_child(Element &e, Element &child);
 			template<typename T>
-				friend void set_element_value(Element &child, T &&v);
+			friend void set_element_value(Element &child, T &&v);
 
 			template<typename T>
 			void SetValue(Element &child, T &&v);
@@ -92,9 +92,7 @@ export {
 		template<typename T>
 		void Element::SetValue(Element &child, T &&v)
 		{
-			auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) {
-				return get_property_type(*pair.second) == Type::Element && get_property_value(*pair.second) == &child;
-			});
+			auto it = std::find_if(children.begin(), children.end(), [&child](const std::pair<std::string, PProperty> &pair) { return get_property_type(*pair.second) == Type::Element && get_property_value(*pair.second) == &child; });
 			if(it == children.end())
 				return;
 			children[it->first] = create_property<T>(std::forward<T>(v));

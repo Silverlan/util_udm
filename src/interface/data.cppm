@@ -16,7 +16,7 @@ export import :types;
 export {
 	namespace udm {
 		class DLLUDM Data {
-		public:
+		  public:
 			static constexpr auto KEY_ASSET_TYPE = "assetType";
 			static constexpr auto KEY_ASSET_VERSION = "assetVersion";
 			static constexpr auto KEY_ASSET_DATA = "assetData";
@@ -66,7 +66,7 @@ export {
 
 			static std::string ReadKey(IFile &f);
 			static void WriteKey(IFile &f, const std::string &key);
-		private:
+		  private:
 			friend AsciiReader;
 			friend ArrayLz4;
 			bool ValidateHeaderProperties();
