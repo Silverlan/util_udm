@@ -3,9 +3,7 @@
 
 module;
 
-#include "sharedutils/magic_enum.hpp"
-#include "udm_definitions.hpp"
-#include "mathutil/glmutil.h"
+#include "definitions.hpp"
 #include <cassert>
 #include <lz4.h>
 

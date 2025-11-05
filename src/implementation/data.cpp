@@ -3,10 +3,8 @@
 
 module;
 
-
-#include "udm_definitions.hpp"
-#include "mathutil/glmutil.h"
-#include <sharedutils/magic_enum.hpp>
+#include "definitions.hpp"
+#include <cassert>
 
 module pragma.udm;
 

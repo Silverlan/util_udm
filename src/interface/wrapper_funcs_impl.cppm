@@ -3,9 +3,6 @@
 
 module;
 
-
-#include "mathutil/glmutil.h"
-
 export module pragma.udm:wrapper_funcs_impl;
 
 import :property;

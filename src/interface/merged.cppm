@@ -3,11 +3,8 @@
 
 module;
 
-#include "udm_definitions.hpp"
+#include "definitions.hpp"
 #include <cassert>
-#include <sharedutils/magic_enum.hpp>
-#include "sharedutils/magic_enum.hpp"
-#include "mathutil/glmutil.h"
 
 export module pragma.udm;
 
@@ -75,9 +72,8 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
+#include "definitions.hpp"
 #include <cassert>
-#include <sharedutils/magic_enum.hpp>
 
 export module pragma.udm:core;
 */
@@ -118,8 +114,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:enums;
 
@@ -303,7 +298,7 @@ constexpr std::string_view enum_to_string(TEnum e)
 		template<typename TEnum>
 		constexpr std::string flags_to_string(TEnum e)
 		{
-			return magic_enum::flags::enum_name(e);
+			return magic_enum::enum_flags_name(e);
 		}
 
 		using namespace umath::scoped_enum::bitwise;
@@ -327,7 +322,7 @@ constexpr std::string_view enum_to_string(TEnum e)
 
 module;
 
-#include "udm_definitions.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:exception;
 
@@ -420,7 +415,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:half;
 
@@ -526,8 +521,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:types.blob;
 
@@ -603,8 +597,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:reference;
 
@@ -652,8 +645,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:types.string;
 
@@ -694,8 +686,6 @@ export {
 // SPDX-License-Identifier: MIT
 
 module;
-
-#include "sharedutils/magic_enum.hpp"
 
 export module pragma.udm:trivial_types;
 
@@ -1606,8 +1596,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:structure;
 
@@ -1892,8 +1881,7 @@ export namespace udm {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:property_wrapper;
 
@@ -2137,7 +2125,7 @@ export {
 		{
 			std::string str;
 			udmEnum(str);
-			auto e = magic_enum::flags::enum_cast<TEnum>(str);
+			auto e = magic_enum::enum_flags_cast<TEnum>(str);
 			return e.has_value() ? *e : def;
 		}
 
@@ -2155,7 +2143,7 @@ export {
 		{
 			std::string str;
 			udmEnum(str);
-			auto e = magic_enum::flags::enum_cast<TEnum>(str);
+			auto e = magic_enum::enum_flags_cast<TEnum>(str);
 			def = e.has_value() ? *e : def;
 		}
 
@@ -2552,8 +2540,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:array_iterator;
 
@@ -2679,8 +2666,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:asset_data;
 
@@ -2714,8 +2700,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:types.element;
 
@@ -2826,8 +2811,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:array;
 
@@ -3083,8 +3067,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:property;
 
@@ -3522,7 +3505,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:util;
 
@@ -3607,8 +3590,7 @@ export {
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:data;
 
@@ -3698,9 +3680,6 @@ export {
 // SPDX-License-Identifier: MIT
 
 module;
-
-
-#include "mathutil/glmutil.h"
 
 export module pragma.udm:wrapper_funcs_impl;
 

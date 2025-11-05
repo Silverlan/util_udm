@@ -3,8 +3,6 @@
 
 module;
 
-#include "sharedutils/magic_enum.hpp"
-
 export module pragma.udm:trivial_types;
 
 export import :basic_types;

@@ -3,8 +3,7 @@
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:property_wrapper;
 
@@ -245,7 +244,7 @@ export {
 		{
 			std::string str;
 			udmEnum(str);
-			auto e = magic_enum::flags::enum_cast<TEnum>(str);
+			auto e = magic_enum::enum_flags_cast<TEnum>(str);
 			return e.has_value() ? *e : def;
 		}
 
@@ -263,7 +262,7 @@ export {
 		{
 			std::string str;
 			udmEnum(str);
-			auto e = magic_enum::flags::enum_cast<TEnum>(str);
+			auto e = magic_enum::enum_flags_cast<TEnum>(str);
 			def = e.has_value() ? *e : def;
 		}
 

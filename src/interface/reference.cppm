@@ -3,8 +3,7 @@
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:reference;
 

@@ -4,8 +4,7 @@
 module;
 
 
-#include "udm_definitions.hpp"
-#include "mathutil/glmutil.h"
+#include "definitions.hpp"
 #include <cassert>
 
 module pragma.udm;

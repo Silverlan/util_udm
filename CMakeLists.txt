@@ -28,7 +28,6 @@ else()
 endif()
 
 pr_init_module(${PROJ_NAME} EXCLUDE ${MODULE_EXCLUSION_LIST})
-pr_add_headers(${PROJ_NAME} "include/")
 
 if(NOT ${UTIL_UDM_STATIC})
 	pr_add_compile_definitions(

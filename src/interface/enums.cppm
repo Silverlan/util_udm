@@ -3,8 +3,7 @@
 
 module;
 
-#include "udm_definitions.hpp"
-#include "sharedutils/magic_enum.hpp"
+#include "definitions.hpp"
 
 export module pragma.udm:enums;
 
@@ -185,7 +184,7 @@ constexpr std::string_view enum_to_string(TEnum e)
 		template<typename TEnum>
 		constexpr std::string flags_to_string(TEnum e)
 		{
-			return magic_enum::flags::enum_name(e);
+			return magic_enum::enum_flags_name(e);
 		}
 
 		using namespace umath::scoped_enum::bitwise;
