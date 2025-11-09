@@ -6,6 +6,7 @@ module;
 export module pragma.udm:wrapper_funcs_impl;
 
 import :property;
+import :types.string;
 import :wrapper_funcs;
 
 export {
@@ -43,7 +44,7 @@ export {
 		return prop.ToValue<T>();
 	}
 	template<typename T>
-	    requires(!is_struct_type<T>)
+	    requires(!udm::is_struct_type<T>)
 	void udm::set_property_value(Property &prop, T &&value)
 	{
 		prop = std::forward<T>(value);
@@ -67,7 +68,7 @@ export {
 		return a.GetValuePtr<T>(idx);
 	}
 	template<typename T>
-	    requires(!is_struct_type<T>)
+	    requires(!udm::is_struct_type<T>)
 	void udm::set_array_value(Array &a, uint32_t idx, T &&v)
 	{
 		a.SetValue<T>(idx, std::forward<T>(v));

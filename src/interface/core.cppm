@@ -8,6 +8,8 @@ module;
 
 export module pragma.udm:core;
 
+export import std.compat;
+
 #undef VERSION
 
 export {

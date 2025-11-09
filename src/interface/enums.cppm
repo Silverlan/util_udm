@@ -7,7 +7,7 @@ module;
 
 export module pragma.udm:enums;
 
-import pragma.math;
+import pragma.util;
 
 export {
 	namespace udm {

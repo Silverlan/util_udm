@@ -4,6 +4,7 @@
 module;
 
 #include "definitions.hpp"
+#include <cassert>
 
 export module pragma.udm:property;
 
@@ -13,6 +14,7 @@ import :types.element;
 import :structure;
 export import :trivial_types;
 export import :types;
+import :util;
 
 export {
 	namespace udm {

@@ -25,3 +25,5 @@ export import :structure;
 export import :trivial_types;
 export import :types;
 export import :util;
+export import :wrapper_funcs;
+export import :wrapper_funcs_impl;
