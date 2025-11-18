@@ -346,7 +346,7 @@ bool udm::Data::ValidateHeaderProperties()
 		auto it = el.children.find(requiredKeys[i]);
 		if(it != el.children.end()) {
 			if(it->second->type != requiredKeyTypes[i]) {
-				throw InvalidFormatError {"Excepted type " + std::string {magic_enum::enum_name(requiredKeyTypes[i])} + " for KeyValue '" + std::string {requiredKeys[i]} + "', but got type " + std::string {magic_enum::enum_name(it->second->type)} + "!"};
+				throw InvalidFormatError {"Excepted type '" + std::string {magic_enum::enum_name(requiredKeyTypes[i])} + "' for KeyValue '" + std::string {requiredKeys[i]} + "', but got type '" + std::string {magic_enum::enum_name(it->second->type)} + "'!"};
 				return false;
 			}
 			continue;
