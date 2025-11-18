@@ -3807,8 +3807,7 @@ export {
 #else
 		__declspec(dllexport)
 #endif
-		void
-		instantiate()
+		void instantiate()
 		{
 			udm::visit(udm::Type {}, [](auto tag) {
 				using T = typename decltype(tag)::type;
