@@ -1,9 +1,16 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
 #include <lz4.h>
-#include <sharedutils/util_string.h>
+#include <cassert>
+
+module pragma.udm;
+
+#ifndef UDM_SINGLE_MODULE_INTERFACE
+import :core;
+#endif
 
 udm::LinkedPropertyWrapper::LinkedPropertyWrapper(const LinkedPropertyWrapper &other) : PropertyWrapper {other}, propName {other.propName}, prev {other.prev ? std::make_unique<LinkedPropertyWrapper>(*other.prev) : nullptr} { linked = true; }
 
@@ -24,7 +31,7 @@ void udm::LinkedPropertyWrapper::operator=(LinkedPropertyWrapper &&v)
 	PropertyWrapper::operator=(v);
 	prev = std::move(v.prev);
 	propName = std::move(v.propName);
-	static_assert(sizeof(LinkedPropertyWrapper) == 56, "Update this function when the struct has changed!");
+	static_assert(LinkedPropertyWrapper::layout_version == 1, "Update this function when the struct has changed!");
 }
 
 void udm::LinkedPropertyWrapper::operator=(const PropertyWrapper &v)
@@ -43,7 +50,7 @@ void udm::LinkedPropertyWrapper::operator=(const LinkedPropertyWrapper &v)
 	PropertyWrapper::operator=(v);
 	prev = v.prev ? std::make_unique<LinkedPropertyWrapper>(*v.prev) : nullptr;
 	propName = v.propName;
-	static_assert(sizeof(LinkedPropertyWrapper) == 56, "Update this function when the struct has changed!");
+	static_assert(LinkedPropertyWrapper::layout_version == 1, "Update this function when the struct has changed!");
 }
 
 std::string udm::LinkedPropertyWrapper::GetPath() const

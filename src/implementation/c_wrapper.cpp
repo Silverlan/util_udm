@@ -1,8 +1,16 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include <udm.hpp>
-#include <sharedutils/util_file.h>
+module;
+
+#include "definitions.hpp"
+#include <cassert>
+
+module pragma.udm;
+
+#ifndef UDM_SINGLE_MODULE_INTERFACE
+import :core;
+#endif
 
 struct BaseUdmData {
 	BaseUdmData(const std::shared_ptr<udm::Data> &udmData, bool clearDataOnDestruction) : data {udmData}, clearDataOnDestruction {clearDataOnDestruction} {}
@@ -34,7 +42,7 @@ struct BaseProperty {
 	udm::LinkedPropertyWrapper prop;
 
 	udm::Property *operator->() { return prop.operator->(); }
-	udm::Property *operator*() { return prop.operator*(); }
+	udm::Property &operator*() { return prop.operator*(); }
 };
 using UdmData = BaseUdmData *;
 using UdmProperty = BaseProperty *;
@@ -669,7 +677,6 @@ DLLUDM void udm_pose_to_matrix(const float pos[3], const float rot[4], const flo
 }
 }
 
-#include <sharedutils/util_library.hpp>
 void udm::detail::test_c_wrapper()
 {
 	// Note: This will only work if util_udm was built as a shared library!

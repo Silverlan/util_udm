@@ -1,11 +1,15 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
-#include <sharedutils/base64.hpp>
-#include <sharedutils/util_string.h>
-#include <fsys/ifile.hpp>
-#include <sstream>
+module;
+
+#include <cassert>
+
+module pragma.udm;
+
+#ifndef UDM_SINGLE_MODULE_INTERFACE
+import :core;
+#endif
 
 namespace udm {
 	class AsciiReader {
@@ -84,7 +88,7 @@ void udm::AsciiReader::ReadTemplateParameterList(std::vector<Type> &outTypes, st
 		case ':':
 			throw BuildException<SyntaxError>("Unexpected token '" + std::string {t} + "'");
 			return;
-		case EOF:
+		case std::char_traits<char>::eof():
 			throw BuildException<SyntaxError>("Unexpected EOF");
 			return;
 		}
@@ -134,7 +138,7 @@ void udm::AsciiReader::ReadValueList(Type type, const std::function<bool()> &val
 				return;
 			continue;
 		}
-		else if(t == EOF)
+		else if(t == std::char_traits<char>::eof())
 			throw BuildException<SyntaxError>("Unexpected EOF");
 		if(t != ',') {
 			assert(m_curCharPos > 0);
@@ -496,7 +500,7 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 		}
 		if(t == '}')
 			return BlockResult::EndOfBlock;
-		if(t == EOF)
+		if(t == std::char_traits<char>::eof())
 			return BlockResult::EndOfFile;
 		if(is_control_character(t))
 			throw BuildException<SyntaxError>("Expected variable or child block, got unexpected control character '" + std::string {t} + "'");
@@ -606,7 +610,7 @@ struct MemoryData : public udm::IFile {
 	virtual int32_t ReadChar() override
 	{
 		if(m_pos >= m_data.size())
-			return EOF;
+			return std::char_traits<char>::eof();
 		char c;
 		Read(&c, sizeof(c));
 		return c;
@@ -634,8 +638,8 @@ namespace udm {
 char udm::AsciiReader::ReadChar()
 {
 	auto c = m_file->ReadChar();
-	if(c == EOF)
-		return EOF;
+	if(c == std::char_traits<char>::eof())
+		return std::char_traits<char>::eof();
 	if(c == '\n') {
 		++m_curLine;
 		m_curCharPos = 0;
@@ -660,7 +664,7 @@ char udm::AsciiReader::ReadUntil(char c, std::string_view *optOut)
 	auto *ptr = static_cast<MemoryData *>(f.get())->GetMemoryDataPtr();
 	auto cur = ReadChar();
 	for(;;) {
-		if(cur == EOF || cur == c) {
+		if(cur == std::char_traits<char>::eof() || cur == c) {
 			if(optOut) {
 				auto len = static_cast<size_t>(static_cast<MemoryData *>(f.get())->GetMemoryDataPtr() - ptr);
 				*optOut = std::string_view {ptr, (len > 0) ? (len - 1) : 0};
@@ -679,7 +683,7 @@ char udm::AsciiReader::ReadUntil(char c, std::string_view *optOut)
 void udm::AsciiReader::SeekNextToken(const std::optional<char> &tSeek)
 {
 	auto t = ReadNextToken();
-	if(t == EOF)
+	if(t == std::char_traits<char>::eof())
 		return;
 	if(tSeek.has_value() && t != *tSeek)
 		return SeekNextToken(tSeek);
@@ -700,8 +704,8 @@ char udm::AsciiReader::ReadNextToken()
 	int c;
 	for(;;) {
 		c = ReadChar();
-		if(c == EOF)
-			return EOF;
+		if(c == std::char_traits<char>::eof())
+			return std::char_traits<char>::eof();
 		if(ustring::WHITESPACE.find(c) != std::string::npos)
 			continue;
 		if(c == '/') {
@@ -714,8 +718,8 @@ char udm::AsciiReader::ReadNextToken()
 			else if(cNext == '*') {
 				f->Seek(f->Tell() + 1);
 				for(;;) {
-					if(ReadUntil('*') == EOF)
-						return EOF;
+					if(ReadUntil('*') == std::char_traits<char>::eof())
+						return std::char_traits<char>::eof();
 					if(PeekNextChar() == '/') {
 						f->Seek(f->Tell() + 1);
 						break;
@@ -726,14 +730,14 @@ char udm::AsciiReader::ReadNextToken()
 		}
 		return c;
 	}
-	return EOF;
+	return std::char_traits<char>::eof();
 }
 
 std::string_view udm::AsciiReader::ReadString(char initialC)
 {
 	auto &f = m_file;
 	auto t = initialC;
-	if(t == EOF)
+	if(t == std::char_traits<char>::eof())
 		return {};
 	if(is_control_character(initialC))
 		throw BuildException<SyntaxError>("Expected string, got control character '" + std::string {t} + "'");
@@ -741,7 +745,7 @@ std::string_view udm::AsciiReader::ReadString(char initialC)
 		std::string_view str;
 		for(;;) {
 			auto c = ReadUntil('\"', &str);
-			if(c == EOF)
+			if(c == std::char_traits<char>::eof())
 				throw BuildException<SyntaxError>("Expected quotation mark to end string, got EOF");
 			if(str.size() <= 1 || str.back() != '\\')
 				return str;
@@ -757,7 +761,7 @@ std::string_view udm::AsciiReader::ReadString(char initialC)
 	--m_curCharPos;
 	for(;;) {
 		t = PeekNextChar();
-		if(t == EOF)
+		if(t == std::char_traits<char>::eof())
 			return std::string_view {ptr, len};
 		if(is_whitespace_character(t) || is_control_character(t))
 			return std::string_view {ptr, len};

@@ -1,10 +1,16 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
-#include <sharedutils/magic_enum.hpp>
-#include <sharedutils/util_string.h>
-#include <fsys/ifile.hpp>
+module;
+
+#include "definitions.hpp"
+#include <cassert>
+
+module pragma.udm;
+
+#ifndef UDM_SINGLE_MODULE_INTERFACE
+import :core;
+#endif
 
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName, std::string &outErr)
 {
@@ -340,7 +346,7 @@ bool udm::Data::ValidateHeaderProperties()
 		auto it = el.children.find(requiredKeys[i]);
 		if(it != el.children.end()) {
 			if(it->second->type != requiredKeyTypes[i]) {
-				throw InvalidFormatError {"Excepted type " + std::string {magic_enum::enum_name(requiredKeyTypes[i])} + " for KeyValue '" + std::string {requiredKeys[i]} + "', but got type " + std::string {magic_enum::enum_name(it->second->type)} + "!"};
+				throw InvalidFormatError {"Excepted type '" + std::string {magic_enum::enum_name(requiredKeyTypes[i])} + "' for KeyValue '" + std::string {requiredKeys[i]} + "', but got type '" + std::string {magic_enum::enum_name(it->second->type)} + "'!"};
 				return false;
 			}
 			continue;

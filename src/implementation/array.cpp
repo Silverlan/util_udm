@@ -1,10 +1,17 @@
 // SPDX-FileCopyrightText: © 2021 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-#include "udm.hpp"
+module;
+
+#include "definitions.hpp"
+#include <cassert>
 #include <lz4.h>
-#include <sharedutils/datastream.h>
-#include <sharedutils/scope_guard.h>
+
+module pragma.udm;
+
+#ifndef UDM_SINGLE_MODULE_INTERFACE
+import :core;
+#endif
 
 udm::Array::~Array() { Clear(); }
 
@@ -366,7 +373,7 @@ void udm::ArrayLz4::SetUncompressedMemoryPersistent(bool persistent)
 
 struct StreamData : public udm::IFile {
 	StreamData() = default;
-	DataStream &GetDataStream() { return m_ds; }
+	util::DataStream &GetDataStream() { return m_ds; }
 	virtual size_t Read(void *data, size_t size) override
 	{
 		m_ds->Read(data, size);
@@ -394,7 +401,7 @@ struct StreamData : public udm::IFile {
 	}
 	virtual int32_t ReadChar() override { return m_ds->Read<char>(); }
   private:
-	DataStream m_ds;
+	util::DataStream m_ds;
 };
 
 #pragma pack(push, 1)
