@@ -4,6 +4,7 @@
 module;
 
 #include "definitions.hpp"
+#include "util_enum_flags.hpp"
 
 export module pragma.udm:array;
 
@@ -241,8 +242,5 @@ export {
 		ArrayIterator<LinkedPropertyWrapper> Array::end() { return end<LinkedPropertyWrapper>(); }
 	}
 
-	namespace umath::scoped_enum::bitwise {
-		template<>
-		struct enable_bitwise_operators<udm::ArrayLz4::Flags> : std::true_type {};
-	}
+	REGISTER_ENUM_FLAGS(udm::ArrayLz4::Flags)
 }
