@@ -111,16 +111,16 @@ export namespace udm {
 	void set_element_child_value(Element &e, const std::string_view &key, const PProperty &prop);
 
 	template<typename T>
-	void set_element_value(Element &child, T &&v);
+	void set_element_value(Element &parent, Element &child, T &&v);
 	template<const char *>
-	void set_element_value(Element &child, const char *v)
+	void set_element_value(Element &parent, Element &child, const char *v)
 	{
-		set_element_value(child, std::string_view(v));
+		set_element_value(parent, child, std::string_view(v));
 	}
 	template<std::size_t N>
-	void set_element_value(Element &child, const char (&v)[N])
+	void set_element_value(Element &parent, Element &child, const char (&v)[N])
 	{
-		set_element_value(child, std::string_view(v));
+		set_element_value(parent, child, std::string_view(v));
 	}
 
 	PropertyWrapper &get_element_parent_property(Element &e);

@@ -424,7 +424,7 @@ export {
 					case Type::Element:
 						{
 							auto *valParent = static_cast<Element *>(get_property_value(parent));
-							set_element_value(*valParent, v);
+							set_element_value(*valParent, el, v);
 							break;
 						}
 					/*case Type::Array:

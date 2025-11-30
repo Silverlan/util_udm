@@ -31,7 +31,7 @@ export {
 	template<typename T>
 	T &udm::get_property_value(PropertyWrapper &prop)
 	{
-		return prop->GetValue<T>();
+		return prop.GetValue<T>();
 	}
 	template<typename T>
 	T *udm::get_property_value_ptr(Property &prop)
@@ -106,9 +106,9 @@ export {
 	void udm::erase_element_child(Element &e, Element &child) { e.EraseValue(child); }
 	void udm::set_element_child_value(Element &e, const std::string_view &key, const PProperty &prop) { e.children[std::string {key}] = prop; }
 	template<typename T>
-	void udm::set_element_value(Element &child, T &&v)
+	void udm::set_element_value(Element &parent, Element &child, T &&v)
 	{
-		child.SetValue(child, std::forward<T>(v));
+		parent.SetValue(child, std::forward<T>(v));
 	}
 	udm::PropertyWrapper &udm::get_element_parent_property(Element &e) { return e.parentProperty; }
 
@@ -154,9 +154,9 @@ export {
 
 				if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::UInt8>) {
 					std::vector<T> &vec = *static_cast<std::vector<T> *>(nullptr);
-					udm::set_element_value<std::vector<T>>(*static_cast<udm::Element *>(nullptr), {});
-					udm::set_element_value<std::vector<T> &>(*static_cast<udm::Element *>(nullptr), vec);
-					udm::set_element_value<const std::vector<T> &>(*static_cast<udm::Element *>(nullptr), vec);
+					udm::set_element_value<std::vector<T>>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), {});
+					udm::set_element_value<std::vector<T> &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), vec);
+					udm::set_element_value<const std::vector<T> &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), vec);
 				}
 
 				if constexpr(!std::is_same_v<T, udm::UInt8> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>) {
@@ -178,10 +178,10 @@ export {
 				udm::get_array_begin_iterator<T>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<T> *>(nullptr));
 				udm::get_array_end_iterator<T>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<T> *>(nullptr));
 
-				udm::set_element_value<T>(*static_cast<udm::Element *>(nullptr), std::forward<T>(v));
+				udm::set_element_value<T>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), std::forward<T>(v));
 
-				udm::set_element_value<const T &>(*static_cast<udm::Element *>(nullptr), std::forward<const T &>(v));
-				udm::set_element_value<T &>(*static_cast<udm::Element *>(nullptr), std::forward<T &>(v));
+				udm::set_element_value<const T &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), std::forward<const T &>(v));
+				udm::set_element_value<T &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), std::forward<T &>(v));
 				udm::set_property_value<const T &>(*static_cast<udm::Property *>(nullptr), std::forward<const T &>(v));
 			});
 			udm::get_array_begin_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper> *>(nullptr));
@@ -190,7 +190,7 @@ export {
 			udm::create_property<std::string_view>({});
 			udm::set_property_value<std::string_view>(*static_cast<udm::Property *>(nullptr), {});
 			udm::set_array_value<std::string_view>(*static_cast<udm::Array *>(nullptr), 0u, {});
-			udm::set_element_value<std::string_view>(*static_cast<udm::Element *>(nullptr), {});
+			udm::set_element_value<std::string_view>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), {});
 
 			auto &prop = *static_cast<udm::PProperty *>(nullptr);
 			udm::set_property_value<udm::PProperty>(*static_cast<udm::Property *>(nullptr), {});

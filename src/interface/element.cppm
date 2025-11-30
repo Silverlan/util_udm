@@ -82,7 +82,7 @@ export {
 		  private:
 			friend void erase_element_child(Element &e, Element &child);
 			template<typename T>
-			friend void set_element_value(Element &child, T &&v);
+			friend void set_element_value(Element &parent, Element &child, T &&v);
 
 			template<typename T>
 			void SetValue(Element &child, T &&v);
