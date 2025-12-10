@@ -84,25 +84,11 @@ export {
 						return false;
 					}
 					else if constexpr(std::is_same_v<T1, Half>) {
-						float v1 {};
-#ifdef _LIBCPP_VERSION
-						v1 = atof(v0.data());
-#else
-						std::from_chars(v0.data(), v0.data() + v0.size(), v1);
-#endif
-						return Half {v1};
+						return Half {ustring::to_float(v0)};
 					}
 					else if constexpr(is_arithmetic<T1>) {
 						T1 v1 {};
-
-#if defined(_LIBCPP_VERSION) //checking if we use clang's stl
-						if constexpr(std::is_integral_v<T1>)
-							v1 = atoi(v0.data());
-						else
-							v1 = atof(v0.data());
-#else
 						std::from_chars(v0.data(), v0.data() + v0.size(), v1);
-#endif
 						return v1;
 					}
 					else if constexpr(std::is_enum_v<T1>) {
