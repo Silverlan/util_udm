@@ -124,78 +124,78 @@ export {
 #endif
 		void instantiate()
 		{
-			udm::visit(udm::Type {}, [](auto tag) {
+			visit(Type {}, [](auto tag) {
 				using T = typename decltype(tag)::type;
 				auto &v = *static_cast<T *>(nullptr);
 
-				udm::set_array_value<T>(*static_cast<udm::Array *>(nullptr), 0, std::forward<T>(v));
-				udm::set_array_value<T &>(*static_cast<udm::Array *>(nullptr), 0, std::forward<T &>(v));
-				udm::set_array_value<const T &>(*static_cast<udm::Array *>(nullptr), 0, std::forward<const T &>(v));
+				udm::set_array_value<T>(*static_cast<Array *>(nullptr), 0, std::forward<T>(v));
+				udm::set_array_value<T &>(*static_cast<Array *>(nullptr), 0, std::forward<T &>(v));
+				udm::set_array_value<const T &>(*static_cast<Array *>(nullptr), 0, std::forward<const T &>(v));
 
 				udm::create_property<T>(std::forward<T>(v));
 
-				if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Blob> && !std::is_same_v<T, udm::BlobLz4> && !std::is_same_v<T, udm::UInt8>) {
+				if constexpr(!std::is_same_v<T, Boolean> && !std::is_same_v<T, Blob> && !std::is_same_v<T, BlobLz4> && !std::is_same_v<T, UInt8>) {
 					std::vector<T> &vec = *static_cast<std::vector<T> *>(nullptr);
 					udm::create_property<std::vector<T>>({});
 					udm::create_property<std::vector<T> &>(vec);
 					udm::create_property<const std::vector<T> &>(vec);
 
-					udm::set_property_value<std::vector<T>>(*static_cast<udm::Property *>(nullptr), {});
-					udm::set_property_value<std::vector<T> &>(*static_cast<udm::Property *>(nullptr), vec);
-					udm::set_property_value<const std::vector<T> &>(*static_cast<udm::Property *>(nullptr), vec);
+					udm::set_property_value<std::vector<T>>(*static_cast<Property *>(nullptr), {});
+					udm::set_property_value<std::vector<T> &>(*static_cast<Property *>(nullptr), vec);
+					udm::set_property_value<const std::vector<T> &>(*static_cast<Property *>(nullptr), vec);
 				}
 
-				if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>) {
-					udm::to_property_value<std::vector<T>>(*static_cast<udm::Property *>(nullptr));
+				if constexpr(!std::is_same_v<T, Boolean> && !std::is_same_v<T, Array> && !std::is_same_v<T, ArrayLz4> && !std::is_same_v<T, Element>) {
+					udm::to_property_value<std::vector<T>>(*static_cast<Property *>(nullptr));
 
 					std::vector<T> blobData;
-					udm::get_property_blob_data(*static_cast<udm::Property *>(nullptr), blobData);
+					udm::get_property_blob_data(*static_cast<Property *>(nullptr), blobData);
 				}
 
-				if constexpr(!std::is_same_v<T, udm::Boolean> && !std::is_same_v<T, udm::UInt8>) {
+				if constexpr(!std::is_same_v<T, Boolean> && !std::is_same_v<T, UInt8>) {
 					std::vector<T> &vec = *static_cast<std::vector<T> *>(nullptr);
-					udm::set_element_value<std::vector<T>>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), {});
-					udm::set_element_value<std::vector<T> &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), vec);
-					udm::set_element_value<const std::vector<T> &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), vec);
+					udm::set_element_value<std::vector<T>>(*static_cast<Element *>(nullptr), *static_cast<Element *>(nullptr), {});
+					udm::set_element_value<std::vector<T> &>(*static_cast<Element *>(nullptr), *static_cast<Element *>(nullptr), vec);
+					udm::set_element_value<const std::vector<T> &>(*static_cast<Element *>(nullptr), *static_cast<Element *>(nullptr), vec);
 				}
 
-				if constexpr(!std::is_same_v<T, udm::UInt8> && !std::is_same_v<T, udm::Array> && !std::is_same_v<T, udm::ArrayLz4> && !std::is_same_v<T, udm::Element>) {
+				if constexpr(!std::is_same_v<T, UInt8> && !std::is_same_v<T, Array> && !std::is_same_v<T, ArrayLz4> && !std::is_same_v<T, Element>) {
 					std::vector<T> &vec = *static_cast<std::vector<T> *>(nullptr);
-					udm::set_array_value<std::vector<T>>(*static_cast<udm::Array *>(nullptr), 0u, {});
-					udm::set_array_value<std::vector<T> &>(*static_cast<udm::Array *>(nullptr), 0u, vec);
-					udm::set_array_value<const std::vector<T> &>(*static_cast<udm::Array *>(nullptr), 0u, vec);
+					udm::set_array_value<std::vector<T>>(*static_cast<Array *>(nullptr), 0u, {});
+					udm::set_array_value<std::vector<T> &>(*static_cast<Array *>(nullptr), 0u, vec);
+					udm::set_array_value<const std::vector<T> &>(*static_cast<Array *>(nullptr), 0u, vec);
 				}
 
-				udm::get_property_value<T>(*static_cast<udm::Property *>(nullptr));
-				udm::get_property_value<T>(*static_cast<udm::PropertyWrapper *>(nullptr));
-				udm::get_property_value_ptr<T>(*static_cast<udm::Property *>(nullptr));
-				udm::to_property_value<T>(*static_cast<udm::Property *>(nullptr));
-				udm::set_property_value(*static_cast<udm::Property *>(nullptr), v);
+				udm::get_property_value<T>(*static_cast<Property *>(nullptr));
+				udm::get_property_value<T>(*static_cast<PropertyWrapper *>(nullptr));
+				udm::get_property_value_ptr<T>(*static_cast<Property *>(nullptr));
+				udm::to_property_value<T>(*static_cast<Property *>(nullptr));
+				udm::set_property_value(*static_cast<Property *>(nullptr), v);
 
-				udm::get_array_value<T>(*static_cast<udm::Array *>(nullptr), 0u);
-				udm::get_array_value_ptr<T>(*static_cast<udm::Array *>(nullptr), 0u);
-				udm::set_array_value<T>(*static_cast<udm::Array *>(nullptr), 0u, std::forward<T>(v));
-				udm::get_array_begin_iterator<T>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<T> *>(nullptr));
-				udm::get_array_end_iterator<T>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<T> *>(nullptr));
+				udm::get_array_value<T>(*static_cast<Array *>(nullptr), 0u);
+				udm::get_array_value_ptr<T>(*static_cast<Array *>(nullptr), 0u);
+				udm::set_array_value<T>(*static_cast<Array *>(nullptr), 0u, std::forward<T>(v));
+				udm::get_array_begin_iterator<T>(*static_cast<Array *>(nullptr), *static_cast<ArrayIterator<T> *>(nullptr));
+				udm::get_array_end_iterator<T>(*static_cast<Array *>(nullptr), *static_cast<ArrayIterator<T> *>(nullptr));
 
-				udm::set_element_value<T>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), std::forward<T>(v));
+				udm::set_element_value<T>(*static_cast<Element *>(nullptr), *static_cast<Element *>(nullptr), std::forward<T>(v));
 
-				udm::set_element_value<const T &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), std::forward<const T &>(v));
-				udm::set_element_value<T &>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), std::forward<T &>(v));
-				udm::set_property_value<const T &>(*static_cast<udm::Property *>(nullptr), std::forward<const T &>(v));
+				udm::set_element_value<const T &>(*static_cast<Element *>(nullptr), *static_cast<Element *>(nullptr), std::forward<const T &>(v));
+				udm::set_element_value<T &>(*static_cast<Element *>(nullptr), *static_cast<Element *>(nullptr), std::forward<T &>(v));
+				udm::set_property_value<const T &>(*static_cast<Property *>(nullptr), std::forward<const T &>(v));
 			});
-			udm::get_array_begin_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper> *>(nullptr));
-			udm::get_array_end_iterator<udm::LinkedPropertyWrapper>(*static_cast<udm::Array *>(nullptr), *static_cast<udm::ArrayIterator<udm::LinkedPropertyWrapper> *>(nullptr));
+			udm::get_array_begin_iterator<LinkedPropertyWrapper>(*static_cast<Array *>(nullptr), *static_cast<ArrayIterator<LinkedPropertyWrapper> *>(nullptr));
+			udm::get_array_end_iterator<LinkedPropertyWrapper>(*static_cast<Array *>(nullptr), *static_cast<ArrayIterator<LinkedPropertyWrapper> *>(nullptr));
 
 			udm::create_property<std::string_view>({});
-			udm::set_property_value<std::string_view>(*static_cast<udm::Property *>(nullptr), {});
-			udm::set_array_value<std::string_view>(*static_cast<udm::Array *>(nullptr), 0u, {});
-			udm::set_element_value<std::string_view>(*static_cast<udm::Element *>(nullptr), *static_cast<udm::Element *>(nullptr), {});
+			udm::set_property_value<std::string_view>(*static_cast<Property *>(nullptr), {});
+			udm::set_array_value<std::string_view>(*static_cast<Array *>(nullptr), 0u, {});
+			udm::set_element_value<std::string_view>(*static_cast<Element *>(nullptr), *static_cast<Element *>(nullptr), {});
 
-			auto &prop = *static_cast<udm::PProperty *>(nullptr);
-			udm::set_property_value<udm::PProperty>(*static_cast<udm::Property *>(nullptr), {});
-			udm::set_property_value<udm::PProperty &>(*static_cast<udm::Property *>(nullptr), prop);
-			udm::set_property_value<const udm::PProperty &>(*static_cast<udm::Property *>(nullptr), prop);
+			auto &prop = *static_cast<PProperty *>(nullptr);
+			udm::set_property_value<PProperty>(*static_cast<Property *>(nullptr), {});
+			udm::set_property_value<PProperty &>(*static_cast<Property *>(nullptr), prop);
+			udm::set_property_value<const PProperty &>(*static_cast<Property *>(nullptr), prop);
 		}
 	}
 }

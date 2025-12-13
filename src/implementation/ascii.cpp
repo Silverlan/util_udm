@@ -56,12 +56,12 @@ udm::Type udm::ascii_type_to_enum(const std::string_view &type)
 	  {"uint32", Type::UInt32}, {"int64", Type::Int64}, {"uint64", Type::UInt64}, {"float", Type::Float}, {"double", Type::Double}, {"bool", Type::Boolean}, {"vec2", Type::Vector2}, {"vec2i", Type::Vector2i}, {"vec3", Type::Vector3}, {"vec3i", Type::Vector3i}, {"vec4", Type::Vector4},
 	  {"vec4i", Type::Vector4i}, {"quat", Type::Quaternion}, {"ang", Type::EulerAngles}, {"srgba", Type::Srgba}, {"hdr", Type::HdrColor}, {"transform", Type::Transform}, {"stransform", Type::ScaledTransform}, {"mat4", Type::Mat4}, {"mat3x4", Type::Mat3x4}, {"blob", Type::Blob},
 	  {"lz4", Type::BlobLz4}, {"array", Type::Array}, {"arrayLz4", Type::ArrayLz4}, {"element", Type::Element}, {"ref", Type::Reference}, {"struct", Type::Struct}, {"half", Type::Half}};
-	static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
+	static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 	auto it = namedTypeToEnum.find(type);
 	return (it != namedTypeToEnum.end()) ? it->second : Type::Invalid;
 }
 
-void udm::sanitize_key_name(std::string &key) { ustring::replace(key, "/", ""); }
+void udm::sanitize_key_name(std::string &key) { pragma::string::replace(key, "/", ""); }
 
 template<typename T>
 void udm::AsciiReader::ReadFloatValueList(T &outData)
@@ -169,7 +169,7 @@ void udm::AsciiReader::ReadBlobData(std::vector<uint8_t> &outData)
 		throw BuildException<SyntaxError>("Unexpected end of blob data");
 	// TODO: Optimize this so no copy is required!
 	try {
-		auto decoded = util::base64_decode(strData);
+		auto decoded = pragma::util::base64_decode(strData);
 		outData.resize(decoded.size());
 		memcpy(outData.data(), decoded.data(), outData.size());
 	}
@@ -195,7 +195,7 @@ constexpr bool is_float_based_type(udm::Type type)
 	default:
 		break;
 	}
-	static_assert(umath::to_integral(udm::Type::Count) == 36, "Update this list when new types are added!");
+	static_assert(pragma::math::to_integral(udm::Type::Count) == 36, "Update this list when new types are added!");
 	return false;
 }
 
@@ -242,7 +242,7 @@ void udm::AsciiReader::ReadValue(Type type, void *outData)
 						  return true;
 					  });
 					  if(idx == values.size())
-						  memcpy(&v, values.data(), util::size_of_container(values));
+						  memcpy(&v, values.data(), pragma::util::size_of_container(values));
 					  else if(idx == values.size() - 1) {
 						  // Transform and ScaledTransform values have an alternative valid representation,
 						  // where the rotation is represented as euler angles (i.e. 3 values instead of 4).
@@ -273,7 +273,7 @@ void udm::AsciiReader::ReadValue(Type type, void *outData)
 		auto vs = [this, outData](auto tag) {
 			using T = typename decltype(tag)::type;
 			if constexpr(!std::is_same_v<T, Half> && !std::is_same_v<T, Boolean>)
-				*static_cast<T *>(outData) = util::to_number<T>(ReadString());
+				*static_cast<T *>(outData) = pragma::util::to_number<T>(ReadString());
 		};
 		std::visit(vs, get_numeric_tag(type));
 		return;
@@ -304,7 +304,7 @@ void udm::AsciiReader::ReadValue(Type type, void *outData)
 			break;
 		}
 	case Type::Boolean:
-		*static_cast<Boolean *>(outData) = util::to_boolean(ReadString());
+		*static_cast<Boolean *>(outData) = pragma::util::to_boolean(ReadString());
 		break;
 	case Type::Srgba:
 		ReadTypedValueList<Srgba, Srgba::value_type>(*static_cast<Srgba *>(outData));
@@ -454,7 +454,7 @@ void udm::AsciiReader::ReadValue(Type type, void *outData)
 			break;
 		}
 	case Type::Half:
-		*static_cast<Half *>(outData) = util::to_number<float>(ReadString());
+		*static_cast<Half *>(outData) = pragma::util::to_number<float>(ReadString());
 		break;
 	case Type::Struct:
 		{
@@ -468,7 +468,7 @@ void udm::AsciiReader::ReadValue(Type type, void *outData)
 	default:
 		break;
 	};
-	static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
+	static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 }
 
 udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &parent)
@@ -521,12 +521,12 @@ udm::AsciiReader::BlockResult udm::AsciiReader::ReadBlockKeyValues(Element &pare
 
 bool udm::Data::SaveAscii(const std::string &fileName, AsciiSaveFlags flags) const
 {
-	auto f = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName, filemanager::FileMode::Write));
+	auto f = std::dynamic_pointer_cast<pragma::fs::VFilePtrInternalReal>(pragma::fs::open_file(fileName, pragma::fs::FileMode::Write));
 	if(f == nullptr) {
 		throw FileError {"Unable to open file!"};
 		return false;
 	}
-	auto fp = std::make_unique<VFilePtr>(f);
+	auto fp = std::make_unique<pragma::fs::VFilePtr>(f);
 	return SaveAscii(*fp, flags);
 }
 bool udm::Data::SaveAscii(IFile &f, AsciiSaveFlags flags) const
@@ -536,9 +536,9 @@ bool udm::Data::SaveAscii(IFile &f, AsciiSaveFlags flags) const
 	f.WriteString(ss.str());
 	return true;
 }
-bool udm::Data::SaveAscii(const ::VFilePtr &f, AsciiSaveFlags flags) const
+bool udm::Data::SaveAscii(const pragma::fs::VFilePtr &f, AsciiSaveFlags flags) const
 {
-	fsys::File fp {f};
+	pragma::fs::File fp {f};
 	return SaveAscii(fp, flags);
 }
 
@@ -631,7 +631,7 @@ namespace udm {
 		// Don't need the file handle anymore at this point
 		auto tmp = std::move(f);
 		tmp = nullptr;
-		return udm::AsciiReader::LoadAscii(std::move(memData));
+		return AsciiReader::LoadAscii(std::move(memData));
 	}
 };
 
@@ -706,7 +706,7 @@ char udm::AsciiReader::ReadNextToken()
 		c = ReadChar();
 		if(c == std::char_traits<char>::eof())
 			return std::char_traits<char>::eof();
-		if(ustring::WHITESPACE.find(c) != std::string::npos)
+		if(pragma::string::WHITESPACE.find(c) != std::string::npos)
 			continue;
 		if(c == '/') {
 			auto cNext = PeekNextChar();
@@ -796,7 +796,7 @@ std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const Nil &nil, co
 std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const Blob &blob, const std::string &prefix)
 {
 	try {
-		return "[" + util::base64_encode(blob.data.data(), blob.data.size()) + "]";
+		return "[" + pragma::util::base64_encode(blob.data.data(), blob.data.size()) + "]";
 	}
 	catch(const std::runtime_error &e) {
 		throw CompressionError {e.what()};
@@ -806,7 +806,7 @@ std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const Blob &blob, 
 std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const BlobLz4 &blob, const std::string &prefix)
 {
 	try {
-		return "[" + std::to_string(blob.uncompressedSize) + "][" + util::base64_encode(blob.compressedData.data(), blob.compressedData.size()) + "]";
+		return "[" + std::to_string(blob.uncompressedSize) + "][" + pragma::util::base64_encode(blob.compressedData.data(), blob.compressedData.size()) + "]";
 	}
 	catch(const std::runtime_error &e) {
 		throw CompressionError {e.what()};
@@ -816,7 +816,7 @@ std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const BlobLz4 &blo
 std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const Utf8String &utf8, const std::string &prefix)
 {
 	try {
-		return "[base64][" + util::base64_encode(utf8.data.data(), utf8.data.size()) + ']';
+		return "[base64][" + pragma::util::base64_encode(utf8.data.data(), utf8.data.size()) + ']';
 	}
 	catch(const std::runtime_error &e) {
 		throw CompressionError {e.what()};
@@ -940,16 +940,16 @@ std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const ArrayLz4 &a,
 	if(valueType == Type::Struct)
 		stype += a.GetStructuredDataInfo()->GetTemplateArgumentList();
 	auto r = "[" + stype + ';' + std::to_string(a.GetSize());
-	if(/*valueType == Type::Element && */ !umath::is_flag_set(flags, AsciiSaveFlags::DontCompressLz4Arrays))
+	if(/*valueType == Type::Element && */ !pragma::math::is_flag_set(flags, AsciiSaveFlags::DontCompressLz4Arrays))
 		r += ';' + std::to_string(blob.uncompressedSize);
 	r += "]";
-	if(umath::is_flag_set(flags, AsciiSaveFlags::DontCompressLz4Arrays)) {
+	if(pragma::math::is_flag_set(flags, AsciiSaveFlags::DontCompressLz4Arrays)) {
 		std::stringstream ss;
 		ArrayValuesToAscii(flags, ss, a, prefix);
 		return r + ss.str();
 	}
 	try {
-		return r + "[" + util::base64_encode(blob.compressedData.data(), blob.compressedData.size()) + "]";
+		return r + "[" + pragma::util::base64_encode(blob.compressedData.data(), blob.compressedData.size()) + "]";
 	}
 	catch(const std::runtime_error &e) {
 		throw CompressionError {e.what()};
@@ -959,7 +959,7 @@ std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const ArrayLz4 &a,
 std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const String &str, const std::string &prefix)
 {
 	auto val = str;
-	ustring::replace(val, "\\", "\\\\");
+	pragma::string::replace(val, "\\", "\\\\");
 	return '\"' + val + '\"';
 }
 std::string udm::Property::ToAsciiValue(AsciiSaveFlags flags, const Reference &ref, const std::string &prefix) { return ToAsciiValue(flags, ref.path, prefix); }

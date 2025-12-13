@@ -171,7 +171,7 @@ export {
 			default:
 				break;
 			}
-			static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
+			static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 			return nullptr;
 		}
 		DLLUDM Type ascii_type_to_enum(const std::string_view &type);
@@ -188,7 +188,7 @@ export {
 			return magic_enum::enum_flags_name(e);
 		}
 
-		using namespace umath::scoped_enum::bitwise;
+		using namespace pragma::math::scoped_enum::bitwise;
 	};
 
 	REGISTER_ENUM_FLAGS(udm::AsciiSaveFlags)

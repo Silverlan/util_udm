@@ -33,41 +33,41 @@ export {
 		}
 
 		template<typename T>
-		void lerp_value(const T &value0, const T &value1, float f, T &outValue, ::udm::Type type)
+		void lerp_value(const T &value0, const T &value1, float f, T &outValue, Type type)
 		{
-			using TBase = ::udm::base_type<T>;
-			if constexpr(std::is_same_v<TBase, ::udm::Transform> || std::is_same_v<TBase, ::udm::ScaledTransform>) {
+			using TBase = base_type<T>;
+			if constexpr(std::is_same_v<TBase, Transform> || std::is_same_v<TBase, ScaledTransform>) {
 				outValue.SetOrigin(uvec::lerp(value0.GetOrigin(), value1.GetOrigin(), f));
 				outValue.SetRotation(uquat::slerp(value0.GetRotation(), value1.GetRotation(), f));
-				if constexpr(std::is_same_v<TBase, ::udm::ScaledTransform>)
+				if constexpr(std::is_same_v<TBase, ScaledTransform>)
 					outValue.SetScale(uvec::lerp(value0.GetScale(), value1.GetScale(), f));
 			}
-			else if constexpr(std::is_same_v<TBase, ::udm::Half>)
-				outValue = static_cast<float>(umath::lerp(static_cast<float>(value0), static_cast<float>(value1), f));
+			else if constexpr(std::is_same_v<TBase, Half>)
+				outValue = static_cast<float>(pragma::math::lerp(static_cast<float>(value0), static_cast<float>(value1), f));
 			else if constexpr(::udm::is_arithmetic<TBase>)
-				outValue = umath::lerp(value0, value1, f);
+				outValue = pragma::math::lerp(value0, value1, f);
 			else if constexpr(::udm::is_vector_type<TBase>) {
 				if constexpr(std::is_integral_v<typename TBase::value_type>)
 					; // TODO
 				else
 					outValue = value0 + (value1 - value0) * f;
 			}
-			else if constexpr(std::is_same_v<TBase, ::udm::EulerAngles>) {
+			else if constexpr(std::is_same_v<TBase, EulerAngles>) {
 				auto q0 = uquat::create(value0);
 				auto q1 = uquat::create(value1);
 				auto qr = uquat::slerp(q0, q1, f);
 				outValue = EulerAngles {qr};
 			}
-			else if constexpr(std::is_same_v<TBase, ::udm::Quaternion>)
+			else if constexpr(std::is_same_v<TBase, Quaternion>)
 				outValue = uquat::slerp(value0, value1, f);
 			else {
 				outValue = value0;
-				auto n = ::udm::get_numeric_component_count(type);
+				auto n = udm::get_numeric_component_count(type);
 				for(auto i = decltype(n) {0u}; i < n; ++i) {
 					auto &f0 = *(reinterpret_cast<const float *>(&value0) + i);
 					auto &f1 = *(reinterpret_cast<const float *>(&value1) + i);
 
-					*(reinterpret_cast<float *>(&outValue) + i) = umath::lerp(f0, f1, f);
+					*(reinterpret_cast<float *>(&outValue) + i) = pragma::math::lerp(f0, f1, f);
 				}
 			}
 		}

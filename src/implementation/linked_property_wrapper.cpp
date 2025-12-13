@@ -62,7 +62,7 @@ std::string udm::LinkedPropertyWrapper::GetPath() const
 		if(it != e.children.end())
 			path = it->first;
 	}
-	ustring::replace(path, "/", "\\/");
+	pragma::string::replace(path, "/", "\\/");
 	if(prev) {
 		auto tmp = prev->GetPath();
 		if(!tmp.empty()) {

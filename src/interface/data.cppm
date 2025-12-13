@@ -22,13 +22,13 @@ export {
 			static constexpr auto KEY_ASSET_DATA = "assetData";
 			static std::optional<FormatType> GetFormatType(const std::string &fileName, std::string &outErr);
 			static std::optional<FormatType> GetFormatType(std::unique_ptr<IFile> &&f, std::string &outErr);
-			static std::optional<FormatType> GetFormatType(const ::VFilePtr &f, std::string &outErr);
+			static std::optional<FormatType> GetFormatType(const pragma::filesystem::VFilePtr &f, std::string &outErr);
 			static std::shared_ptr<Data> Load(const std::string &fileName);
 			static std::shared_ptr<Data> Load(std::unique_ptr<IFile> &&f);
-			static std::shared_ptr<Data> Load(const ::VFilePtr &f);
+			static std::shared_ptr<Data> Load(const pragma::filesystem::VFilePtr &f);
 			static std::shared_ptr<Data> Open(const std::string &fileName);
 			static std::shared_ptr<Data> Open(std::unique_ptr<IFile> &&f);
-			static std::shared_ptr<Data> Open(const ::VFilePtr &f);
+			static std::shared_ptr<Data> Open(const pragma::filesystem::VFilePtr &f);
 			static std::shared_ptr<Data> Create(const std::string &assetType, Version assetVersion);
 			static std::shared_ptr<Data> Create();
 			static bool DebugTest();
@@ -38,10 +38,10 @@ export {
 
 			bool Save(const std::string &fileName) const;
 			bool Save(IFile &f) const;
-			bool Save(const ::VFilePtr &f);
+			bool Save(const pragma::filesystem::VFilePtr &f);
 			bool SaveAscii(const std::string &fileName, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
 			bool SaveAscii(IFile &f, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
-			bool SaveAscii(const ::VFilePtr &f, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
+			bool SaveAscii(const pragma::filesystem::VFilePtr &f, AsciiSaveFlags flags = AsciiSaveFlags::Default) const;
 			Element &GetRootElement() { return *static_cast<Element *>(m_rootProperty->value); }
 			const Element &GetRootElement() const { return const_cast<Data *>(this)->GetRootElement(); }
 			AssetData GetAssetData() const;

@@ -24,18 +24,18 @@ export {
 		using Double = double;
 		using Boolean = bool;
 
-		using Vector2 = ::Vector2;
-		using Vector3 = ::Vector3;
-		using Vector4 = ::Vector4;
-		using Vector2i = ::Vector2i;
-		using Vector3i = ::Vector3i;
-		using Vector4i = ::Vector4i;
+		using Vector2 = Vector2;
+		using Vector3 = Vector3;
+		using Vector4 = Vector4;
+		using Vector2i = Vector2i;
+		using Vector3i = Vector3i;
+		using Vector4i = Vector4i;
 		using Quaternion = Quat;
-		using EulerAngles = ::EulerAngles;
+		using EulerAngles = EulerAngles;
 		using Srgba = std::array<uint8_t, 4>;
 		using HdrColor = std::array<uint16_t, 3>;
-		using Transform = umath::Transform;
-		using ScaledTransform = umath::ScaledTransform;
+		using Transform = pragma::math::Transform;
+		using ScaledTransform = pragma::math::ScaledTransform;
 		using Mat4 = Mat4;
 		using Mat3x4 = Mat3x4;
 		using Nil = std::monostate;

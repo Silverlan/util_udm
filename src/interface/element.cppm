@@ -13,7 +13,7 @@ import :wrapper_funcs;
 export {
 	namespace udm {
 		struct DLLUDM ElementIteratorPair {
-			ElementIteratorPair(util::StringMap<PProperty>::iterator &it);
+			ElementIteratorPair(pragma::util::StringMap<PProperty>::iterator &it);
 			ElementIteratorPair();
 			bool operator==(const ElementIteratorPair &other) const;
 			bool operator!=(const ElementIteratorPair &other) const;
@@ -30,8 +30,8 @@ export {
 			using reference = ElementIteratorPair &;
 
 			ElementIterator();
-			ElementIterator(udm::Element &e);
-			ElementIterator(udm::Element &e, util::StringMap<PProperty> &c, util::StringMap<PProperty>::iterator it);
+			ElementIterator(Element &e);
+			ElementIterator(Element &e, pragma::util::StringMap<PProperty> &c, pragma::util::StringMap<PProperty>::iterator it);
 			ElementIterator(const ElementIterator &other);
 			ElementIterator &operator++();
 			ElementIterator operator++(int);
@@ -40,8 +40,8 @@ export {
 			bool operator==(const ElementIterator &other) const;
 			bool operator!=(const ElementIterator &other) const;
 		  private:
-			util::StringMap<PProperty> *m_propertyMap = nullptr;
-			util::StringMap<PProperty>::iterator m_iterator {};
+			pragma::util::StringMap<PProperty> *m_propertyMap = nullptr;
+			pragma::util::StringMap<PProperty>::iterator m_iterator {};
 			ElementIteratorPair m_pair;
 		};
 
@@ -57,7 +57,7 @@ export {
 			void AddChild(std::string &&key, const PProperty &o);
 			void AddChild(const std::string &key, const PProperty &o);
 			void Copy(const Element &other);
-			util::StringMap<PProperty> children;
+			pragma::util::StringMap<PProperty> children;
 			PropertyWrapper fromProperty {};
 			PropertyWrapper parentProperty {};
 

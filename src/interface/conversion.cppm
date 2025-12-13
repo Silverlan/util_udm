@@ -84,7 +84,7 @@ export {
 						return false;
 					}
 					else if constexpr(std::is_same_v<T1, Half>) {
-						return Half {ustring::to_float(v0)};
+						return Half {pragma::string::to_float(v0)};
 					}
 					else if constexpr(is_arithmetic<T1>) {
 						T1 v1 {};
@@ -239,7 +239,7 @@ export {
 			};
 
 			template<typename T0, typename T1>
-			    requires((std::is_arithmetic_v<T0> || umath::is_vector_type<T0> || umath::is_matrix_type<T0> || std::is_same_v<T0, Quat> || std::is_same_v<T0, EulerAngles> || std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor> || std::is_same_v<T0, Transform>
+			    requires((std::is_arithmetic_v<T0> || pragma::math::is_vector_type<T0> || pragma::math::is_matrix_type<T0> || std::is_same_v<T0, Quat> || std::is_same_v<T0, EulerAngles> || std::is_same_v<T0, Srgba> || std::is_same_v<T0, HdrColor> || std::is_same_v<T0, Transform>
 			               || std::is_same_v<T0, ScaledTransform> || std::is_same_v<T0, Reference> || std::is_same_v<T0, Half> || std::is_same_v<T0, Nil>)
 			      && std::is_same_v<T1, String>)
 			struct TypeConverter<T0, T1> {
@@ -248,9 +248,9 @@ export {
 				{
 					if constexpr(std::is_arithmetic_v<T0>)
 						return std::to_string(v0);
-					else if constexpr(umath::is_vector_type<T0>)
+					else if constexpr(pragma::math::is_vector_type<T0>)
 						return uvec::to_string<T0>(v0, ' ');
-					else if constexpr(umath::is_matrix_type<T0>)
+					else if constexpr(pragma::math::is_matrix_type<T0>)
 						return umat::to_string<T0>(v0, ' ');
 					else if constexpr(std::is_same_v<T0, Quat>)
 						return uquat::to_string(v0, ' ');

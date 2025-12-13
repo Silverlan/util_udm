@@ -57,13 +57,13 @@ udm::BlobLz4 udm::compress_lz4_blob(const Blob &data) { return compress_lz4_blob
 
 //////////////
 
-udm::Half::Half(float value) : value {static_cast<uint16_t>(umath::float32_to_float16_glm(value))} {}
+udm::Half::Half(float value) : value {static_cast<uint16_t>(pragma::math::float32_to_float16_glm(value))} {}
 
-udm::Half::operator float() const { return umath::float16_to_float32_glm(static_cast<int16_t>(value)); }
+udm::Half::operator float() const { return pragma::math::float16_to_float32_glm(static_cast<int16_t>(value)); }
 
 udm::Half &udm::Half::operator=(float value)
 {
-	this->value = static_cast<uint16_t>(umath::float32_to_float16_glm(value));
+	this->value = static_cast<uint16_t>(pragma::math::float32_to_float16_glm(value));
 	return *this;
 }
 udm::Half &udm::Half::operator=(uint16_t value)
@@ -105,7 +105,7 @@ std::string udm::StructDescription::GetTemplateArgumentList() const
 {
 	assert(!types.empty());
 	std::string r;
-	static_assert(umath::to_integral(Type::Count) == 36, "Update this when new types are added!");
+	static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this when new types are added!");
 	constexpr uint32_t MAX_TYPE_NAME_LENGTH = 10; // Max type name length is that of 'stransform'
 	auto sz = types.size() * MAX_TYPE_NAME_LENGTH + 2 + types.size() - 1;
 	for(auto &name : names) {
@@ -219,7 +219,7 @@ udm::BlobLz4 &udm::BlobLz4::operator=(const BlobLz4 &other)
 
 void udm::detail::test_conversions()
 {
-	auto c = umath::to_integral(udm::Type::Count);
+	auto c = pragma::math::to_integral(udm::Type::Count);
 	for(auto i = decltype(c) {0u}; i < c; ++i) {
 		auto t0 = static_cast<udm::Type>(i);
 		for(auto j = decltype(c) {0u}; j < c; ++j) {
@@ -228,10 +228,10 @@ void udm::detail::test_conversions()
 				using T0 = typename decltype(tag)::type;
 				udm::visit(t1, [&](auto tag) {
 					using T1 = typename decltype(tag)::type;
-					if constexpr(!udm::detail::TypeConverter<T0, T1>::is_convertible)
-						std::cout << magic_enum::enum_name(t0) << " => " << magic_enum::enum_name(t1) << ": " << (udm::detail::TypeConverter<T0, T1>::is_convertible ? "defined" : "undefined") << std::endl;
+					if constexpr(!detail::TypeConverter<T0, T1>::is_convertible)
+						std::cout << magic_enum::enum_name(t0) << " => " << magic_enum::enum_name(t1) << ": " << (detail::TypeConverter<T0, T1>::is_convertible ? "defined" : "undefined") << std::endl;
 					else {
-						T1 value = udm::detail::TypeConverter<T0, T1>::convert(T0 {});
+						T1 value = detail::TypeConverter<T0, T1>::convert(T0 {});
 					}
 				});
 			});

@@ -120,14 +120,14 @@ void udm::Element::Merge(const Element &other, MergeFlags mergeFlags)
 	for(auto &pair : other.children) {
 		auto &prop = *pair.second;
 		if(!prop.IsType(Type::Element) && !is_array_type(prop.type)) {
-			AddChild(pair.first, umath::is_flag_set(mergeFlags, MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second);
+			AddChild(pair.first, pragma::math::is_flag_set(mergeFlags, MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second);
 			continue;
 		}
 		auto it = children.find(pair.first);
 		if(it == children.end() || (prop.type != it->second->type && (!is_array_type(prop.type) || !is_array_type(it->second->type)))) {
-			if(it != children.end() && umath::is_flag_set(mergeFlags, MergeFlags::OverwriteExisting) == false)
+			if(it != children.end() && pragma::math::is_flag_set(mergeFlags, MergeFlags::OverwriteExisting) == false)
 				continue;
-			AddChild(pair.first, umath::is_flag_set(mergeFlags, MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second);
+			AddChild(pair.first, pragma::math::is_flag_set(mergeFlags, MergeFlags::DeepCopy) ? pair.second->Copy(true) : pair.second);
 			continue;
 		}
 		if(prop.IsType(Type::Element)) {

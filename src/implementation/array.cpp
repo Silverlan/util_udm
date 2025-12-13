@@ -79,7 +79,7 @@ udm::Array &udm::Array::operator=(const Array &other)
 
 void udm::Array::Merge(const Array &other, MergeFlags mergeFlags)
 {
-	if(umath::is_flag_set(mergeFlags, MergeFlags::OverwriteExisting) || GetValueType() != other.GetValueType()) { // TODO: Copy files if compatible?
+	if(pragma::math::is_flag_set(mergeFlags, MergeFlags::OverwriteExisting) || GetValueType() != other.GetValueType()) { // TODO: Copy files if compatible?
 		Clear();
 		SetValueType(other.GetValueType());
 	}
@@ -185,7 +185,7 @@ void udm::Array::Resize(uint32_t newSize, Range r0, Range r1, bool defaultInitia
 			  auto *dataPtr = reinterpret_cast<T *>(newValues);
 			  auto *curValues = GetValues();
 			  if(curValues) {
-				  auto numCpy = umath::min(newSize, m_size);
+				  auto numCpy = pragma::math::min(newSize, m_size);
 				  cpyData(curValues, dataPtr, 0, copy_non_trivial_data<T>);
 				  if constexpr(is_non_trivial_type(type_to_enum<T>()))
 					  defaultInitializeNewValues = false; // Non-trivial data has already been default-initialized by AllocateData
@@ -249,7 +249,7 @@ void udm::Array::Resize(uint32_t newSize, Range r0, Range r1, bool defaultInitia
 
 void udm::Array::Resize(uint32_t newSize)
 {
-	auto size = umath::min(GetSize(), newSize);
+	auto size = pragma::math::min(GetSize(), newSize);
 	Range r0 {0, 0, size};
 	Range r1 {size, size, 0};
 	Resize(newSize, r0, r1, true);
@@ -257,14 +257,14 @@ void udm::Array::Resize(uint32_t newSize)
 
 void udm::Array::AddValueRange(uint32_t startIndex, uint32_t count)
 {
-	::udm::Array::Range r0 {0 /* src */, 0 /* dst */, startIndex};
-	::udm::Array::Range r1 {startIndex /* src */, startIndex + count /* dst */, GetSize() - startIndex};
+	udm::Array::Range r0 {0 /* src */, 0 /* dst */, startIndex};
+	udm::Array::Range r1 {startIndex /* src */, startIndex + count /* dst */, GetSize() - startIndex};
 	Resize(GetSize() + count, r0, r1, false);
 }
 void udm::Array::RemoveValueRange(uint32_t startIndex, uint32_t count)
 {
-	::udm::Array::Range r0 {0 /* src */, 0 /* dst */, startIndex};
-	::udm::Array::Range r1 {startIndex + count /* src */, startIndex /* dst */, GetSize() - (startIndex + count)};
+	udm::Array::Range r0 {0 /* src */, 0 /* dst */, startIndex};
+	udm::Array::Range r1 {startIndex + count /* src */, startIndex /* dst */, GetSize() - (startIndex + count)};
 	Resize(GetSize() - count, r0, r1, false);
 }
 
@@ -364,7 +364,7 @@ udm::StructDescription *udm::ArrayLz4::GetStructuredDataInfo()
 void udm::ArrayLz4::ClearUncompressedMemory() { Compress(); }
 void udm::ArrayLz4::SetUncompressedMemoryPersistent(bool persistent)
 {
-	umath::set_flag(m_flags, Flags::PersistentUncompressedData, persistent);
+	pragma::math::set_flag(m_flags, Flags::PersistentUncompressedData, persistent);
 	if(persistent)
 		Decompress();
 	else
@@ -373,7 +373,7 @@ void udm::ArrayLz4::SetUncompressedMemoryPersistent(bool persistent)
 
 struct StreamData : public udm::IFile {
 	StreamData() = default;
-	util::DataStream &GetDataStream() { return m_ds; }
+	pragma::util::DataStream &GetDataStream() { return m_ds; }
 	virtual size_t Read(void *data, size_t size) override
 	{
 		m_ds->Read(data, size);
@@ -401,7 +401,7 @@ struct StreamData : public udm::IFile {
 	}
 	virtual int32_t ReadChar() override { return m_ds->Read<char>(); }
   private:
-	util::DataStream m_ds;
+	pragma::util::DataStream m_ds;
 };
 
 #pragma pack(push, 1)
@@ -411,9 +411,9 @@ struct CompressedStringArrayHeader {
 #pragma pack(pop)
 void udm::ArrayLz4::Compress()
 {
-	if(umath::is_flag_set(m_flags, Flags::Compressed))
+	if(pragma::math::is_flag_set(m_flags, Flags::Compressed))
 		return;
-	util::ScopeGuard sgState {[this]() { umath::set_flag(m_flags, Flags::Compressed); }};
+	pragma::util::ScopeGuard sgState {[this]() { pragma::math::set_flag(m_flags, Flags::Compressed); }};
 	auto *p = GetValuePtr();
 	if(!p) {
 		auto *pStrct = Array::GetStructuredDataInfo();
@@ -433,7 +433,7 @@ void udm::ArrayLz4::Compress()
 		}
 		auto &ds = f.GetDataStream();
 		m_compressedBlob = udm::compress_lz4_blob(ds->GetData(), ds->GetInternalSize());
-		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+		if(!pragma::math::is_flag_set(m_flags, Flags::PersistentUncompressedData))
 			ReleaseValues();
 		return;
 	}
@@ -458,7 +458,7 @@ void udm::ArrayLz4::Compress()
 			++p;
 		}
 		m_compressedBlob = udm::compress_lz4_blob(memFile.GetData(), memFile.GetDataSize());
-		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+		if(!pragma::math::is_flag_set(m_flags, Flags::PersistentUncompressedData))
 			ReleaseValues();
 		return;
 	}
@@ -469,20 +469,20 @@ void udm::ArrayLz4::Compress()
 		m_structuredDataInfo = std::make_unique<StructDescription>();
 		*m_structuredDataInfo = std::move(*pStrct);
 	}
-	if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+	if(!pragma::math::is_flag_set(m_flags, Flags::PersistentUncompressedData))
 		ReleaseValues();
 }
 void udm::ArrayLz4::Decompress()
 {
-	if(!umath::is_flag_set(m_flags, Flags::Compressed))
+	if(!pragma::math::is_flag_set(m_flags, Flags::Compressed))
 		return;
 	if(GetValuePtr()) {
-		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+		if(!pragma::math::is_flag_set(m_flags, Flags::PersistentUncompressedData))
 			throw ImplementationError {"Attempted to decompress array which has a valid data pointer!"}; // Unreachable
 		// Uncompressed data is already available
 		return;
 	}
-	umath::set_flag(m_flags, Flags::Compressed, false);
+	pragma::math::set_flag(m_flags, Flags::Compressed, false);
 
 	if(m_valueType == Type::Element) {
 		StreamData f {};
@@ -577,9 +577,9 @@ void *udm::ArrayLz4::GetValues()
 void udm::ArrayLz4::Clear()
 {
 	m_structuredDataInfo = nullptr;
-	if(umath::is_flag_set(m_flags, Flags::Compressed)) {
+	if(pragma::math::is_flag_set(m_flags, Flags::Compressed)) {
 		m_compressedBlob = {};
-		if(!umath::is_flag_set(m_flags, Flags::PersistentUncompressedData))
+		if(!pragma::math::is_flag_set(m_flags, Flags::PersistentUncompressedData))
 			return;
 	}
 	Array::Clear();

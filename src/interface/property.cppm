@@ -165,7 +165,7 @@ export {
 		bool Property::Assign(T &&v)
 		{
 			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-			if constexpr(util::is_specialization<TBase, std::vector>::value) {
+			if constexpr(pragma::util::is_specialization<TBase, std::vector>::value) {
 				using TValueType = typename TBase::value_type;
 				if(!is_array_type(type)) {
 					if constexpr(ENABLE_EXCEPTIONS)
@@ -201,7 +201,7 @@ export {
 					return false;
 				return true;
 			}
-			else if constexpr(util::is_specialization<TBase, std::unordered_map>::value || util::is_specialization<TBase, std::map>::value) {
+			else if constexpr(pragma::util::is_specialization<TBase, std::unordered_map>::value || pragma::util::is_specialization<TBase, std::map>::value) {
 				if(type != Type::Element) {
 					if constexpr(ENABLE_EXCEPTIONS)
 						throw InvalidUsageError {"Attempted to assign map to non-element property (of type " + std::string {magic_enum::enum_name(type)} + "), this is not allowed!"};
@@ -349,12 +349,12 @@ export {
 		{
 			if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 				return {};
-			if constexpr(util::is_specialization<T, std::vector>::value) {
+			if constexpr(pragma::util::is_specialization<T, std::vector>::value) {
 				T v {};
 				auto res = GetBlobData(v);
 				return (res == BlobResult::Success) ? v : std::optional<T> {};
 			}
-			else if constexpr(util::is_specialization<T, std::unordered_map>::value || util::is_specialization<T, std::map>::value) {
+			else if constexpr(pragma::util::is_specialization<T, std::unordered_map>::value || pragma::util::is_specialization<T, std::map>::value) {
 				if(type != Type::Element)
 					return {};
 				using TValue = decltype(T::value_type::second);
@@ -374,7 +374,7 @@ export {
 				return {};
 			};
 			return visit(type, vs);
-			static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
+			static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 			return {};
 		}
 

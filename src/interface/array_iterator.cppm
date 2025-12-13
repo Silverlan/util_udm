@@ -23,8 +23,8 @@ export {
 			using reference = T &;
 
 			ArrayIterator();
-			explicit ArrayIterator(udm::Array &a);
-			ArrayIterator(udm::Array &a, uint32_t idx);
+			explicit ArrayIterator(Array &a);
+			ArrayIterator(Array &a, uint32_t idx);
 			ArrayIterator(const ArrayIterator &other);
 			ArrayIterator &operator++();
 			ArrayIterator operator++(int);
@@ -34,9 +34,9 @@ export {
 			bool operator==(const ArrayIterator &other) const;
 			bool operator!=(const ArrayIterator &other) const;
 
-			udm::LinkedPropertyWrapper &GetProperty() { return m_curProperty; }
+			LinkedPropertyWrapper &GetProperty() { return m_curProperty; }
 		  private:
-			udm::LinkedPropertyWrapper m_curProperty;
+			LinkedPropertyWrapper m_curProperty;
 		};
 
 		template<typename T>

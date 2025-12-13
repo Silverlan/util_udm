@@ -242,11 +242,11 @@ static udm::StructDescription to_struct_description(uint32_t numMembers, UdmType
 extern "C" {
 DLLUDM UdmData udm_load(const char *fileName, bool clearDataOnDestruction)
 {
-	auto fileMode = filemanager::FileMode::Read;
+	auto fileMode = pragma::fs::FileMode::Read;
 	std::string ext;
 	if(ufile::get_extension(fileName, &ext) && ext.length() > 2 && ext.substr(ext.length() - 2) == "_b")
-		fileMode |= filemanager::FileMode::Binary;
-	auto f = filemanager::open_system_file(fileName, fileMode);
+		fileMode |= pragma::fs::FileMode::Binary;
+	auto f = pragma::fs::open_system_file(fileName, fileMode);
 	if(!f)
 		return nullptr;
 	auto udmData = udm::Data::Load(f);
@@ -256,11 +256,11 @@ DLLUDM UdmData udm_load(const char *fileName, bool clearDataOnDestruction)
 }
 DLLUDM char *udm_read_header(const char *fileName, udm::Version &outVersion)
 {
-	auto fileMode = filemanager::FileMode::Read;
+	auto fileMode = pragma::fs::FileMode::Read;
 	std::string ext;
 	if(ufile::get_extension(fileName, &ext) && ext.length() > 2 && ext.substr(ext.length() - 2) == "_b")
-		fileMode |= filemanager::FileMode::Binary;
-	auto f = filemanager::open_system_file(fileName, fileMode);
+		fileMode |= pragma::fs::FileMode::Binary;
+	auto f = pragma::fs::open_system_file(fileName, fileMode);
 	if(!f)
 		return nullptr;
 	auto udmData = udm::Data::Open(f);
@@ -282,14 +282,14 @@ DLLUDM udm::Version udm_get_asset_version(UdmData udmData) { return udmData->dat
 
 DLLUDM bool udm_save_binary(UdmData udmData, const char *fileName)
 {
-	auto f = filemanager::open_system_file(fileName, filemanager::FileMode::Write | filemanager::FileMode::Binary);
+	auto f = pragma::fs::open_system_file(fileName, pragma::fs::FileMode::Write | pragma::fs::FileMode::Binary);
 	if(!f)
 		return false;
 	return (*udmData)->Save(f);
 }
 DLLUDM bool udm_save_ascii(UdmData udmData, const char *fileName, uint32_t asciiFlags)
 {
-	auto f = filemanager::open_system_file(fileName, filemanager::FileMode::Write);
+	auto f = pragma::fs::open_system_file(fileName, pragma::fs::FileMode::Write);
 	if(!f)
 		return false;
 	return (*udmData)->SaveAscii(f, static_cast<udm::AsciiSaveFlags>(asciiFlags));
@@ -298,7 +298,7 @@ DLLUDM bool udm_is_property_valid(UdmProperty prop, const char *path) { return s
 DLLUDM UdmType udm_get_property_type(UdmProperty prop, const char *path)
 {
 	auto p = get_property(prop, path);
-	return umath::to_integral(p.GetType());
+	return pragma::math::to_integral(p.GetType());
 }
 DLLUDM uint32_t udm_get_property_child_count(UdmProperty udmData, const char *path)
 {
@@ -601,8 +601,8 @@ DLLUDM UdmType udm_get_array_value_type(UdmProperty udmData, const char *path)
 {
 	auto childProp = get_property(udmData, path);
 	if(!childProp || childProp.IsArrayItem() || !udm::is_array_type(childProp->type))
-		return umath::to_integral(udm::Type::Invalid);
-	return umath::to_integral(childProp.GetValue<udm::Array>().GetValueType());
+		return pragma::math::to_integral(udm::Type::Invalid);
+	return pragma::math::to_integral(childProp.GetValue<udm::Array>().GetValueType());
 }
 DLLUDM uint32_t udm_get_array_size(UdmProperty udmData, const char *path)
 {
@@ -632,7 +632,7 @@ DLLUDM UdmType *udm_get_struct_member_types(UdmProperty udmData, const char *pat
 	auto n = strct->GetMemberCount();
 	auto *r = new UdmType[n];
 	for(auto i = decltype(n) {0u}; i < n; ++i)
-		r[i] = umath::to_integral(strct->types[i]);
+		r[i] = pragma::math::to_integral(strct->types[i]);
 	*outNumMembers = n;
 	udmData->data.AddDeleter([r]() { delete[] r; });
 	return r;
@@ -668,10 +668,10 @@ DLLUDM char *udm_property_to_ascii(UdmProperty udmData, const char *propName)
 
 DLLUDM void udm_free_memory(UdmData udmData) { udmData->FreeMemory(); }
 
-DLLUDM void udm_add_custom_mount_path(const char *path) { filemanager::add_custom_mount_directory(path, true); }
+DLLUDM void udm_add_custom_mount_path(const char *path) { pragma::fs::add_custom_mount_directory(path, true); }
 DLLUDM void udm_pose_to_matrix(const float pos[3], const float rot[4], const float scale[3], float *outMatrix)
 {
-	umath::ScaledTransform pose {Vector3 {pos[0], pos[1], pos[2]}, Quat {rot[0], rot[1], rot[2], rot[3]}, Vector3 {scale[0], scale[1], scale[2]}};
+	pragma::math::ScaledTransform pose {Vector3 {pos[0], pos[1], pos[2]}, Quat {rot[0], rot[1], rot[2], rot[3]}, Vector3 {scale[0], scale[1], scale[2]}};
 	auto mat = pose.ToMatrix();
 	memcpy(outMatrix, &mat, sizeof(mat));
 }
@@ -681,7 +681,7 @@ void udm::detail::test_c_wrapper()
 {
 	// Note: This will only work if util_udm was built as a shared library!
 	std::string err;
-	auto lib = util::Library::Get("util_udm", &err);
+	auto lib = pragma::util::Library::Get("util_udm", &err);
 	if(!lib)
 		return;
 	auto *udm_load = lib->FindSymbolAddress<UdmData (*)(const char *, bool)>("udm_load");
@@ -746,15 +746,15 @@ void udm::detail::test_c_wrapper()
 		auto *root = udm_get_root_property(udmData);
 		udm_write_property_f(root, "mass", 12.f); // Write float property
 		// Add an uncompressed array
-		udm_add_property_array(root, "hitboxes", umath::to_integral(udm::Type::Element), umath::to_integral(udm::ArrayType::Raw), 2 /* arraySize */);
+		udm_add_property_array(root, "hitboxes", pragma::math::to_integral(udm::Type::Element), pragma::math::to_integral(udm::ArrayType::Raw), 2 /* arraySize */);
 
 		auto hb0 = udm_get_property(root, "hitboxes[0]");
 		udm_write_property_s(hb0, "hitGroup", "LeftLeg"); // Write string: hitboxes[0]/hitGroup = "LeftLeg"
 		std::array<float, 3> min = {-10.f, -3.f, -5.f};
 		std::array<float, 3> max = {3.f, 12.f, 55.f};
 		// Write vector properties
-		udm_write_property_vf(hb0, "bounds/min", umath::to_integral(udm::Type::Vector3), min.data(), min.size());
-		udm_write_property_vf(hb0, "bounds/max", umath::to_integral(udm::Type::Vector3), max.data(), max.size());
+		udm_write_property_vf(hb0, "bounds/min", pragma::math::to_integral(udm::Type::Vector3), min.data(), min.size());
+		udm_write_property_vf(hb0, "bounds/max", pragma::math::to_integral(udm::Type::Vector3), max.data(), max.size());
 
 		udm_write_property_i(hb0, "bone", 3);
 
@@ -765,9 +765,9 @@ void udm::detail::test_c_wrapper()
 		udm_write_property_i(hb1, "bone", 12);
 
 		// Create a struct with three members: position (vec3), normal (vec3), uv (vec2)
-		std::array<uint8_t, 3> types = {umath::to_integral(udm::Type::Vector3), umath::to_integral(udm::Type::Vector3), umath::to_integral(udm::Type::Vector2)};
+		std::array<uint8_t, 3> types = {pragma::math::to_integral(udm::Type::Vector3), pragma::math::to_integral(udm::Type::Vector3), pragma::math::to_integral(udm::Type::Vector2)};
 		std::array<const char *, 3> names = {"pos", "n", "uv"}; // Member names
-		udm_add_property_struct_array(root, "vertices", types.size() /* memberCount */, types.data(), names.data(), umath::to_integral(udm::ArrayType::Compressed), 3 /* arraySize */);
+		udm_add_property_struct_array(root, "vertices", types.size() /* memberCount */, types.data(), names.data(), pragma::math::to_integral(udm::ArrayType::Compressed), 3 /* arraySize */);
 
 		auto vertices = udm_get_property(root, "vertices");
 		std::array<float, 3> pos0 = {-1.f, 5.f, 12.f};
@@ -778,24 +778,24 @@ void udm::detail::test_c_wrapper()
 		std::array<float, 2> uv = {1.f, 0.f};
 
 		// Write first vertex
-		udm_write_property_svf(vertices, "", 0 /* arrayIndex */, 0 /* memberIndex */, umath::to_integral(udm::Type::Vector3), pos0.data(), pos0.size());
-		udm_write_property_svf(root, "vertices", 0 /* arrayIndex */, 1 /* memberIndex */, umath::to_integral(udm::Type::Vector3), n.data(), n.size());
-		udm_write_property_svf(root, "vertices", 0 /* arrayIndex */, 2 /* memberIndex */, umath::to_integral(udm::Type::Vector2), uv.data(), uv.size());
+		udm_write_property_svf(vertices, "", 0 /* arrayIndex */, 0 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector3), pos0.data(), pos0.size());
+		udm_write_property_svf(root, "vertices", 0 /* arrayIndex */, 1 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector3), n.data(), n.size());
+		udm_write_property_svf(root, "vertices", 0 /* arrayIndex */, 2 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector2), uv.data(), uv.size());
 
 		// Write second vertex
-		udm_write_property_svf(root, "vertices", 1 /* arrayIndex */, 0 /* memberIndex */, umath::to_integral(udm::Type::Vector3), pos1.data(), 3);
-		udm_write_property_svf(root, "vertices", 1 /* arrayIndex */, 1 /* memberIndex */, umath::to_integral(udm::Type::Vector3), n.data(), n.size());
-		udm_write_property_svf(root, "vertices", 1 /* arrayIndex */, 2 /* memberIndex */, umath::to_integral(udm::Type::Vector2), uv.data(), uv.size());
+		udm_write_property_svf(root, "vertices", 1 /* arrayIndex */, 0 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector3), pos1.data(), 3);
+		udm_write_property_svf(root, "vertices", 1 /* arrayIndex */, 1 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector3), n.data(), n.size());
+		udm_write_property_svf(root, "vertices", 1 /* arrayIndex */, 2 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector2), uv.data(), uv.size());
 
 		// Write third vertex
-		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 0 /* memberIndex */, umath::to_integral(udm::Type::Vector3), pos2.data(), 3);
-		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 1 /* memberIndex */, umath::to_integral(udm::Type::Vector3), n.data(), n.size());
-		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 2 /* memberIndex */, umath::to_integral(udm::Type::Vector2), uv.data(), uv.size());
+		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 0 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector3), pos2.data(), 3);
+		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 1 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector3), n.data(), n.size());
+		udm_write_property_svf(root, "vertices", 2 /* arrayIndex */, 2 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector2), uv.data(), uv.size());
 
-		auto path = filemanager::get_program_write_path();
+		auto path = pragma::fs::get_program_write_path();
 
 		// Save ascii version
-		udm_save_ascii(udmData, (path + "/udm_example_file.pmdl").c_str(), umath::to_integral(udm::AsciiSaveFlags::IncludeHeader | udm::AsciiSaveFlags::DontCompressLz4Arrays));
+		udm_save_ascii(udmData, (path + "/udm_example_file.pmdl").c_str(), pragma::math::to_integral(udm::AsciiSaveFlags::IncludeHeader | udm::AsciiSaveFlags::DontCompressLz4Arrays));
 
 		// Save binary version
 		udm_save_binary(udmData, (path + "/udm_example_file.pmdl_b").c_str());
@@ -808,7 +808,7 @@ void udm::detail::test_c_wrapper()
 		udm_destroy(udmData);
 	}
 
-	auto path = filemanager::get_program_write_path();
+	auto path = pragma::fs::get_program_write_path();
 	// Load binary file
 	udmData = udm_load((path + "/udm_example_file.pmdl").c_str(), true /* clearDataOnDestruction */);
 	if(udmData != nullptr) {
@@ -828,12 +828,12 @@ void udm::detail::test_c_wrapper()
 
 		auto propBoundsMin = udm_get_property(root, "hitboxes[0]/bounds/min");
 		uint32_t numItems = 0;
-		auto *boundsMin = udm_read_property_vf(propBoundsMin, "", umath::to_integral(udm::Type::Float), &numItems);
+		auto *boundsMin = udm_read_property_vf(propBoundsMin, "", pragma::math::to_integral(udm::Type::Float), &numItems);
 
-		std::array<uint8_t, 3> types = {umath::to_integral(udm::Type::Vector3), umath::to_integral(udm::Type::Vector3), umath::to_integral(udm::Type::Vector2)};
+		std::array<uint8_t, 3> types = {pragma::math::to_integral(udm::Type::Vector3), pragma::math::to_integral(udm::Type::Vector3), pragma::math::to_integral(udm::Type::Vector2)};
 		std::array<const char *, 3> names = {"pos", "n", "uv"};
 		uint32_t numValues = 0;
-		auto *pos0 = udm_read_property_svf(root, "vertices", 0 /* arrayIndex */, 0 /* memberIndex */, umath::to_integral(udm::Type::Vector3), &numValues);
+		auto *pos0 = udm_read_property_svf(root, "vertices", 0 /* arrayIndex */, 0 /* memberIndex */, pragma::math::to_integral(udm::Type::Vector3), &numValues);
 		assert(numValues == 3);
 		std::cout << "Position of vertex 0: " << pos0[0] << "," << pos0[1] << "," << pos0[2] << std::endl;
 

@@ -25,7 +25,7 @@ udm::ElementIterator::ElementIterator() : m_iterator {} {}
 
 udm::ElementIterator::ElementIterator(udm::Element &e) : ElementIterator {e, e.children, e.children.begin()} {}
 
-udm::ElementIterator::ElementIterator(udm::Element &e, util::StringMap<PProperty> &c, util::StringMap<PProperty>::iterator it) : m_iterator {it}, m_pair {}, m_propertyMap {&c}
+udm::ElementIterator::ElementIterator(udm::Element &e, pragma::util::StringMap<PProperty> &c, pragma::util::StringMap<PProperty>::iterator it) : m_iterator {it}, m_pair {}, m_propertyMap {&c}
 {
 	if(it != c.end())
 		m_pair = {it};

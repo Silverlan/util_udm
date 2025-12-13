@@ -59,7 +59,7 @@ static void to_json(udm::LinkedPropertyWrapperArg prop, std::stringstream &ss, c
 			blobData.resize(blobSize);
 			auto res = prop.GetBlobData(blobData.data(), blobData.size());
 			if(res == udm::BlobResult::Success) {
-				auto encoded = util::base64_encode(blobData.data(), blobData.size());
+				auto encoded = pragma::util::base64_encode(blobData.data(), blobData.size());
 				ss << "\"" << encoded << "\"";
 				return;
 			}

@@ -110,7 +110,7 @@ void udm::Property::SetAppropriatePrecision(std::stringstream &ss, Type type)
 	default:
 		break;
 	}
-	static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
+	static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 }
 void udm::Property::RemoveTrailingZeroes(std::string &str)
 {
@@ -408,7 +408,7 @@ void udm::Property::Write(IFile &f, const ArrayLz4 &a)
 }
 uint32_t udm::Property::GetStringPrefixSizeRequirement(const String &str)
 {
-	auto len = umath::min(str.length(), static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
+	auto len = pragma::math::min(str.length(), static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
 	if(len < EXTENDED_STRING_IDENTIFIER)
 		return sizeof(uint8_t);
 	return sizeof(uint32_t);
@@ -417,7 +417,7 @@ uint32_t udm::Property::GetStringSizeRequirement(const String &str) { return Get
 void udm::Property::Write(IFile &f, const String &str)
 {
 	// Note: Any changes made here may affect udm::Data::SkipProperty as well
-	auto len = umath::min(str.length(), static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
+	auto len = pragma::math::min(str.length(), static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
 	if(len < EXTENDED_STRING_IDENTIFIER)
 		f.Write<uint8_t>(len);
 	else {

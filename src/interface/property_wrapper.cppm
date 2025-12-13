@@ -87,7 +87,7 @@ export {
 			bool operator()(T &valOut) const
 			{
 				using TBase = std::remove_reference_t<T>;
-				if constexpr(util::is_specialization<TBase, std::optional>::value) {
+				if constexpr(pragma::util::is_specialization<TBase, std::optional>::value) {
 					typename TBase::value_type v;
 					if(!(*this)(v)) {
 						valOut = {};
@@ -96,7 +96,7 @@ export {
 					valOut = v;
 					return true;
 				}
-				else if constexpr(util::is_specialization<TBase, std::vector>::value || util::is_specialization<TBase, std::map>::value || util::is_specialization<TBase, std::unordered_map>::value) {
+				else if constexpr(pragma::util::is_specialization<TBase, std::vector>::value || pragma::util::is_specialization<TBase, std::map>::value || pragma::util::is_specialization<TBase, std::unordered_map>::value) {
 					bool isDefined;
 					valOut = std::move((*this)(const_cast<const T &>(valOut), isDefined));
 					return isDefined;
@@ -231,7 +231,7 @@ export {
 		};
 
 		template<typename TEnum>
-		TEnum string_to_enum(udm::LinkedPropertyWrapperArg udmEnum, TEnum def)
+		TEnum string_to_enum(LinkedPropertyWrapperArg udmEnum, TEnum def)
 		{
 			std::string str;
 			udmEnum(str);
@@ -240,7 +240,7 @@ export {
 		}
 
 		template<typename TEnum>
-		TEnum string_to_flags(udm::LinkedPropertyWrapperArg udmEnum, TEnum def)
+		TEnum string_to_flags(LinkedPropertyWrapperArg udmEnum, TEnum def)
 		{
 			std::string str;
 			udmEnum(str);
@@ -249,7 +249,7 @@ export {
 		}
 
 		template<typename TEnum>
-		void to_enum_value(udm::LinkedPropertyWrapperArg udmEnum, TEnum &def)
+		void to_enum_value(LinkedPropertyWrapperArg udmEnum, TEnum &def)
 		{
 			std::string str;
 			udmEnum(str);
@@ -258,7 +258,7 @@ export {
 		}
 
 		template<typename TEnum>
-		void to_flags(udm::LinkedPropertyWrapperArg udmEnum, TEnum &def)
+		void to_flags(LinkedPropertyWrapperArg udmEnum, TEnum &def)
 		{
 			std::string str;
 			udmEnum(str);
@@ -267,9 +267,9 @@ export {
 		}
 
 		template<typename TEnum>
-		void write_flag(udm::LinkedPropertyWrapperArg udm, TEnum flags, TEnum flag, const std::string_view &name)
+		void write_flag(LinkedPropertyWrapperArg udm, TEnum flags, TEnum flag, const std::string_view &name)
 		{
-			if(umath::is_flag_set(flags, flag) == false)
+			if(pragma::math::is_flag_set(flags, flag) == false)
 				return;
 			udm[name] = true;
 		}
@@ -278,7 +278,7 @@ export {
 		{
 			if(!udm)
 				return;
-			umath::set_flag(flags, flag, udm[name](false));
+			pragma::math::set_flag(flags, flag, udm[name](false));
 		}
 	}
 
@@ -288,7 +288,7 @@ export {
 		{
 			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 			if(prop == nullptr) {
-				if constexpr(util::is_specialization<TBase, std::optional>::value) {
+				if constexpr(pragma::util::is_specialization<TBase, std::optional>::value) {
 					if(!v) // nullopt
 						return;
 				}
@@ -308,7 +308,7 @@ export {
 			if(prop == nullptr)
 				throw LogicError {"Cannot assign property value: Property is invalid!"};
 			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
-			if constexpr(util::is_specialization<TBase, std::optional>::value) {
+			if constexpr(pragma::util::is_specialization<TBase, std::optional>::value) {
 				// Value is std::optional
 				if(!v) {
 					// nullopt case
@@ -459,7 +459,7 @@ export {
 			auto prop = AddArray(path, strct, values.size(), arrayType, pathToElements);
 			auto &a = prop.template GetValue<Array>();
 			auto sz = a.GetValueSize() * a.GetSize();
-			auto szValues = util::size_of_container(values);
+			auto szValues = pragma::util::size_of_container(values);
 			if(szValues != sz)
 				throw InvalidUsageError {"Size of values does not match expected size of defined struct!"};
 			auto *ptr = a.GetValues();
@@ -585,7 +585,7 @@ export {
 		template<typename T>
 		bool PropertyWrapper::operator==(const T &other) const
 		{
-			if constexpr(util::is_c_string<T>())
+			if constexpr(pragma::util::is_c_string<T>())
 				return operator==(std::string {other});
 			else {
 				auto *val = GetValuePtr<T>();

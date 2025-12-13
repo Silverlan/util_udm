@@ -100,31 +100,31 @@ export {
 			return false;
 		}
 
-		constexpr uint8_t get_numeric_component_count(udm::Type type)
+		constexpr uint8_t get_numeric_component_count(Type type)
 		{
-			if(udm::is_numeric_type(type))
+			if(is_numeric_type(type))
 				return 1;
 			switch(type) {
-			case udm::Type::Vector2:
-			case udm::Type::Vector2i:
+			case Type::Vector2:
+			case Type::Vector2i:
 				return 2;
-			case udm::Type::Vector3:
-			case udm::Type::Vector3i:
-			case udm::Type::EulerAngles:
-			case udm::Type::HdrColor:
+			case Type::Vector3:
+			case Type::Vector3i:
+			case Type::EulerAngles:
+			case Type::HdrColor:
 				return 3;
-			case udm::Type::Vector4:
-			case udm::Type::Vector4i:
-			case udm::Type::Quaternion:
-			case udm::Type::Srgba:
+			case Type::Vector4:
+			case Type::Vector4i:
+			case Type::Quaternion:
+			case Type::Srgba:
 				return 4;
-			case udm::Type::Transform:
+			case Type::Transform:
 				return 7;
-			case udm::Type::ScaledTransform:
+			case Type::ScaledTransform:
 				return 10;
-			case udm::Type::Mat3x4:
+			case Type::Mat3x4:
 				return 12;
-			case udm::Type::Mat4:
+			case Type::Mat4:
 				return 16;
 			}
 			return 0;
@@ -137,9 +137,9 @@ export {
 				return value.value;
 			else if constexpr(udm::is_arithmetic<T>)
 				return value;
-			else if constexpr(udm::is_vector_type<T> || std::is_same_v<T, udm::EulerAngles> || std::is_same_v<T, udm::Srgba> || std::is_same_v<T, udm::HdrColor>)
+			else if constexpr(udm::is_vector_type<T> || std::is_same_v<T, EulerAngles> || std::is_same_v<T, Srgba> || std::is_same_v<T, HdrColor>)
 				return value[idx];
-			else if constexpr(std::is_same_v<T, udm::Quaternion>) {
+			else if constexpr(std::is_same_v<T, Quaternion>) {
 				// Quaternion memory order is xyzw, but we want wxyz
 				if(idx == 0)
 					return value[3];
@@ -164,9 +164,9 @@ export {
 				value.value = compVal;
 			else if constexpr(udm::is_arithmetic<T>)
 				value = compVal;
-			else if constexpr(udm::is_vector_type<T> || std::is_same_v<T, udm::EulerAngles> || std::is_same_v<T, udm::Srgba> || std::is_same_v<T, udm::HdrColor>)
+			else if constexpr(udm::is_vector_type<T> || std::is_same_v<T, EulerAngles> || std::is_same_v<T, Srgba> || std::is_same_v<T, HdrColor>)
 				value[idx] = compVal;
-			else if constexpr(std::is_same_v<T, udm::Quaternion>) {
+			else if constexpr(std::is_same_v<T, Quaternion>) {
 				// Quaternion memory order is xyzw, but we want wxyz
 				if(idx == 0)
 					value[3] = compVal;
@@ -410,7 +410,7 @@ export {
 	constexpr udm::Type udm::type_to_enum()
 	{
 		constexpr auto type = type_to_enum_s<T>();
-		if constexpr(umath::to_integral(type) > umath::to_integral(Type::Last))
+		if constexpr(pragma::math::to_integral(type) > pragma::math::to_integral(Type::Last))
 			[]<bool flag = false>() { static_assert(flag, "Unsupported type!"); }();
 		return type;
 	}
@@ -421,13 +421,13 @@ export {
 		using T = std::remove_cv_t<std::remove_reference_t<TT>>;
 		if constexpr(std::is_enum_v<T>)
 			return type_to_enum_s<std::underlying_type_t<T>>();
-		if constexpr(util::is_specialization<T, std::vector>::value)
+		if constexpr(pragma::util::is_specialization<T, std::vector>::value)
 			return Type::Array;
-		else if constexpr(util::is_specialization<T, std::unordered_map>::value || util::is_specialization<T, std::map>::value)
+		else if constexpr(pragma::util::is_specialization<T, std::unordered_map>::value || pragma::util::is_specialization<T, std::map>::value)
 			return Type::Element;
 		else if constexpr(std::is_same_v<T, Nil> || std::is_same_v<T, void>)
 			return Type::Nil;
-		else if constexpr(util::is_string<T>::value || std::is_same_v<T, std::string_view>)
+		else if constexpr(pragma::util::is_string<T>::value || std::is_same_v<T, std::string_view>)
 			return Type::String;
 		else if constexpr(std::is_same_v<T, Utf8String>)
 			return Type::Utf8String;
@@ -497,7 +497,7 @@ export {
 			return Type::Half;
 		else if constexpr(std::is_same_v<T, Struct>)
 			return Type::Struct;
-		static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
+		static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 		return Type::Invalid;
 	}
 
@@ -519,14 +519,14 @@ export {
 			  tag);
 		}
 		throw InvalidUsageError {std::string {"UDM type "} + std::string {magic_enum::enum_name(t)} + " has non-constant size!"};
-		static_assert(umath::to_integral(Type::Count) == 36, "Update this list when new types are added!");
+		static_assert(pragma::math::to_integral(Type::Count) == 36, "Update this list when new types are added!");
 		return 0;
 	}
 
 	template<typename T>
 	constexpr udm::Type udm::array_value_type_to_enum()
 	{
-		static_assert(util::is_specialization<T, std::vector>::value);
+		static_assert(pragma::util::is_specialization<T, std::vector>::value);
 		return udm::type_to_enum<T::value_type>();
 	}
 

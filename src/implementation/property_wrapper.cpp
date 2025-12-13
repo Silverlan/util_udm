@@ -392,7 +392,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::GetFromPath(const std::string_v
 		auto st = baseKeyName.rfind('[');
 		if(st == std::string::npos)
 			return {};
-		auto arrayIndex = util::to_uint(std::string {baseKeyName.substr(st + 1, baseKeyName.length() - st - 2)});
+		auto arrayIndex = pragma::util::to_uint(std::string {baseKeyName.substr(st + 1, baseKeyName.length() - st - 2)});
 		arrayIndices.push_back(arrayIndex);
 		baseKeyName = baseKeyName.substr(0, st);
 	}

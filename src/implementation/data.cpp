@@ -14,14 +14,14 @@ import :core;
 
 std::optional<udm::FormatType> udm::Data::GetFormatType(const std::string &fileName, std::string &outErr)
 {
-	auto f = filemanager::open_file(fileName, filemanager::FileMode::Read | filemanager::FileMode::Binary);
+	auto f = pragma::fs::open_file(fileName, pragma::fs::FileMode::Read | pragma::fs::FileMode::Binary);
 	if(f == nullptr) {
 		outErr = "Unable to open file!";
 		return {};
 	}
 	return GetFormatType(f, outErr);
 }
-std::optional<udm::FormatType> udm::Data::GetFormatType(const ::VFilePtr &f, std::string &outErr) { return GetFormatType(std::make_unique<fsys::File>(f), outErr); }
+std::optional<udm::FormatType> udm::Data::GetFormatType(const pragma::fs::VFilePtr &f, std::string &outErr) { return GetFormatType(std::make_unique<pragma::fs::File>(f), outErr); }
 std::optional<udm::FormatType> udm::Data::GetFormatType(std::unique_ptr<IFile> &&f, std::string &outErr)
 {
 	auto offset = f->Tell();
@@ -44,7 +44,7 @@ std::optional<udm::FormatType> udm::Data::GetFormatType(std::unique_ptr<IFile> &
 std::shared_ptr<udm::Data> udm::Data::Load(const std::string &fileName)
 {
 	std::string err;
-	auto f = filemanager::open_file(fileName, filemanager::FileMode::Read | filemanager::FileMode::Binary, &err);
+	auto f = pragma::fs::open_file(fileName, pragma::fs::FileMode::Read | pragma::fs::FileMode::Binary, &err);
 	if(f == nullptr) {
 		throw FileError {"Unable to open file: " + (!err.empty() ? err : "Unknown error")};
 		return nullptr;
@@ -55,12 +55,12 @@ std::shared_ptr<udm::Data> udm::Data::Load(const std::string &fileName)
 bool udm::Data::Save(const std::string &fileName) const
 {
 	std::string err;
-	auto f = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName, filemanager::FileMode::Write | filemanager::FileMode::Binary, &err));
+	auto f = std::dynamic_pointer_cast<pragma::fs::VFilePtrInternalReal>(pragma::fs::open_file(fileName, pragma::fs::FileMode::Write | pragma::fs::FileMode::Binary, &err));
 	if(f == nullptr) {
 		throw FileError {"Unable to open file: " + (!err.empty() ? err : "Unknown error")};
 		return false;
 	}
-	fsys::File fp {f};
+	pragma::fs::File fp {f};
 	return Save(fp);
 }
 
@@ -255,14 +255,14 @@ bool udm::Data::DebugTest()
 		//aNested["b"] = 3.f;
 
 		auto fTestFileIo = [&data](const std::string &fileName, bool binary) {
-			auto fw = std::dynamic_pointer_cast<VFilePtrInternalReal>(filemanager::open_file(fileName, binary ? (filemanager::FileMode::Write | filemanager::FileMode::Binary) : filemanager::FileMode::Write));
+			auto fw = std::dynamic_pointer_cast<pragma::fs::VFilePtrInternalReal>(pragma::fs::open_file(fileName, binary ? (pragma::fs::FileMode::Write | pragma::fs::FileMode::Binary) : pragma::fs::FileMode::Write));
 			if(fw) {
 				if(binary) {
-					fsys::File fp {fw};
+					pragma::fs::File fp {fw};
 					data->Save(fp);
 				}
 				else {
-					fsys::File fp {fw};
+					pragma::fs::File fp {fw};
 					data->SaveAscii(fp);
 				}
 				fw = nullptr;
@@ -270,7 +270,7 @@ bool udm::Data::DebugTest()
 			else
 				throw Exception {"Unable to write '" + fileName + "'"};
 
-			auto fr = filemanager::open_file(fileName, binary ? (filemanager::FileMode::Write | filemanager::FileMode::Binary) : filemanager::FileMode::Write);
+			auto fr = pragma::fs::open_file(fileName, binary ? (pragma::fs::FileMode::Write | pragma::fs::FileMode::Binary) : pragma::fs::FileMode::Write);
 			if(fr) {
 				auto udmDataLoad = udm::Data::Load(fr);
 				if(udmDataLoad == nullptr)
@@ -305,14 +305,14 @@ bool udm::Data::DebugTest()
 
 std::shared_ptr<udm::Data> udm::Data::Open(const std::string &fileName)
 {
-	auto f = filemanager::open_file(fileName, filemanager::FileMode::Read | filemanager::FileMode::Binary);
+	auto f = pragma::fs::open_file(fileName, pragma::fs::FileMode::Read | pragma::fs::FileMode::Binary);
 	if(f == nullptr) {
 		throw FileError {"Unable to open file!"};
 		return nullptr;
 	}
 	return Open(f);
 }
-std::shared_ptr<udm::Data> udm::Data::Open(const ::VFilePtr &f) { return Open(std::make_unique<fsys::File>(f)); }
+std::shared_ptr<udm::Data> udm::Data::Open(const pragma::fs::VFilePtr &f) { return Open(std::make_unique<pragma::fs::File>(f)); }
 std::shared_ptr<udm::Data> udm::Data::Open(std::unique_ptr<IFile> &&f)
 {
 	auto udmData = std::shared_ptr<udm::Data> {new udm::Data {}};
@@ -321,7 +321,7 @@ std::shared_ptr<udm::Data> udm::Data::Open(std::unique_ptr<IFile> &&f)
 		return nullptr;
 	}
 	udmData->m_header = f->Read<Header>();
-	if(ustring::compare(udmData->m_header.identifier.data(), HEADER_IDENTIFIER, true, strlen(HEADER_IDENTIFIER)) == false) {
+	if(pragma::string::compare(udmData->m_header.identifier.data(), HEADER_IDENTIFIER, true, strlen(HEADER_IDENTIFIER)) == false) {
 		throw InvalidFormatError {"Unexpected header identifier, file is not a valid UDM file!"};
 		return nullptr;
 	}
@@ -360,7 +360,7 @@ bool udm::Data::ValidateHeaderProperties()
 namespace udm {
 	std::shared_ptr<udm::Data> load_ascii(std::unique_ptr<IFile> &&f);
 };
-std::shared_ptr<udm::Data> udm::Data::Load(const ::VFilePtr &f) { return Load(std::make_unique<fsys::File>(f)); }
+std::shared_ptr<udm::Data> udm::Data::Load(const pragma::fs::VFilePtr &f) { return Load(std::make_unique<pragma::fs::File>(f)); }
 std::shared_ptr<udm::Data> udm::Data::Load(std::unique_ptr<IFile> &&f)
 {
 	auto offset = f->Tell();
@@ -541,11 +541,11 @@ udm::PProperty udm::Data::LoadProperty(Type type, const std::string_view &path) 
 	if(type != Type::Element) {
 		if(type == Type::Array) {
 			std::string str {name};
-			if(ustring::is_integer(str) == false) {
+			if(pragma::string::is_integer(str) == false) {
 				throw PropertyLoadError {"Attempted to retrieve non-integer index from array type, which is not allowed!"};
 				return nullptr;
 			}
-			auto i = ustring::to_int(str);
+			auto i = pragma::string::to_int(str);
 			auto valueType = f.Read<Type>();
 			using TSize = decltype(std::declval<Array>().GetSize());
 			auto n = f.Read<TSize>();
@@ -630,7 +630,7 @@ void udm::Data::ToAscii(std::stringstream &ss, AsciiSaveFlags flags) const
 {
 	assert(m_rootProperty->type == Type::Element);
 	if(m_rootProperty->type == Type::Element) {
-		if(!umath::is_flag_set(flags, AsciiSaveFlags::IncludeHeader)) {
+		if(!pragma::math::is_flag_set(flags, AsciiSaveFlags::IncludeHeader)) {
 			auto udmAssetData = GetAssetData().GetData();
 			if(udmAssetData && udmAssetData->IsType(Type::Element))
 				udmAssetData->GetValue<Element>().ToAscii(flags, ss);
@@ -648,9 +648,9 @@ bool udm::Data::Save(IFile &f) const
 	return true;
 }
 
-bool udm::Data::Save(const ::VFilePtr &f)
+bool udm::Data::Save(const pragma::fs::VFilePtr &f)
 {
-	fsys::File fp {f};
+	pragma::fs::File fp {f};
 	return Save(fp);
 }
 

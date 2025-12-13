@@ -46,7 +46,7 @@ export namespace udm {
 
 	// Any struct or class that isn't a UDM type is assumed to be a struct type
 	template<typename T>
-	concept is_struct_type = std::is_class_v<T> && type_to_enum_s<T>() == udm::Type::Invalid && !util::is_specialization<T, std::vector>::value && !util::is_specialization<T, std::shared_ptr>::value && !util::is_specialization_array<T>::value;
+	concept is_struct_type = std::is_class_v<T> && type_to_enum_s<T>() == Type::Invalid && !pragma::util::is_specialization<T, std::vector>::value && !pragma::util::is_specialization<T, std::shared_ptr>::value && !pragma::util::is_specialization_array<T>::value;
 
 	template<typename T>
 	    requires(!is_struct_type<T>)
