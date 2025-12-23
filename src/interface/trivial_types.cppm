@@ -265,6 +265,7 @@ export {
 			case Type::Half:
 				return tag<Half>;
 			}
+			std::unreachable();
 		}
 
 		constexpr std::variant<tag_t<Vector2>, tag_t<Vector3>, tag_t<Vector4>, tag_t<Vector2i>, tag_t<Vector3i>, tag_t<Vector4i>, tag_t<Quaternion>, tag_t<EulerAngles>, tag_t<Srgba>, tag_t<HdrColor>, tag_t<Transform>, tag_t<ScaledTransform>, tag_t<Mat4>, tag_t<Mat3x4>, tag_t<Nil>>
@@ -302,6 +303,7 @@ export {
 			case Type::Nil:
 				return tag<Nil>;
 			}
+			std::unreachable();
 		}
 
 		constexpr std::variant<tag_t<String>> get_common_tag_exclusive(Type e)
@@ -310,6 +312,7 @@ export {
 			case Type::String:
 				return tag<String>;
 			}
+			std::unreachable();
 		}
 
 		struct Element;
@@ -340,6 +343,7 @@ export {
 				return tag<Struct>;
 			}
 			static_assert(NON_TRIVIAL_TYPES.size() == 9, "Update this list when new non-trivial types have been added!");
+			std::unreachable();
 		}
 		template<bool ENABLE_NUMERIC = true, bool ENABLE_GENERIC = true, bool ENABLE_NON_TRIVIAL = true, bool ENABLE_DEFAULT_RETURN = true, typename T>
 		    requires(ENABLE_NUMERIC || ENABLE_GENERIC || ENABLE_NON_TRIVIAL)
@@ -374,6 +378,7 @@ export {
 						return decltype(std::visit(vs, get_non_trivial_tag(type)))();
 				}
 			}
+			std::unreachable();
 		}
 		template<bool ENABLE_DEFAULT_RETURN = true>
 		constexpr decltype(auto) visit_ng(Type type, auto vs)
@@ -403,6 +408,7 @@ export {
 				else if(is_common_type(type))
 					return decltype(std::visit(vs, get_common_tag_exclusive(type)))();
 			}
+			std::unreachable();
 		}
 	};
 
