@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: © 2025 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-module;
-
 export module pragma.udm:wrapper_funcs_impl;
 
 import :property;

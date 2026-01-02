@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: © 2025 Silverlan <opensource@pragma-engine.com>
 // SPDX-License-Identifier: MIT
 
-module;
-
 module pragma.udm;
 
 #ifndef UDM_SINGLE_MODULE_INTERFACE

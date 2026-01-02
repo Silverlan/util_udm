@@ -2,7 +2,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/pr_common.cmake)
 
 option(UTIL_UDM_STATIC "Build as static library?" ON)
 
-if(${UTIL_UDM_STATIC})
+if(UTIL_UDM_STATIC)
 	set(LIB_TYPE STATIC)
 else()
 	set(LIB_TYPE SHARED)
@@ -10,6 +10,7 @@ endif()
 
 set(PROJ_NAME util_udm)
 pr_add_library(${PROJ_NAME} ${LIB_TYPE})
+pr_add_export_macro(${PROJ_NAME} DLLUDM ${LIB_TYPE})
 
 pr_add_dependency(${PROJ_NAME} vfilesystem TARGET PUBLIC)
 pr_add_dependency(${PROJ_NAME} lz4 TARGET)

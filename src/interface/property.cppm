@@ -3,7 +3,6 @@
 
 module;
 
-#include "definitions.hpp"
 #include <cassert>
 
 export module pragma.udm:property;
