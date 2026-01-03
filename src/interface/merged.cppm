@@ -3,6 +3,7 @@
 
 module;
 
+#include "definitions.hpp"
 #include <cassert>
 #include "util_enum_flags.hpp"
 
@@ -3905,3 +3906,4 @@ export import :wrapper_funcs_impl;
 // (no body found in original file)
 
 // --- END PARTITION: src/interface/udm.cppm ---
+

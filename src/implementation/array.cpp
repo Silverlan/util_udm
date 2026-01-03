@@ -3,6 +3,7 @@
 
 module;
 
+#include "definitions.hpp"
 #include <cassert>
 #include <lz4.h>
 
