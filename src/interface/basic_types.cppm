@@ -9,6 +9,7 @@ export import pragma.math;
 
 export {
 	namespace udm {
+		using ConstDataValue = const void *;
 		using DataValue = void *;
 		using String = std::string;
 		using Int8 = int8_t;
