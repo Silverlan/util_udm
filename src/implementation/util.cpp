@@ -30,7 +30,6 @@ void udm::decompress_lz4_blob(const void *compressedData, uint64_t compressedSiz
 
 udm::Blob udm::decompress_lz4_blob(const void *compressedData, uint64_t compressedSize, uint64_t uncompressedSize)
 {
-	auto x = sizeof(Array);
 	udm::Blob dst {};
 	dst.data.resize(uncompressedSize);
 	decompress_lz4_blob(compressedData, compressedSize, uncompressedSize, dst.data.data());
