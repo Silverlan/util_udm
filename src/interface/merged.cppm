@@ -3172,6 +3172,11 @@ export {
 			static PProperty Create();
 			static PProperty Create() { return Create<Nil>(); }
 			static PProperty Create(Type type);
+
+			template<typename T>
+			    requires(is_udm_type<T>())
+			static std::string to_ascii_value(const T &val, const std::string &prefix = "", AsciiSaveFlags flags = AsciiSaveFlags::Default);
+
 			Property() = default;
 			Property(const Property &other);
 			Property(Property &&other);
@@ -3568,6 +3573,19 @@ export {
 				}
 			}
 			return BlobResult::NotABlobType;
+		}
+
+		template<typename T>
+		    requires(is_udm_type<T>())
+		std::string Property::to_ascii_value(const T &val, const std::string &prefix, AsciiSaveFlags flags)
+		{
+			constexpr auto type = type_to_enum<T>();
+			if constexpr(is_numeric_type(type))
+				return NumericTypeToString<T>(val);
+			else
+				return ToAsciiValue(flags, val, prefix);
+			std::unreachable();
+			return {};
 		}
 	}
 }
