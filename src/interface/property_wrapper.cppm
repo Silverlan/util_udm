@@ -159,9 +159,8 @@ export {
 			uint32_t GetChildCount() const;
 			//
 
-			LinkedPropertyWrapper GetFromPath(const std::string_view &key) const;
-			LinkedPropertyWrapper operator[](const std::string_view &key) const;
-			LinkedPropertyWrapper operator[](const std::string &key) const;
+			LinkedPropertyWrapper GetFromPath(std::string_view key) const;
+			LinkedPropertyWrapper operator[](std::string_view key) const;
 			LinkedPropertyWrapper operator[](const char *key) const;
 			bool operator==(const PropertyWrapper &other) const;
 			bool operator!=(const PropertyWrapper &other) const;
@@ -215,8 +214,7 @@ export {
 			LinkedPropertyWrapper operator[](int32_t idx) const;
 			LinkedPropertyWrapper operator[](size_t idx) const;
 
-			LinkedPropertyWrapper operator[](const std::string_view &key) const;
-			LinkedPropertyWrapper operator[](const std::string &key) const;
+			LinkedPropertyWrapper operator[](std::string_view key) const;
 			LinkedPropertyWrapper operator[](const char *key) const;
 
 			std::string GetPath() const;

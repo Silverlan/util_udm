@@ -371,7 +371,6 @@ void udm::Element::AddChild(std::string &&key, const PProperty &o)
 	else if(is_array_type(o->type))
 		static_cast<Array *>(o->value)->fromProperty = *o;
 }
-
 void udm::Element::AddChild(const std::string &key, const PProperty &o)
 {
 	auto cpy = key;
@@ -381,7 +380,7 @@ void udm::Element::AddChild(const std::string &key, const PProperty &o)
 udm::Property &udm::PropertyWrapper::operator*() const { return *prop; }
 udm::Property *udm::PropertyWrapper::operator->() const { return prop; }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::GetFromPath(const std::string_view &key) const
+udm::LinkedPropertyWrapper udm::PropertyWrapper::GetFromPath(std::string_view key) const
 {
 	if(key.empty())
 		return {};
@@ -459,11 +458,10 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](uint32_t idx) const
 	return item;
 }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const char *key) const { return operator[](std::string {key}); }
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](int32_t idx) const { return operator[](static_cast<uint32_t>(idx)); }
 udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](size_t idx) const { return operator[](static_cast<uint32_t>(idx)); }
 
-udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_view &key) const
+udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](std::string_view key) const
 {
 	if(key.empty())
 		throw InvalidUsageError {"Empty string is not allowed as key!"};
@@ -525,8 +523,7 @@ udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string_vi
 		return {};
 	return getElementProperty(*this, *el, key);
 }
-
-udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const std::string &key) const { return operator[](std::string_view {key}); }
+udm::LinkedPropertyWrapper udm::PropertyWrapper::operator[](const char *key) const { return operator[](std::string_view {key}); }
 
 bool udm::PropertyWrapper::operator==(const PropertyWrapper &other) const
 {

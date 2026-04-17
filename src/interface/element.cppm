@@ -61,11 +61,11 @@ export {
 			PropertyWrapper fromProperty {};
 			PropertyWrapper parentProperty {};
 
-			LinkedPropertyWrapper operator[](const std::string &key) { return fromProperty[key]; }
-			LinkedPropertyWrapper operator[](const char *key) { return operator[](std::string {key}); }
+			LinkedPropertyWrapper operator[](std::string_view key) const { return fromProperty[key]; }
+			LinkedPropertyWrapper operator[](const char *key) const { return operator[](std::string_view {key}); }
 
-			LinkedPropertyWrapper Add(const std::string_view &path, Type type = Type::Element, bool pathToElements = false);
-			LinkedPropertyWrapper AddArray(const std::string_view &path, std::optional<uint32_t> size = {}, Type type = Type::Element, ArrayType arrayType = ArrayType::Raw, bool pathToElements = false);
+			LinkedPropertyWrapper Add(std::string_view path, Type type = Type::Element, bool pathToElements = false);
+			LinkedPropertyWrapper AddArray(std::string_view path, std::optional<uint32_t> size = {}, Type type = Type::Element, ArrayType arrayType = ArrayType::Raw, bool pathToElements = false);
 			void ToAscii(AsciiSaveFlags flags, std::stringstream &ss, const std::optional<std::string> &prefix = {}) const;
 
 			void Merge(const Element &other, MergeFlags mergeFlags = MergeFlags::OverwriteExisting);

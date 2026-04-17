@@ -12,7 +12,7 @@ module pragma.udm;
 import :core;
 #endif
 
-udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path, std::optional<uint32_t> size, Type type, ArrayType arrayType, bool pathToElements)
+udm::LinkedPropertyWrapper udm::Element::AddArray(std::string_view path, std::optional<uint32_t> size, Type type, ArrayType arrayType, bool pathToElements)
 {
 	auto prop = Add(path, (arrayType == ArrayType::Compressed) ? Type::ArrayLz4 : Type::Array, pathToElements);
 	if(!prop)
@@ -24,7 +24,7 @@ udm::LinkedPropertyWrapper udm::Element::AddArray(const std::string_view &path, 
 	return prop;
 }
 
-udm::LinkedPropertyWrapper udm::Element::Add(const std::string_view &path, Type type, bool pathToElements)
+udm::LinkedPropertyWrapper udm::Element::Add(std::string_view path, Type type, bool pathToElements)
 {
 	auto end = pathToElements ? path.find(PATH_SEPARATOR) : std::string::npos;
 	auto name = path.substr(0, end);

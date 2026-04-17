@@ -740,21 +740,8 @@ void udm::Property::ToAscii(AsciiSaveFlags flags, std::stringstream &ss, const s
 	else
 		ss << propName;
 	ss << " ";
-	if(is_numeric_type(type)) {
-		auto tag = get_numeric_tag(type);
-		std::visit(
-		  [this, &ss](auto tag) {
-			  using T = typename decltype(tag)::type;
-			  NumericTypeToString(*static_cast<T *>(value), ss);
-		  },
-		  tag);
-	}
-	else {
-		auto vs = [this, &ss, &prefix, flags](auto tag) {
-			using T = typename decltype(tag)::type;
-			ss << ToAsciiValue(flags, *static_cast<T *>(value), prefix);
-		};
-		if(is_gnt_type(type))
-			visit_gnt(type, vs);
-	}
+	visit(type, [this, &ss, &prefix, flags](auto tag) {
+		using T = typename decltype(tag)::type;
+		ss << to_ascii_value<T>(*static_cast<T *>(value), prefix, flags);
+	});
 }

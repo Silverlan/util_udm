@@ -176,9 +176,8 @@ udm::ElementIteratorWrapper udm::LinkedPropertyWrapper::ElIt()
 	//	return ElementIteratorWrapper{*static_cast<LinkedPropertyWrapper*>(this)};
 	//return ElementIteratorWrapper{LinkedPropertyWrapper{*this}};
 }
-udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](const std::string_view &key) const { return PropertyWrapper::operator[](key); }
-udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](const std::string &key) const { return PropertyWrapper::operator[](key); }
-udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](const char *key) const { return PropertyWrapper::operator[]((key)); }
+udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](std::string_view key) const { return PropertyWrapper::operator[](key); }
+udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](const char *key) const { return operator[](std::string_view {key}); }
 udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](int32_t idx) const { return operator[](static_cast<uint32_t>(idx)); }
 udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](size_t idx) const { return operator[](static_cast<uint32_t>(idx)); }
 udm::LinkedPropertyWrapper udm::LinkedPropertyWrapper::operator[](uint32_t idx) const
