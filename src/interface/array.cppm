@@ -170,7 +170,7 @@ export {
 		T &Array::GetValue(uint32_t idx)
 		{
 			if(idx >= m_size)
-				throw OutOfBoundsError {"Array index " + std::to_string(idx) + " out of bounds of array of size " + std::to_string(m_size) + "!"};
+				throw OutOfBoundsError {"Array index " + pragma::util::to_string(idx) + " out of bounds of array of size " + pragma::util::to_string(m_size) + "!"};
 			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 			auto vs = [this, idx](auto tag) -> T & {
 				using TTag = typename decltype(tag)::type;
@@ -206,7 +206,7 @@ export {
 				if constexpr(!std::is_fundamental_v<std::remove_extent_t<TBase>>) {
 					auto sz = GetStructuredDataInfo()->GetDataSizeRequirement();
 					if(sizeof(T) != sz)
-						throw LogicError {"Attempted to assign data of size " + std::to_string(sizeof(T)) + " to struct of size " + std::to_string(sz) + "!"};
+						throw LogicError {"Attempted to assign data of size " + pragma::util::to_string(sizeof(T)) + " to struct of size " + pragma::util::to_string(sz) + "!"};
 					if constexpr(std::is_rvalue_reference_v<T>)
 						static_cast<TBase *>(GetValues())[idx] = std::move(v);
 					else

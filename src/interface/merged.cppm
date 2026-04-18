@@ -1484,7 +1484,7 @@ export {
 				static T1 convert(const T0 &v0)
 				{
 					if constexpr(std::is_arithmetic_v<T0>)
-						return std::to_string(v0);
+						return pragma::util::to_string(v0);
 					else if constexpr(pragma::math::is_vector_type<T0>)
 						return uvec::to_string<T0>(v0, ' ');
 					else if constexpr(pragma::math::is_matrix_type<T0>)
@@ -1492,11 +1492,11 @@ export {
 					else if constexpr(std::is_same_v<T0, Quat>)
 						return uquat::to_string(v0, ' ');
 					else if constexpr(std::is_same_v<T0, EulerAngles>)
-						return std::to_string(v0.p) + ' ' + std::to_string(v0.y) + ' ' + std::to_string(v0.r);
+						return pragma::util::to_string(v0.p) + ' ' + pragma::util::to_string(v0.y) + ' ' + pragma::util::to_string(v0.r);
 					else if constexpr(std::is_same_v<T0, Srgba>)
-						return std::to_string(v0[0]) + ' ' + std::to_string(v0[1]) + ' ' + std::to_string(v0[2]) + ' ' + std::to_string(v0[3]);
+						return pragma::util::to_string(v0[0]) + ' ' + pragma::util::to_string(v0[1]) + ' ' + pragma::util::to_string(v0[2]) + ' ' + pragma::util::to_string(v0[3]);
 					else if constexpr(std::is_same_v<T0, HdrColor>)
-						return std::to_string(v0[0]) + ' ' + std::to_string(v0[1]) + ' ' + std::to_string(v0[2]);
+						return pragma::util::to_string(v0[0]) + ' ' + pragma::util::to_string(v0[1]) + ' ' + pragma::util::to_string(v0[2]);
 					else if constexpr(std::is_same_v<T0, Transform>)
 						return '[' + uvec::to_string<Vector3>(v0.GetOrigin(), ' ') + "][" + uquat::to_string(v0.GetRotation(), ' ') + ']';
 					else if constexpr(std::is_same_v<T0, ScaledTransform>)
@@ -1504,7 +1504,7 @@ export {
 					else if constexpr(std::is_same_v<T0, Reference>)
 						return v0.path;
 					else if constexpr(std::is_same_v<T0, Half>)
-						return std::to_string(static_cast<float>(v0));
+						return pragma::util::to_string(static_cast<float>(v0));
 					else if constexpr(std::is_same_v<T0, Nil>)
 						return "nil";
 				}
@@ -1673,7 +1673,7 @@ export {
 			{
 				auto sz = description.GetDataSizeRequirement();
 				if(inSize != sz)
-					throw LogicError {"Attempted to assign data of size " + std::to_string(inSize) + " to struct of size " + std::to_string(sz) + "!"};
+					throw LogicError {"Attempted to assign data of size " + pragma::util::to_string(inSize) + " to struct of size " + pragma::util::to_string(sz) + "!"};
 				if(data.size() != sz)
 					throw ImplementationError {"Size of struct data does not match its types!"};
 				memcpy(data.data(), inData, inSize);
@@ -1851,7 +1851,7 @@ export namespace udm {
 			if constexpr(!std::is_fundamental_v<std::remove_extent_t<TBase>>) {
 				auto sz = get_array_structured_data_info_data_size_requirement(a);
 				if(sizeof(T) != sz)
-					throw LogicError {"Attempted to assign data of size " + std::to_string(sizeof(T)) + " to struct of size " + std::to_string(sz) + "!"};
+					throw LogicError {"Attempted to assign data of size " + pragma::util::to_string(sizeof(T)) + " to struct of size " + pragma::util::to_string(sz) + "!"};
 				if constexpr(std::is_rvalue_reference_v<T>)
 					static_cast<TBase *>(get_array_values(a))[idx] = std::move(v);
 				else
@@ -2401,7 +2401,7 @@ export {
 						auto &propName = static_cast<const LinkedPropertyWrapper &>(*this).propName;
 						auto *child = find_element_child(el, propName);
 						if(!child)
-							throw LogicError {"Attempted to retrieve value of property '" + propName + "' from array element at index " + std::to_string(arrayIndex) + ", but property does not exist!"};
+							throw LogicError {"Attempted to retrieve value of property '" + propName + "' from array element at index " + pragma::util::to_string(arrayIndex) + ", but property does not exist!"};
 						return get_property_value<T>(**child);
 					}
 					if(is_array_value_type(*a, type_to_enum<T>()) == false)
@@ -2972,7 +2972,7 @@ export {
 		T &Array::GetValue(uint32_t idx)
 		{
 			if(idx >= m_size)
-				throw OutOfBoundsError {"Array index " + std::to_string(idx) + " out of bounds of array of size " + std::to_string(m_size) + "!"};
+				throw OutOfBoundsError {"Array index " + pragma::util::to_string(idx) + " out of bounds of array of size " + pragma::util::to_string(m_size) + "!"};
 			using TBase = std::remove_cv_t<std::remove_reference_t<T>>;
 			auto vs = [this, idx](auto tag) -> T & {
 				using TTag = typename decltype(tag)::type;
@@ -3008,7 +3008,7 @@ export {
 				if constexpr(!std::is_fundamental_v<std::remove_extent_t<TBase>>) {
 					auto sz = GetStructuredDataInfo()->GetDataSizeRequirement();
 					if(sizeof(T) != sz)
-						throw LogicError {"Attempted to assign data of size " + std::to_string(sizeof(T)) + " to struct of size " + std::to_string(sz) + "!"};
+						throw LogicError {"Attempted to assign data of size " + pragma::util::to_string(sizeof(T)) + " to struct of size " + pragma::util::to_string(sz) + "!"};
 					if constexpr(std::is_rvalue_reference_v<T>)
 						static_cast<TBase *>(GetValues())[idx] = std::move(v);
 					else
@@ -3454,8 +3454,8 @@ export {
 				return NumericTypeToString<float>(value);
 			if constexpr(!std::is_floating_point_v<T>) {
 				if constexpr(std::is_same_v<T, Int8> || std::is_same_v<T, UInt8>)
-					return std::to_string(+value);
-				return std::to_string(value);
+					return pragma::util::to_string(+value);
+				return pragma::util::to_string(value);
 			}
 			// TODO: This is not very efficient...
 			// (We need a temporary stringstream because we want to

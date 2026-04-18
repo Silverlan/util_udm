@@ -137,7 +137,7 @@ export namespace udm {
 			if constexpr(!std::is_fundamental_v<std::remove_extent_t<TBase>>) {
 				auto sz = get_array_structured_data_info_data_size_requirement(a);
 				if(sizeof(T) != sz)
-					throw LogicError {"Attempted to assign data of size " + std::to_string(sizeof(T)) + " to struct of size " + std::to_string(sz) + "!"};
+					throw LogicError {"Attempted to assign data of size " + pragma::util::to_string(sizeof(T)) + " to struct of size " + pragma::util::to_string(sz) + "!"};
 				if constexpr(std::is_rvalue_reference_v<T>)
 					static_cast<TBase *>(get_array_values(a))[idx] = std::move(v);
 				else

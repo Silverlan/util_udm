@@ -313,8 +313,8 @@ export {
 				return NumericTypeToString<float>(value);
 			if constexpr(!std::is_floating_point_v<T>) {
 				if constexpr(std::is_same_v<T, Int8> || std::is_same_v<T, UInt8>)
-					return std::to_string(+value);
-				return std::to_string(value);
+					return pragma::util::to_string(+value);
+				return pragma::util::to_string(value);
 			}
 			// TODO: This is not very efficient...
 			// (We need a temporary stringstream because we want to

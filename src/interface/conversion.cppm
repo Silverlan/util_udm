@@ -247,7 +247,7 @@ export {
 				static T1 convert(const T0 &v0)
 				{
 					if constexpr(std::is_arithmetic_v<T0>)
-						return std::to_string(v0);
+						return pragma::util::to_string(v0);
 					else if constexpr(pragma::math::is_vector_type<T0>)
 						return uvec::to_string<T0>(v0, ' ');
 					else if constexpr(pragma::math::is_matrix_type<T0>)
@@ -255,11 +255,11 @@ export {
 					else if constexpr(std::is_same_v<T0, Quat>)
 						return uquat::to_string(v0, ' ');
 					else if constexpr(std::is_same_v<T0, EulerAngles>)
-						return std::to_string(v0.p) + ' ' + std::to_string(v0.y) + ' ' + std::to_string(v0.r);
+						return pragma::util::to_string(v0.p) + ' ' + pragma::util::to_string(v0.y) + ' ' + pragma::util::to_string(v0.r);
 					else if constexpr(std::is_same_v<T0, Srgba>)
-						return std::to_string(v0[0]) + ' ' + std::to_string(v0[1]) + ' ' + std::to_string(v0[2]) + ' ' + std::to_string(v0[3]);
+						return pragma::util::to_string(v0[0]) + ' ' + pragma::util::to_string(v0[1]) + ' ' + pragma::util::to_string(v0[2]) + ' ' + pragma::util::to_string(v0[3]);
 					else if constexpr(std::is_same_v<T0, HdrColor>)
-						return std::to_string(v0[0]) + ' ' + std::to_string(v0[1]) + ' ' + std::to_string(v0[2]);
+						return pragma::util::to_string(v0[0]) + ' ' + pragma::util::to_string(v0[1]) + ' ' + pragma::util::to_string(v0[2]);
 					else if constexpr(std::is_same_v<T0, Transform>)
 						return '[' + uvec::to_string<Vector3>(v0.GetOrigin(), ' ') + "][" + uquat::to_string(v0.GetRotation(), ' ') + ']';
 					else if constexpr(std::is_same_v<T0, ScaledTransform>)
@@ -267,7 +267,7 @@ export {
 					else if constexpr(std::is_same_v<T0, Reference>)
 						return v0.path;
 					else if constexpr(std::is_same_v<T0, Half>)
-						return std::to_string(static_cast<float>(v0));
+						return pragma::util::to_string(static_cast<float>(v0));
 					else if constexpr(std::is_same_v<T0, Nil>)
 						return "nil";
 				}

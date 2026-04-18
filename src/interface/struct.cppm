@@ -90,7 +90,7 @@ export {
 			{
 				auto sz = description.GetDataSizeRequirement();
 				if(inSize != sz)
-					throw LogicError {"Attempted to assign data of size " + std::to_string(inSize) + " to struct of size " + std::to_string(sz) + "!"};
+					throw LogicError {"Attempted to assign data of size " + pragma::util::to_string(inSize) + " to struct of size " + pragma::util::to_string(sz) + "!"};
 				if(data.size() != sz)
 					throw ImplementationError {"Size of struct data does not match its types!"};
 				memcpy(data.data(), inData, inSize);

@@ -528,7 +528,7 @@ export {
 						auto &propName = static_cast<const LinkedPropertyWrapper &>(*this).propName;
 						auto *child = find_element_child(el, propName);
 						if(!child)
-							throw LogicError {"Attempted to retrieve value of property '" + propName + "' from array element at index " + std::to_string(arrayIndex) + ", but property does not exist!"};
+							throw LogicError {"Attempted to retrieve value of property '" + propName + "' from array element at index " + pragma::util::to_string(arrayIndex) + ", but property does not exist!"};
 						return get_property_value<T>(**child);
 					}
 					if(is_array_value_type(*a, type_to_enum<T>()) == false)
