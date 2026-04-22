@@ -1280,6 +1280,20 @@ export {
 			};
 
 			template<typename T0, typename T1>
+			    requires(std::is_integral_v<T0> && std::is_scoped_enum_v<T1>)
+			struct TypeConverter<T0, T1> {
+				static constexpr auto is_convertible = true;
+				static T1 convert(const T0 &v0) { return static_cast<T1>(v0); }
+			};
+
+			template<typename T0, typename T1>
+			    requires(std::is_scoped_enum_v<T0> && std::is_integral_v<T1>)
+			struct TypeConverter<T0, T1> {
+				static constexpr auto is_convertible = true;
+				static T1 convert(const T0 &v0) { return pragma::math::to_integral(v0); }
+			};
+
+			template<typename T0, typename T1>
 			    requires(std::is_same_v<T0, String> && (is_numeric_type(type_to_enum<T1>()) || is_generic_type(type_to_enum<T1>()) || std::is_same_v<T1, Utf8String>) && !std::is_same_v<T1, Nil>)
 			struct TypeConverter<T0, T1> {
 				template<typename T, typename TValue, uint32_t TCount, uint32_t (*TTranslateIdx)(uint32_t) = nullptr>
