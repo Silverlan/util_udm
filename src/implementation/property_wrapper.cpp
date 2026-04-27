@@ -52,6 +52,8 @@ void udm::PropertyWrapper::operator=(Property &other)
 
 udm::PropertyWrapper::operator bool() const
 {
+	if(!prop)
+		return false;
 	if(linked)
 		const_cast<LinkedPropertyWrapper &>(static_cast<const LinkedPropertyWrapper &>(*this)).InitializeProperty(Type::Element, true);
 	if(arrayIndex == std::numeric_limits<uint32_t>::max()) {

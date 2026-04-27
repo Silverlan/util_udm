@@ -563,7 +563,7 @@ export {
 		template<typename T>
 		T PropertyWrapper::ToValue(const T &defaultValue, bool *optOutIsDefined) const
 		{
-			if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+			if(this == nullptr) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 			{
 				if(optOutIsDefined)
 					*optOutIsDefined = false;
@@ -625,7 +625,7 @@ export {
 		template<typename T>
 		std::optional<T> PropertyWrapper::ToValue() const
 		{
-			if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+			if(this == nullptr) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 				return {};
 			if(IsArrayItem(true)) {
 				auto &a = get_property_value<Array>(*prop);

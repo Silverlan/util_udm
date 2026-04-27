@@ -344,7 +344,7 @@ export {
 		template<typename T>
 		T Property::ToValue(const T &defaultValue) const
 		{
-			if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+			if(this == nullptr) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 				return defaultValue;
 			auto val = ToValue<T>();
 			return val.has_value() ? *val : defaultValue;
@@ -352,7 +352,7 @@ export {
 		template<typename T>
 		std::optional<T> Property::ToValue() const
 		{
-			if(!this) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
+			if(this == nullptr) // This can happen in chained expressions. TODO: This is technically undefined behavior and should be implemented differently!
 				return {};
 			if constexpr(pragma::util::is_specialization<T, std::vector>::value) {
 				T v {};
@@ -396,7 +396,7 @@ export {
 		T *Property::GetValuePtr()
 		{
 			// TODO: this should never be null, but there are certain cases where it seems to happen
-			if(!this)
+			if(this == nullptr)
 				return nullptr;
 			if constexpr(std::is_same_v<T, Array>)
 				return is_array_type(this->type) ? reinterpret_cast<T *>(value) : nullptr;
