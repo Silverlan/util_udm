@@ -61,7 +61,17 @@ udm::Type udm::ascii_type_to_enum(const std::string_view &type)
 	return (it != namedTypeToEnum.end()) ? it->second : Type::Invalid;
 }
 
-void udm::sanitize_key_name(std::string &key) { pragma::string::replace(key, "/", ""); }
+void udm::sanitize_key_name(std::string &key)
+{
+	for(auto it = key.begin(); it != key.end();) {
+		auto &c = *it;
+		if(c != '/' && c != '[' && c != ']') {
+			++it;
+			continue;
+		}
+		it = key.erase(it);
+	}
+}
 
 template<typename T>
 void udm::AsciiReader::ReadFloatValueList(T &outData)
