@@ -69,8 +69,6 @@ static void to_json(udm::LinkedPropertyWrapperArg prop, std::stringstream &ss, c
 	}
 
 	auto strVal = prop.ToValue<udm::String>();
-	if(!strVal.has_value())
-		std::cout << "";
 	assert(strVal.has_value());
 	if(strVal.has_value())
 		ss << "\"" << *strVal << "\"";
